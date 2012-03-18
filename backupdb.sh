@@ -37,14 +37,14 @@ handle=$(shmysql user=musicb_app password=backup dbname=music_backup)
 
 for file in $(find "$@" -type f); do
 	file=$(readlink -f $file)
-	if is_backedup $handle "$file"; then
-		if is_insync $handle "$file"; then
+	if is_backedup $handle $(hostname) $file; then
+		if is_insync $handle $(hostname) $file; then
 			continue
 		else
-			update_file $handle $file
+			update_file $handle $(hostname) $file
 		fi
 	else
-		insert_file $handle $file
+		insert_file $handle $(hostname) $file
 	fi
 done
 
