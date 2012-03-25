@@ -19,7 +19,7 @@ source ~/code/bash/lib/backupdb/libbackupdb.sh
 #        NOTES: --
 #       AUTHOR: Marcelo Auquer, auquer@gmail.com
 #      CREATED: 03/07/2012
-#     REVISION: 03/17/2012
+#     REVISION: 03/25/2012
 #
 #======================================================================= 
 
@@ -28,11 +28,11 @@ source ~/code/bash/lib/backupdb/libbackupdb.sh
 #-----------------------------------------------------------------------
 
 handle=$(shmysql user=musicb_app password=backup dbname=music_backup) 
-{
-	[[ $? -ne 0 ]] && cat <<- EOF
-	backupdb.sh: Unable to establish a connection to the database.
-	EOF
-} && exit 1
+if [ $? -ne 0 ]
+then
+	echo "backupdb.sh: Unable to establish connection to db." 1>&2
+	exit 1
+fi
 chpathn -rp "$@"
 
 #-----------------------------------------------------------------------
