@@ -27,8 +27,13 @@ source ~/code/bash/lib/backupdb/libbackupdb.sh
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-chpathn -rp "$@"
 handle=$(shmysql user=musicb_app password=backup dbname=music_backup) 
+{
+	[[ $? -ne 0 ]] && cat <<- EOF
+	backupdb.sh: Unable to establish a connection to the database.
+	EOF
+} && exit 1
+chpathn -rp "$@"
 
 #-----------------------------------------------------------------------
 # Search in PATH... for file's metadata and insert/update it in the
