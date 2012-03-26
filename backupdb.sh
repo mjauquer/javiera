@@ -42,14 +42,34 @@ chpathn -rp "$@"
 
 for file in $(find "$@" -type f); do
 	file=$(readlink -f $file)
-	if is_backedup $handle $(hostname) $file; then
-		if is_insync $handle $(hostname) $file; then
+	if ! is_backedup $handle backedup $(hostname) $file
+	then
+		echo "backupdb.sh: error in is_backedup ()." 1>&2
+		exit 1
+	fi
+	if [ $backedup == "true" ]
+	then
+		if ! is_insync $handle insync $(hostname) $file
+		then
+			echo "backupdb.sh: error in is_insync ()." 1>&2
+			exit 1
+		fi
+		if [ $insync == "true" ]
+		then
 			continue
 		else
-			update_file $handle $(hostname) $file
+			if ! update_file $handle $(hostname) $file 
+			then
+				echo "backupdb.sh: error in update_file ()." 1>&2
+				exit 1
+			fi
 		fi
 	else
-		insert_file $handle $(hostname) $file
+		if ! insert_file $handle $(hostname) $file 
+		then
+			echo "backupdb.sh: error in insert_file ()." 1>&2
+			exit 1
+		fi
 	fi
 done
 
@@ -66,7 +86,11 @@ shsql $handle "SELECT id, pathname FROM file;" | (
 		[[ ! -a "$2" ]] && tobedel[$ind]=$1 && ind=$(($ind+1))
 	done
 for id in ${tobedel[@]} ; do
-	delete_file $handle $id
+	if ! delete_file $handle $id
+	then
+		echo "backupdb: error in delete_file ()." 1>&2
+		exit 1
+	fi
 done
 )
 shsqlend $handle
