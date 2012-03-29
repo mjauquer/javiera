@@ -19,7 +19,7 @@ source ~/code/bash/lib/backupdb/libbackupdb.sh
 #        NOTES: --
 #       AUTHOR: Marcelo Auquer, auquer@gmail.com
 #      CREATED: 03/07/2012
-#     REVISION: 03/25/2012
+#     REVISION: 03/29/2012
 #
 #======================================================================= 
 
@@ -40,7 +40,8 @@ chpathn -rp "$@"
 # database.
 #-----------------------------------------------------------------------
 
-for file in $(find "$@" -type f); do
+for file in $(find "$@" -type f)
+do
 	file=$(readlink -f $file)
 	if ! is_backedup $handle backedup $(hostname) $file
 	then
@@ -81,16 +82,22 @@ done
 tobedel=
 ind=0
 shsql $handle "SELECT id, pathname FROM file;" | (
-	while row=$(shsqlline); do
+	while row=$(shsqlline)
+	do
 		eval set $row
-		[[ ! -a "$2" ]] && tobedel[$ind]=$1 && ind=$(($ind+1))
+		if [[ ! -a "$2" ]]
+		then
+			tobedel[$ind]=$1
+			ind=$(($ind+1))
+		fi
 	done
-for id in ${tobedel[@]} ; do
-	if ! delete_file $handle $id
-	then
-		echo "backupdb: error in delete_file ()." 1>&2
-		exit 1
-	fi
-done
+	for id in ${tobedel[@]}
+	do
+		if ! delete_file $handle $id
+		then
+			echo "backupdb: error in delete_file ()." 1>&2
+			exit 1
+		fi
+	done
 )
 shsqlend $handle
