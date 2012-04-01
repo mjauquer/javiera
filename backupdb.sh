@@ -1,6 +1,8 @@
 #! /bin/sh
 
 source ~/code/bash/lib/backupdb/libbackupdb.sh
+source ~/code/bash/lib/getoptx/getoptx.bash
+source ~/code/bash/lib/pathn/libpathn.sh
 
 #=======================================================================
 #
@@ -19,12 +21,62 @@ source ~/code/bash/lib/backupdb/libbackupdb.sh
 #        NOTES: --
 #       AUTHOR: Marcelo Auquer, auquer@gmail.com
 #      CREATED: 03/07/2012
-#     REVISION: 03/29/2012
+#     REVISION: 04/01/2012
 #
 #======================================================================= 
 
+#===  FUNCTION =========================================================
+#
+#        NAME: usage
+#
+#       USAGE: usage
+#
+# DESCRIPTION: Print a help message to stdout.
+#
+#=======================================================================
+usage () {
+	cat <<- EOF
+	Usage: backupdb.sh [OPTIONS] PATH...
+	
+	Collect and store in a backup database metadata about files in 
+	the directories listed in PATH...
+
+	 -r
+	 -R
+	--recursive    Do all actions recursively.
+	EOF
+}
+
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+# Parse command line options.
+#-----------------------------------------------------------------------
+
+find_opts[0]="-maxdepth 1"
+while getoptex "r recursive R" "$@"; do
+	case "$OPTOPT" in
+		r)            find_opts[0]="-depth"
+			      ;;
+		recursive)    find_opts[0]="-depth"
+		              ;;
+		R)            find_opts[0]="-depth"
+		              ;;
+	esac
+done
+shift $(($OPTIND-1))
+
+#-----------------------------------------------------------------------
+# Check for command line correctness.
+#-----------------------------------------------------------------------
+
+[[ $# -eq 0 ]] && usage && exit
+[[ $# -gt 1 ]] && rm_subtrees pathnames "$@" || pathnames=$@
+
+#-----------------------------------------------------------------------
+# Setup a connection to the database and change problematic pathnames.
 #-----------------------------------------------------------------------
 
 handle=$(shmysql user=musicb_app password=backup dbname=music_backup) 
@@ -40,7 +92,7 @@ chpathn -rp "$@"
 # database.
 #-----------------------------------------------------------------------
 
-for file in $(find "$@" -type f)
+for file in $(find ${pathnames[@]} $find_opts -type f)
 do
 	file=$(readlink -f $file)
 	if ! is_backedup $handle backedup $(hostname) $file
