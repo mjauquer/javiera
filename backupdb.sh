@@ -79,7 +79,8 @@ shift $(($OPTIND-1))
 # Setup a connection to the database and change problematic pathnames.
 #-----------------------------------------------------------------------
 
-handle=$(shmysql user=musicb_app password=backup dbname=music_backup) 
+handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
+	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
 	echo "backupdb.sh: Unable to establish connection to db." 1>&2

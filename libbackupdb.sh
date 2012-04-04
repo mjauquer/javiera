@@ -1,7 +1,7 @@
 #! /bin/sh
 
-source ~/code/bash/lib/ftype/libftype.sh
-source ~/code/bash/lib/upvars/upvars.sh
+source ~/code/bash/lib-backupdb/libftype.sh
+source ~/code/bash/lib-backupdb/upvars.sh
 
 #=======================================================================
 #

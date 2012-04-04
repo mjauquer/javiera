@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ~/code/bash/lib/upvars/upvars.sh
+source ~/code/bash/lib-pathn/upvars.sh
 
 #===  FUNCTION =========================================================
 #
