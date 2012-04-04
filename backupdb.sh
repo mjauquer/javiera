@@ -1,14 +1,14 @@
 #! /bin/sh
 
-source ~/code/bash/lib/backupdb/libbackupdb.sh
-source ~/code/bash/lib/getoptx/getoptx.bash
-source ~/code/bash/lib/pathn/libpathn.sh
+source ~/code/bash/backupdb/libbackupdb.sh
+source ~/code/bash/backupdb/getoptx.bash
+source ~/code/bash/backupdb/libpathn.sh
 
 #=======================================================================
 #
 #         FILE: backupdb.sh
 #
-#        USAGE: backupdb.sh PATH...
+#        USAGE: backupdb.sh [OPTIONS] PATH...
 #
 #  DESCRIPTION: Store metadata from audio files in music_backup
 #               database.
@@ -92,7 +92,8 @@ chpathn -rp "$@"
 # database.
 #-----------------------------------------------------------------------
 
-for file in $(find ${pathnames[@]} $find_opts -type f)
+echo "$(find ${pathnames[@]} ${find_opts[@]} -type f)"
+for file in $(find ${pathnames[@]} ${find_opts[@]} -type f)
 do
 	file=$(readlink -f $file)
 	if ! is_backedup $handle backedup $(hostname) $file
