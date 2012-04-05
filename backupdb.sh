@@ -93,7 +93,6 @@ chpathn -rp "$@"
 # database.
 #-----------------------------------------------------------------------
 
-echo "$(find ${pathnames[@]} ${find_opts[@]} -type f)"
 for file in $(find ${pathnames[@]} ${find_opts[@]} -type f)
 do
 	file=$(readlink -f $file)
