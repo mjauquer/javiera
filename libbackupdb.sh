@@ -268,7 +268,7 @@ insert_archive () {
 #=======================================================================
 insert_dvd () {
 	shsql $1 $(printf 'INSERT INTO dvd (image_file, dvd_type,
-		dvd_trademark) VALUES (%b, %b, %b);' $2 $3 $4)
+		dvd_trademark) VALUES (%b, "%b", "%b");' $2 $3 $4)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -459,18 +459,22 @@ delete_file () {
 	mimetype=$(shsql $1 $(printf 'SELECT mimetype FROM file 
 		WHERE id="%b";' $2))
 	[[ $? -ne 0 ]] && return 1
-	if [ \( $mimetype == \"audio/x-flac\" \) ] \
-		&& ! delete_flacdata $1 $2
+	if [[ $mimetype = \"audio/x-flac\" ]]
 	then
-		printf 'libbackupdb.sh: error in delete_flacdata
-	       		().' 1>&2
-		return 1
-	elif [ \( $mimetype == \"application/x-iso9660-image\" \) ] \
-		&& ! delete_isodata $1 $2
+		if ! delete_flacdata $1 $2 
+		then
+			printf 'libbackupdb.sh: error in delete_flacdata
+				().' 1>&2
+			return 1
+		fi
+	elif [[ $mimetype = \"application/x-iso9660-image\" ]]
 	then
-		printf 'libbackupdb.sh: error in delete_isodata
-	       		().' 1>&2
-		return 1
+		if ! delete_isodata $1 $2
+		then
+			printf 'libbackupdb.sh: error in delete_isodata
+				().' 1>&2
+			return 1
+		fi
 	fi
 	shsql $1 $(printf 'DELETE FROM file WHERE id="%b";' $2)
 	[[ $? -ne 0 ]] && return 1
