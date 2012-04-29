@@ -98,21 +98,44 @@ get_parentmatcher () {
 		Error: function get_parentmatcher requires one argument.
 		EOF
 	} && exit 1
-	local file="$2"
 	local parent_matcher=
+	local file="$2"
 	slashes="${file//[^\/]}"
 	depth=${#slashes}	
+	
+	#--------------------------------------------------------------
+	# Check for error in pathname (all slashes?)
+	#--------------------------------------------------------------
+
 	if [ ${#file} -eq ${#slashes} ]; then
 		echo "Error: file $file skipped." 2>&1
 		parent_matcher=
 		continue
 	fi
-	subdir_matcher="[^/]*/"
-	while [ $depth -ne 0 ]; do
-		parent_matcher="$parent_matcher$subdir_matcher"
+	
+	#--------------------------------------------------------------
+	# Build the pattern matcher.
+	#--------------------------------------------------------------
+
+	# Is an absolute path?
+	if [[ $file =~ ^/.* ]]
+	then
+		parent_matcher="/"
 		depth=$(($depth-1))
-	done
-	local $1 && upvar $1 $parent_matcher
+		subdir_matcher="[^/]*/"
+		while [ $depth -ne 0 ]; do
+			parent_matcher="$parent_matcher$subdir_matcher"
+			depth=$(($depth-1))
+		done
+		local $1 && upvar $1 $parent_matcher
+	else
+		subdir_matcher="[^/]*/"
+		while [ $depth -ne 0 ]; do
+			parent_matcher="$parent_matcher$subdir_matcher"
+			depth=$(($depth-1))
+		done
+		local $1 && upvar $1 $parent_matcher
+	fi
 }
 
 #===  FUNCTION =========================================================
