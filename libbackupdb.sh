@@ -23,6 +23,27 @@ source ~/code/bash/lib-backupdb/upvars.sh
 
 #===  FUNCTION =========================================================
 #
+#        NAME: escape_chars
+#
+#       USAGE: escape_chars VARNAME STRING
+#
+# DESCRIPTION: Edit STRING inserting backslashes in order to escape SQL
+#              special characters. Store the resulting string in
+#              caller's VARNAME variable.
+#
+#  PARAMETERS: VARNAME The name of a caller's variable.
+#              STRING  The string to be edited.
+#
+#=======================================================================
+escape_chars () {
+	local string="$2"
+	string=${string//\"/\\\"}
+	string=${string//\'/\\\'}
+	local $1 && upvar $1 "$string"
+}
+
+#===  FUNCTION =========================================================
+#
 #        NAME: get_id
 #
 #       USAGE: get_id HANDLE VARNAME HOSTNAME PATHNAME
@@ -361,18 +382,22 @@ insert_flacdata () {
 	[[ $? -ne 0 ]] && return 1
 	local title="$(metaflac --show-tag=title $2)"
 	title="${title##title=}"
+	escape_chars title "$title"
 	title=${title:-NULL} && [[ $title != NULL ]] && \
 		title="\"$title\""
 	local artist="$(metaflac --show-tag=artist $2)"
 	artist="${artist##artist=}"
+	escape_chars artist "$artist"
 	artist=${artist:-NULL} && [[ $artist != NULL ]] && \
 		artist="\"$artist\""
 	local artistsort="$(metaflac --show-tag=artistsort $2)"
 	artistsort="${artistsort##artistsort=}"
+	escape_chars artistsort "$artistsort"
 	artistsort=${artistsort:-NULL} && [[ $artistsort != NULL ]] && \
 		artistsort="\"$artistsort\""
 	local album="$(metaflac --show-tag=album $2)"
 	album="${album##album=}"
+	escape_chars album "$album"
 	album=${album:-NULL} && [[ $album != NULL ]] && \
 		album="\"$album\""
 	local tracknumber="$(metaflac --show-tag=tracknumber $2)"
@@ -617,18 +642,22 @@ update_flacdata () {
 	[[ $? -ne 0 ]] && return 1
 	local title="$(metaflac --show-tag=title $2)"
 	title="${title##title=}"
+	escape_chars title "$title"
 	title=${title:-NULL} && [[ $title != NULL ]] && \
 		title="\"$title\""
 	local artist="$(metaflac --show-tag=artist $2)"
 	artist="${artist##artist=}"
+	escape_chars artist "$artist"
 	artist=${artist:-NULL} && [[ $artist != NULL ]] && \
 		artist="\"$artist\""
 	local artistsort="$(metaflac --show-tag=artistsort $2)"
 	artistsort="${artistsort##artistsort=}"
+	escape_chars artistsort "$artistsort"
 	artistsort=${artistsort:-NULL} && [[ $artistsort != NULL ]] && \
 		artistsort="\"$artistsort\""
 	local album="$(metaflac --show-tag=album $2)"
 	album="${album##album=}"
+	escape_chars album "$album"
 	album=${album:-NULL} && [[ $album != NULL ]] && \
 		album="\"$album\""
 	local tracknumber="$(metaflac --show-tag=tracknumber $2)"
