@@ -1,0 +1,3 @@
+[submodule "pathname"]
+	path = pathname
+	url = git@github.com:mjauquer/bash-pathname.git

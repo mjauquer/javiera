@@ -2,7 +2,7 @@
 
 source ~/code/bash/backupdb/libbackupdb.sh
 source ~/code/bash/backupdb/getoptx.bash
-source ~/code/bash/backupdb/libpathn.sh
+source ~/code/bash/backupdb/pathname/pathname.flib
 
 #=======================================================================
 #
