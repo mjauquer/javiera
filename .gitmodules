@@ -1,3 +1,6 @@
 [submodule "pathname"]
 	path = pathname
 	url = git@github.com:mjauquer/bash-pathname.git
+[submodule "getoptx"]
+	path = getoptx
+	url = https://github.com/mjauquer/bash-getoptx.git

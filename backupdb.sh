@@ -1,7 +1,7 @@
 #! /bin/sh
 
 source ~/code/bash/backupdb/libbackupdb.sh
-source ~/code/bash/backupdb/getoptx.bash
+source ~/code/bash/backupdb/getoptx/getoptx.bash
 source ~/code/bash/backupdb/pathname/pathname.flib
 
 #=======================================================================
