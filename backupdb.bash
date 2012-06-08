@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #=======================================================================
 #
@@ -23,8 +23,8 @@
 #  DESCRIPTION: Keep up to date a backup database.
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               upvars.sh
-#               libbackupdb.sh
+#               getoptx
+#               backupdb.flib
 #               pathname.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in

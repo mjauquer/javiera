@@ -1,25 +1,32 @@
-#! /bin/sh
-
-source ~/code/bash/lib-backupdb/libftype.sh
-source ~/code/bash/backupdb/upvars/upvars.bash
+#! /bin/bash
 
 #=======================================================================
 #
-#         FILE: libbackupdb.sh
+# chpathn.flib <Functions for the backupdb.bash script.>
+# Copyright (C) 2012  Marcelo Javier Auquer
 #
-#  DESCRIPTION: Provides functions to scripts that must interact with
-#               the backup database.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               libftype.sh
-#               upvars.sh
+#               upvars.bash, filetype.flib
 #         BUGS: --
-#        NOTES: --
-#       AUTHOR: Marcelo Auquer, auquer@gmail.com
-#      CREATED: 03/07/2012
-#     REVISION: 03/25/2012
+#        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
+#               the dots).
 #
-#======================================================================= 
+
+source ~/code/bash/backupdb/filetype/filetype.flib
+source ~/code/bash/backupdb/upvars/upvars.bash
 
 #===  FUNCTION =========================================================
 #
@@ -34,7 +41,6 @@ source ~/code/bash/backupdb/upvars/upvars.bash
 #  PARAMETERS: VARNAME The name of a caller's variable.
 #              STRING  The string to be edited.
 #
-#=======================================================================
 escape_chars () {
 	local string="$2"
 	string=${string//\"/\\\"}
@@ -58,7 +64,6 @@ escape_chars () {
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 #
-#=======================================================================
 get_id () {
 	! is_backedup $1 backedup $3 $4 && return 1
 	if [ $backedup == "true" ]
@@ -89,7 +94,6 @@ get_id () {
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 #
-#=======================================================================
 is_backedup () {
 	local count
 	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
@@ -109,7 +113,7 @@ is_backedup () {
 #
 #        NAME: is_archived
 #
-#       USAGE: is_archived HANDLE ID
+#       USAGE: is_archived VARNAME HANDLE ID
 #
 # DESCRIPTION: Do a query on the connected database to find out if ID
 #              matchs the "archived" column of any row in the table
@@ -122,7 +126,6 @@ is_backedup () {
 #              ID        A number value related to the id column of the
 #                        database's file table.
 #
-#=======================================================================
 is_archived () {
 	local count
 	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM archive
@@ -156,7 +159,6 @@ is_archived () {
 #              ID        A number value related to the id column of the
 #                        database's file table.
 #
-#=======================================================================
 is_indvd () {
 	local count
 	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM dvd
@@ -190,7 +192,6 @@ is_indvd () {
 #              ID        A number value related to the id column of the
 #                        database's file table.
 #
-#=======================================================================
 is_archiver () {
 	local count
 	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM archive
@@ -225,7 +226,6 @@ is_archiver () {
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 #
-#=======================================================================
 is_insync () {
 	local tstamp
 	tstamp=$(shsql $1 $(printf 'SELECT last_updated FROM 
@@ -262,7 +262,6 @@ is_insync () {
 #              ARCHIVED_ID The file id number of the archived file. Must
 #                          be passed between <">.
 #
-#=======================================================================
 insert_archive () {
 	shsql $1 $(printf 'INSERT INTO archive (archiver, archived)
 		VALUES (%b, %b);' $2 $3)
@@ -286,7 +285,6 @@ insert_archive () {
 #              DVD_TRADEMARK The trademark or manufacturer of the DVD.
 #                            Must be passed between <">.
 #
-#=======================================================================
 insert_dvd () {
 	shsql $1 $(printf 'INSERT INTO dvd (image_file, dvd_type,
 		dvd_trademark) VALUES (%b, "%b", "%b");' $2 $3 $4)
@@ -309,21 +307,22 @@ insert_dvd () {
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 #
-#=======================================================================
 insert_file () {
 	shsql $1 $(printf 'INSERT INTO file (mimetype, hostname, 
 		pathname, fsize, mtime) VALUES ("%b", "%b", "%b", "%b",
 		"%b");' $(file -b --mime-type $3) $2 $3 \
 		$(stat --format='%s %Y' $3))
 	[[ $? -ne 0 ]] && return 1
-	if is_flac $3
+	is_flac answer $3
+	if [ $answer == "true" ]
 	then
 		local lastid
 		lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
 		[[ $? -ne 0 ]] && return 1
 		! insert_flacdata $1 $3 $lastid && return 1
 	fi
-	if is_iso $3
+	is_iso answer $3
+	if [ $answer == "true" ]
 	then
 		local lastid
 		lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
@@ -346,7 +345,6 @@ insert_file () {
 #  PARAMETERS: HANDLE    A connection to a database.
 #              ID        A number value related to the id column of the
 #                        database's file table.
-#=======================================================================
 insert_iso () {
 	shsql $1 $(printf 'INSERT INTO iso_metadata (file_id) VALUE
 		(%b);' $2)
@@ -368,7 +366,6 @@ insert_iso () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        A number value related to the id column of the
 #                        database's file table.
-#=======================================================================
 insert_flacdata () {
 	local tsamples=\"$(metaflac --show-total-samples $2)\"
 	local sample_rate=\"$(metaflac --show-sample-rate $2)\"
@@ -451,7 +448,6 @@ insert_flacdata () {
 #              ID      A number value related to the id column of the
 #                      database's file table.
 #
-#=======================================================================
 delete_file () {
 	! is_archived $1 archived $2 && return 1
 	! is_indvd $1 indvd $2 && return 1
@@ -518,7 +514,6 @@ delete_file () {
 #
 #  PARAMETERS: HANDLE  A connection to a database.
 #
-#=======================================================================
 delete_orphans () {
 	shsql $1 $(printf 'DELETE FROM file WHERE file.pathname IS NULL
 		AND NOT EXISTS (SELECT archived FROM archive WHERE
@@ -540,7 +535,6 @@ delete_orphans () {
 #              ID      A number value related to the id column of the
 #                      database's file table.
 #
-#=======================================================================
 delete_isodata () {
 	shsql $1 $(printf 'DELETE FROM iso_metadata WHERE 
 		file_id="%b";' $2)
@@ -561,7 +555,6 @@ delete_isodata () {
 #              ID      A number value related to the id column of the
 #                      database's file table.
 #
-#=======================================================================
 delete_flacdata () {
 	shsql $1 $(printf 'DELETE FROM flac_streaminfo WHERE
 		file_id="%b";' $2)
@@ -590,7 +583,6 @@ delete_flacdata () {
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 #
-#=======================================================================
 update_file () {
 	! get_id $1 id $2 $3 && return 1
 	! is_archived $1 archived $id && return 1
@@ -603,7 +595,9 @@ update_file () {
 			pathname="%b";' $(file -b --mime-type $3) \
 			$(stat --format='%s %Y' $3) $2 $3)
 		[[ $? -ne 0 ]] && return 1
-		if is_flac $3; then
+		is_flac answer $3
+		if [ $answer == "true" ]
+		then
 			local id
 			id=$(shsql $1 $(printf 'SELECT id FROM file 
 				WHERE pathname="%b";' $3))
@@ -628,7 +622,6 @@ update_file () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        A number value related to the id column of the
 #                        database's file table.
-#=======================================================================
 update_flacdata () {
 	local tsamples="\"$(metaflac --show-total-samples $2)\""
 	local sample_rate="\"$(metaflac --show-sample-rate $2)\""
