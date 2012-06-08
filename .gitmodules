@@ -4,3 +4,6 @@
 [submodule "getoptx"]
 	path = getoptx
 	url = https://github.com/mjauquer/bash-getoptx.git
+[submodule "upvars"]
+	path = upvars
+	url = git://github.com/mjauquer/bash-upvars.git
