@@ -314,6 +314,7 @@ insert_file () {
 		$(stat --format='%s %Y' $3))
 	[[ $? -ne 0 ]] && return 1
 	is_flac answer $3
+	[[ $? -ne 0 ]] && return 1
 	if [ $answer == "true" ]
 	then
 		local lastid
@@ -322,6 +323,7 @@ insert_file () {
 		! insert_flacdata $1 $3 $lastid && return 1
 	fi
 	is_iso answer $3
+	[[ $? -ne 0 ]] && return 1
 	if [ $answer == "true" ]
 	then
 		local lastid
@@ -596,6 +598,7 @@ update_file () {
 			$(stat --format='%s %Y' $3) $2 $3)
 		[[ $? -ne 0 ]] && return 1
 		is_flac answer $3
+		[[ $? -ne 0 ]] && return 1
 		if [ $answer == "true" ]
 		then
 			local id
