@@ -1,7 +1,5 @@
 #! /bin/bash
 
-#=======================================================================
-#
 # chpathn.flib <Functions for the backupdb.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
@@ -23,14 +21,11 @@
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
-#
 
 source ~/code/bash/backupdb/filetype/filetype.flib
 source ~/code/bash/backupdb/upvars/upvars.bash
 
 #===  FUNCTION =========================================================
-#
-#        NAME: escape_chars
 #
 #       USAGE: escape_chars VARNAME STRING
 #
@@ -49,8 +44,6 @@ escape_chars () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: get_id
 #
 #       USAGE: get_id HANDLE VARNAME HOSTNAME PATHNAME
 #
@@ -77,8 +70,6 @@ get_id () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: is_backedup
 #
 #       USAGE: is_backedup HANDLE HOSTNAME PATHNAME
 #
@@ -111,8 +102,6 @@ is_backedup () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: is_archived
-#
 #       USAGE: is_archived VARNAME HANDLE ID
 #
 # DESCRIPTION: Do a query on the connected database to find out if ID
@@ -143,8 +132,6 @@ is_archived () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: is_indvd
 #
 #       USAGE: is_indvd HANDLE ID
 #
@@ -177,8 +164,6 @@ is_indvd () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: is_archiver
-#
 #       USAGE: is_archiver HANDLE ID
 #
 # DESCRIPTION: Do a query on the connected database to find out if ID
@@ -209,8 +194,6 @@ is_archiver () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: is_insync
 #
 #       USAGE: is_insync HANDLE HOSTNAME PATHNAME
 #
@@ -250,8 +233,6 @@ is_insync () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: insert_archive
-#
 #       USAGE: insert_archive HANDLE ARCHIVER_ID ARCHIVED_ID
 #
 # DESCRIPTION: Insert in the archive table of the backup database a row.
@@ -270,8 +251,6 @@ insert_archive () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: insert_dvd
 #
 #       USAGE: insert_dvd HANDLE IMAGE_ID DVD_TYPE DVD_TRADEMARK
 #
@@ -293,8 +272,6 @@ insert_dvd () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: insert_file
 #
 #       USAGE: insert_file HANDLE HOSTNAME PATHNAME
 #
@@ -336,8 +313,6 @@ insert_file () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: insert_iso
-#
 #       USAGE: insert_iso HANDLE PATHNAME ID
 #
 # DESCRIPTION: Collect metadata related to the iso file pointed by
@@ -355,8 +330,6 @@ insert_iso () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: insert_flacdata
 #
 #       USAGE: insert_flacdata HANDLE PATHNAME ID
 #
@@ -439,8 +412,6 @@ insert_flacdata () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: delete_file
-#
 #       USAGE: delete_file HANDLE ID
 #
 # DESCRIPTION: Delete from the database all the records corresponding
@@ -506,8 +477,6 @@ delete_file () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: delete_orphans
-#
 #       USAGE: delete_orphans HANDLE
 #
 # DESCRIPTION: Delete from table "file" all the records with
@@ -526,8 +495,6 @@ delete_orphans () {
 
 #===  FUNCTION =========================================================
 #
-#        NAME: delete_isodata
-#
 #       USAGE: delete_isodata HANDLE ID
 #
 # DESCRIPTION: Delete from the database all the records corresponding
@@ -545,8 +512,6 @@ delete_isodata () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: delete_flacdata
 #
 #       USAGE: delete_flacdata HANDLE ID
 #
@@ -571,8 +536,6 @@ delete_flacdata () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: update_file
 #
 #       USAGE: update_file HANDLE HOSTNAME PATHNAME
 #
@@ -612,8 +575,6 @@ update_file () {
 }
 
 #===  FUNCTION =========================================================
-#
-#        NAME: update_flacdata
 #
 #       USAGE: update_flacdata HANDLE PATHNAME ID
 #

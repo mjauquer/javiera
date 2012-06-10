@@ -1,7 +1,5 @@
 #! /bin/bash
 
-#=======================================================================
-#
 # dir2iso.bash (See description below).
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
@@ -28,13 +26,10 @@
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
-#
 
 source ~/code/bash/backupdb/backupdb.flib
 
 #===  FUNCTION =========================================================
-#
-#        NAME: usage
 #
 #       USAGE: usage
 #

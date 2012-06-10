@@ -1,7 +1,5 @@
 #! /bin/bash
 
-#=======================================================================
-#
 # backupdb.bash (See description below).
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
