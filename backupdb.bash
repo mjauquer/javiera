@@ -54,9 +54,24 @@ usage () {
 	EOF
 }
 
+#===  FUNCTION =========================================================
+#
+#       USAGE: error_exit [MESSAGE]
+#
+# DESCRIPTION: Function for exit due to fatal program error.
+#
+#   PARAMETER: MESSAGE An optional description of the error.
+#
+error_exit () {
+	echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
+	exit 1
+}
+
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
+
+PROGNAME=$(basename $0)
 
 # Parse command line options.
 find_opts[0]="-maxdepth 1"
@@ -82,8 +97,7 @@ handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
-	echo "backupdb.sh: Unable to establish connection to db." 1>&2
-	exit 1
+	error_exit "$LINENO: Unable to establish connection to db."
 fi
 chpathn -rp "$@"
 
@@ -95,16 +109,14 @@ do
 	is_backedup $handle backedup $(hostname) $file
 	if [ $? -ne 0 ]
 	then
-		echo "backupdb.sh: error in is_backedup ()." 1>&2
-		exit 1
+		error_exit "$LINENO: Error after calling is_backedup()."
 	fi
 	if [ $backedup == "true" ]
 	then
 		is_insync $handle insync $(hostname) $file
 		if [ $? -ne 0 ]
 		then
-			echo "backupdb.sh: error in is_insync ()." 1>&2
-			exit 1
+			error_exit "$LINENO: Error after calling is_insync()."
 		fi
 		if [ $insync == "true" ]
 		then
@@ -113,16 +125,14 @@ do
 			update_file $handle $(hostname) $file 
 			if [ $? -ne 0 ]
 			then
-				echo "backupdb.sh: error in update_file ()." 1>&2
-				exit 1
+				error_exit "$LINENO: Error after calling update_file()."
 			fi
 		fi
 	else
 		insert_file $handle $(hostname) $file 
 		if [ $? -ne 0 ]
 		then
-			echo "backupdb.sh: error in insert_file ()." 1>&2
-			exit 1
+			error_exit "$LINENO: Error after calling insert_file()."
 		fi
 	fi
 done
@@ -146,8 +156,7 @@ shsql $handle "SELECT id, pathname FROM file;" | (
 		delete_file $handle $id
 		if [ $? -ne 0 ]
 		then
-			echo "backupdb: error in delete_file ()." 1>&2
-			exit 1
+			error_exit "$LINENO: Error after calling delete_file()."
 		fi
 	done
 )
