@@ -90,20 +90,54 @@ shift $(($OPTIND-1))
 
 # Check for command line correctness.
 [[ $# -eq 0 ]] && usage && exit
-[[ $# -gt 1 ]] && rm_subtrees pathnames "$@" || pathnames=$@
 
-# Setup a connection to the database and change problematic pathnames.
+# Setup a connection to the database.
 handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Unable to establish connection to db."
 fi
-chpathn -rp "$@"
 
-# Search in PATH... for file's metadata and insert/update it in the
+# Change problematic pathnames saving previously the corresponding inode.
+declare -a INODES
+declare -a TYPE_FILE # "d" for directories, "f" for regular files.
+for arg
+do
+	if [ -d "$arg" ]
+	then
+		TYPE_FILE+=( d )
+		INODES+=($(stat -c %i "$arg"))
+	elif [ -f "$arg" ]
+	then
+		TYPE_FILE+=( f )
+		INODES+=($(stat -c %i "$arg"))
+	fi
+done
+chpathn -rp "$@"
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling chpathn)."
+fi
+
+# Find the new pathname of the files and directories passed as arguments.
+declare -a FILES
+for (( i=0; i<${#INODES[@]}; i++ )) 
+do
+	if [ ${TYPE_FILE[i]} == d ]
+	then
+		DIR=$(find /home/marce/ -depth -inum ${INODES[i]} -type d)
+		FILES+=($(find $DIR ${find_opts[@]} -type f))
+	fi
+	if [ ${TYPE_FILE[i]} == f ]
+	then
+		FILES+=($(find /home/marce/ -depth -inum ${INODES[i]} -type f))
+	fi
+done
+
+# For every file in FILES, insert or update its metadata in the
 # database.
-for file in $(find ${pathnames[@]} ${find_opts[@]} -type f)
+for file in ${FILES[@]}
 do
 	file=$(readlink -f $file)
 	is_backedup $handle backedup $(hostname) $file
