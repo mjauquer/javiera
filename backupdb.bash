@@ -120,22 +120,8 @@ then
 	error_exit "$LINENO: Error after calling chpathn)."
 fi
 
-# Find the new pathname of the files and directories passed as arguments.
-declare -a FILES
-for (( i=0; i<${#INODES[@]}; i++ )) 
-do
-	if [ ${TYPE_FILE[i]} == d ]
-	then
-		DIR=$(find /home/marce/ -depth -inum ${INODES[i]} -type d)
-		FILES+=($(find $DIR ${find_opts[@]} -type f))
-	fi
-	if [ ${TYPE_FILE[i]} == f ]
-	then
-		FILES+=($(find /home/marce/ -depth -inum ${INODES[i]} -type f))
-	fi
-done
-
-# Find the new pathname of the files and directories passed as arguments.
+# Get the pathnames of the files and directories passed as arguments,
+# after calling to chpathn.
 declare -a FILES
 for (( i=0; i<${#INODES[@]}; i++ )) 
 do
