@@ -76,7 +76,10 @@ get_id () {
 # DESCRIPTION: Do a query on the connected database to find out if data
 #              about the file pointed by PATHNAME already exists in the
 #              database. Store "true" in the caller's VARNAME variable
-#              if it is so. Otherwise, store "false".
+#              if it is so. If ther is a record with a sha1 value
+#              corresponding to the file being query and no value for
+#              columns 'pathname' and 'hostname', store "recycle".
+#              Otherwise, store "false".
 #
 #  PARAMETERS: HANDLE    A connection to a database.
 #              VARNAME   The name of a caller's variable.
@@ -86,16 +89,26 @@ get_id () {
 #                        about.
 #
 is_backedup () {
-	local count
-	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
-		hostname="%b" AND pathname="%b";' $3 $4))
-	[[ $? -ne 0 ]] && return 1
+	local match
+	local match2
 	local answer
-	if [ $count == '"0"' ]
+	match=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
+		hostname="%b" AND pathname="%b";' $3 $4))
+	echo "match: $match"
+	[[ $? -ne 0 ]] && return 1
+	match2=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
+		sha1="%b" AND hostname="" AND pathname="";' \
+		$(sha1sum $4 | cut -c1-40)))
+	echo "match2: $match2"
+	[[ $? -ne 0 ]] && return 1
+	if [ $match == '"1"' ]
 	then
-		answer="false"
+		answer=true
+	elif [ $match2 == '"1"' ]
+	then
+		answer=recycle
 	else
-		answer="true"
+		answer=false
 	fi
 	local $2 && upvar $2 $answer
 }
@@ -538,6 +551,33 @@ delete_flacdata () {
 
 #===  FUNCTION =========================================================
 #
+#       USAGE: recycle_file HANDLE HOSTNAME PATHNAME
+#
+# DESCRIPTION: If there is a record in 'file' table with the sha1 value
+#              of the file pointed by PATHNAME and no value for columns
+#              'pathname'and 'hostname', reuse that record to insert
+#              metadata about that file in the database.
+#
+#  PARAMETERS: HANDLE    A connection to a database.
+#              HOSTNAME  The name of the host machine where the file it
+#                        is being query about is stored. 
+#              PATHNAME  The pathname of the file it is being query
+#                        about.
+#
+recycle_file () {
+	shsql $1 $(printf 'UPDATE file SET mimetype="%b",
+		hostname="%b", pathname="%b", basename="%b", 
+		fsize="%b", mtime="%b" WHERE sha1="%b" AND
+		hostname="" AND pathname="";' \
+		$(file -b --mime-type $3) $2 $3 $(basename $3)\
+		$(stat --format='%s %Y' $3) \
+		$(sha1sum $3 | cut -c1-40))
+	[[ $? -ne 0 ]] && return 1
+	return 0
+}
+
+#===  FUNCTION =========================================================
+#
 #       USAGE: update_file HANDLE HOSTNAME PATHNAME
 #
 # DESCRIPTION: Collect metadata related to the file pointed by PATHNAME
@@ -556,12 +596,12 @@ update_file () {
 	then
 		! insert_file $1 $2 $3 && return 1
 	else
-		shsql $1 $(printf 'UPDATE file SET mimetype="%b", 
-			fsize="%b", mtime="%b", sha1="%b" WHERE 
-			hostname="%b" AND pathname="%b";' \
-			$(file -b --mime-type $3) \
+		shsql $1 $(printf 'UPDATE file SET mimetype="%b",
+			hostname="%b", pathname="%b", basename="%b", 
+			fsize="%b", mtime="%b" WHERE sha1="%b";' \
+			$(file -b --mime-type $3) $2 $3 $(basename $3)\
 			$(stat --format='%s %Y' $3) \
-			$(sha1sum $3 | cut -c1-40) $2 $3)
+			$(sha1sum $3 | cut -c1-40))
 		[[ $? -ne 0 ]] && return 1
 		is_flac answer $3
 		[[ $? -ne 0 ]] && return 1

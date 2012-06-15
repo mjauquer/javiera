@@ -91,14 +91,6 @@ shift $(($OPTIND-1))
 # Check for command line correctness.
 [[ $# -eq 0 ]] && usage && exit
 
-# Setup a connection to the database.
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Unable to establish connection to db."
-fi
-
 # Change problematic pathnames saving previously the corresponding inode.
 declare -a INODES
 declare -a TYPE_FILE # "d" for directories, "f" for regular files.
@@ -136,8 +128,18 @@ do
 	fi
 done
 
-# For every file in FILES, insert or update its metadata in the
-# database.
+#======================================================================
+# Update the database.
+#======================================================================
+
+# Setup a connection to the database.
+handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
+	dbname=$BACKUPDB_DBNAME) 
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Unable to establish connection to db."
+fi
+
 for file in ${FILES[@]}
 do
 	file=$(readlink -f $file)
@@ -153,7 +155,7 @@ do
 		then
 			error_exit "$LINENO: Error after calling is_insync()."
 		fi
-		if [ $insync == "true" ]
+		if [ $insync == true ]
 		then
 			continue
 		else
@@ -163,11 +165,19 @@ do
 				error_exit "$LINENO: Error after calling update_file()."
 			fi
 		fi
-	else
+	elif [ $backedup == false ]
+	then
 		insert_file $handle $(hostname) $file 
 		if [ $? -ne 0 ]
 		then
 			error_exit "$LINENO: Error after calling insert_file()."
+		fi
+	elif [ $backedup == recycle ]
+	then
+		recycle_file $handle $(hostname) $file
+		if [ $? -ne 0 ]
+		then
+			error_exit "$LINENO: Error after calling recycle_file()."
 		fi
 	fi
 done
