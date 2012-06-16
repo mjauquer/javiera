@@ -125,10 +125,6 @@ then
 	error_exit "$LINENO: $1 already exists in $(pwd)."
 fi
 
-# Update the backup database before attempting to create a tar file.
-[[ -a $1 ]] && rm $1
-backupdb .
-
 # Create a temporary directory where to work in.
 tempdir=$(mktemp -d tmp.XXX)
 chmod 755 $tempdir
