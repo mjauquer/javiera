@@ -365,31 +365,31 @@ insert_flacdata () {
 		"$tsamples" "$sample_rate" "$channels" "$bps" "$md5")
 	[[ $? -ne 0 ]] && return 1
 	local title="$(metaflac --show-tag=title $2)"
-	title="${title##title=}"
+	title="${title##[Tt][Ii][Tt][Ll][Ee]=}"
 	escape_chars title "$title"
 	title=${title:-NULL} && [[ $title != NULL ]] && \
 		title="\"$title\""
 	local artist="$(metaflac --show-tag=artist $2)"
-	artist="${artist##artist=}"
+	artist="${artist##[Aa][Rr][Tt][Ii][Ss][Tt]=}"
 	escape_chars artist "$artist"
 	artist=${artist:-NULL} && [[ $artist != NULL ]] && \
 		artist="\"$artist\""
 	local artistsort="$(metaflac --show-tag=artistsort $2)"
-	artistsort="${artistsort##artistsort=}"
+	artistsort="${artistsort##[Aa][Rr][Tt[Ii][Ss][Tt][Ss][Oo][Rr][Tt]=}"
 	escape_chars artistsort "$artistsort"
 	artistsort=${artistsort:-NULL} && [[ $artistsort != NULL ]] && \
 		artistsort="\"$artistsort\""
 	local album="$(metaflac --show-tag=album $2)"
-	album="${album##album=}"
+	album="${album##[Aa][Ll][Bb][Uu][Mm]=}"
 	escape_chars album "$album"
 	album=${album:-NULL} && [[ $album != NULL ]] && \
 		album="\"$album\""
 	local tracknumber="$(metaflac --show-tag=tracknumber $2)"
-	tracknumber="${tracknumber##tracknumber=}"
+	tracknumber="${tracknumber##[Tt][Rr][Aa][Cc][Kk][Nn][Uu][Mm][Bb][Ee][Rr]=}"
 	tracknumber=${tracknumber:-NULL} && [[ $tracknumber != NULL ]] && \
 		tracknumber="\"$tracknumber\""
 	local totaltracks="$(metaflac --show-tag=totaltracks $2)"
-	totaltracks="${totaltracks##totaltracks=}"
+	totaltracks="${totaltracks##[Tt][Oo][Tt][Aa][Ll][Tt][Rr][Aa][Cc][Kk][Ss]=}"
 	totaltracks=${totaltracks:-NULL} && [[ $totaltracks != NULL ]] && \
 		totaltracks="\"$totaltracks\""
 	shsql $1 $(printf 'INSERT INTO flac_comments (file_id, title, 
@@ -639,31 +639,31 @@ update_flacdata () {
 		"$tsamples" "$sample_rate" "$channels" "$bps" "$md5" $3)
 	[[ $? -ne 0 ]] && return 1
 	local title="$(metaflac --show-tag=title $2)"
-	title="${title##title=}"
+	title="${title##[Tt][Ii][Tt][Ll][Ee]=}"
 	escape_chars title "$title"
 	title=${title:-NULL} && [[ $title != NULL ]] && \
 		title="\"$title\""
 	local artist="$(metaflac --show-tag=artist $2)"
-	artist="${artist##artist=}"
+	artist="${artist##[Aa][Rr][Tt][Ii][Ss][Tt]=}"
 	escape_chars artist "$artist"
 	artist=${artist:-NULL} && [[ $artist != NULL ]] && \
 		artist="\"$artist\""
 	local artistsort="$(metaflac --show-tag=artistsort $2)"
-	artistsort="${artistsort##artistsort=}"
+	artistsort="${artistsort##[Aa][Rr][Tt[Ii][Ss][Tt][Ss][Oo][Rr][Tt]=}"
 	escape_chars artistsort "$artistsort"
 	artistsort=${artistsort:-NULL} && [[ $artistsort != NULL ]] && \
 		artistsort="\"$artistsort\""
 	local album="$(metaflac --show-tag=album $2)"
-	album="${album##album=}"
+	album="${album##[Aa][Ll][Bb][Uu][Mm]=}"
 	escape_chars album "$album"
 	album=${album:-NULL} && [[ $album != NULL ]] && \
 		album="\"$album\""
 	local tracknumber="$(metaflac --show-tag=tracknumber $2)"
-	tracknumber="${tracknumber##tracknumber=}"
+	tracknumber="${tracknumber##[Tt][Rr][Aa][Cc][Kk][Nn][Uu][Mm][Bb][Ee][Rr]=}"
 	tracknumber=${tracknumber:-NULL} && [[ $tracknumber != NULL ]] && \
 		tracknumber="\"$tracknumber\""
 	local totaltracks="$(metaflac --show-tag=totaltracks $2)"
-	totaltracks="${totaltracks##totaltracks=}"
+	totaltracks="${totaltracks##[Tt][Oo][Tt][Aa][Ll][Tt][Rr][Aa][Cc][Kk][Ss]=}"
 	totaltracks=${totaltracks:-NULL} && [[ $totaltracks != NULL ]] && \
 		totaltracks="\"$totaltracks\""
 	shsql $1 $(printf 'UPDATE flac_comments SET title=%b, 
