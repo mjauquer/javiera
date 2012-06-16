@@ -19,7 +19,7 @@
 #        USAGE: See function usage below.
 #
 #  DESCRIPTION: Create a tar archive named NAME and include in it the
-#               files founded in PATH...
+#               files founded in pathname...
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
 #               backupdb.flib
@@ -40,39 +40,89 @@ source ~/code/bash/backupdb/getoptx/getoptx.bash
 #
 usage () {
 	cat <<- EOF
-	Usage: dir2tar TAR_NAME PATH...
+	Usage: dir2tar TAR_NAME pathname...
 	dir2tar --listed-in TEXT_FILE TAR_NAME
 
 	Create a tar archive named NAME and include in it the
-	files founded in PATH...
+	files founded in pathname...
 	EOF
+}
+
+#===  FUNCTION =========================================================
+#
+#       USAGE: error_exit [MESSAGE]
+#
+# DESCRIPTION: Function for exit due to fatal program error.
+#
+#   PARAMETER: MESSAGE An optional description of the error.
+#
+error_exit () {
+	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	exit 1
 }
 
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
+progname=$(basename $0)
+
 # Parse command line options.
-ind=0
-while getoptex "listed-in:" "$@"; do
+declare -a pathnames
+while getoptex "listed-in:" "$@"
+do
 	case "$OPTOPT" in
-		listed-in)  while read line
-		            do
-			    	[[ $line =~ Total:.* ]] && continue
-					paths[ind]="$line"
-					ind=$((ind+1))
-			    done < $(readlink -f $OPTARG)
+		listed-in) txtfile="$OPTARG"
 		            ;;
 	esac
 done
+if [ "$txtfile" ]
+then
+	if [ -a $(readlink -f "$txtfile") ]
+	then
+		while read line
+		do
+			[[ $line =~ Total:.* ]] && continue
+			pathnames+=( "$line" )
+		done < $(readlink -f "$txtfile")
+	else
+            	error_exit "$LINENO: $txtfile not found."
+	fi
+fi
 shift $(($OPTIND-1))
 
-# Checking for a well-formatted command line.
+# Add to the list of pathnames to be processed, those which were passed
+# as command line arguments.
+pathnames+=( ${@:2} )
+
+# Check the existence of the files passed as arguments.
+declare -a notfound
+for pathname in ${pathnames[@]}
+do
+	if [ \( ! -d $pathname \) -a \( ! -f $pathname \) ]
+	then
+		notfound+=("$pathname")
+	fi
+done
+if [ ${#notfound[@]} -ne 0 ]
+then
+	error_exit "$LINENO: The following arguments do not exist as
+regular files or directories in the filesystem:
+$(for file in ${notfound[@]}; do echo "$file"; done)"
+fi
+
+# Check for a well-formatted pathname of the output tar file.
 [[ $# -eq 0 ]] && usage && exit
 if [[ $1 =~ .*/$ ]]
 then
-	echo "dir2tar.sh: First arg must be a regular filename." 1>&2
-	exit 1
+	error_exit "$LINENO: First arg must be a regular filename."
+fi
+
+# Check if the specified output tar file already exists in the working
+# directory.
+if [ -f $1 ]
+then
+	error_exit "$LINENO: $1 already exists in $(pwd)."
 fi
 
 # Update the backup database before attempting to create a tar file.
@@ -82,13 +132,16 @@ backupdb .
 # Create a temporary directory where to work in.
 tempdir=$(mktemp -d tmp.XXX)
 chmod 755 $tempdir
-mv ${paths[@]:-${@:2}} $tempdir
+mv ${pathnames[@]} $tempdir
 cd $tempdir
 pathlist=( $(find $(ls)) )
 
 # Create a tar file.
 tar -cf $1 ${pathlist[@]}
-[[ $? -ne 0 ]] && exit 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling tar utility."
+fi
 
 # Update the backup database with data about the created tar file.
 backupdb -r .
@@ -103,18 +156,17 @@ handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
-	echo "dir2tar.sh: Unable to establish connection to db." 1>&2
-	exit 1
+	error_exit "$LINENO: Unable to establish connection to db."
 fi
 
 # Separate in two different arrays directories and regular files.
-for path in ${pathlist[@]}
+declare -i ind1
+for pathname in ${pathlist[@]}
 do
-	path=$(readlink -f $path)
+	path=$(readlink -f $pathname)
 	if [ -f $path ]
 	then
-		files[$ind1]=$path
-		ind1=$((ind1+1))
+		files[ind++]=$path
 	fi
 done
 
@@ -122,8 +174,7 @@ done
 tarpath="$(readlink -f $1)"
 if ! get_id $handle archiver_id $(hostname) $tarpath
 then
-	echo "dir2tar.sh: error in get_id ()." 1>&2
-	exit 1
+	error_exit "$LINENO: Error after calling get_id()."
 fi
 
 # Insert archive relationships between the tar file and its content.
@@ -132,14 +183,12 @@ do
 	# Get the id of the archived file.
 	if ! get_id $handle archived_id $(hostname) $file
 	then
-		echo "dir2tar.sh: error in get_id ()." 1>&2
-		exit 1
+		error_exit "$LINENO: Error after calling get_id()."
 	fi
 	# Insert the archive relationship.
 	if ! insert_archive $handle $archiver_id $archived_id
 	then
-		echo "dir2tar.sh: error in insert_archive ()" 1>&2
-		exit 1
+		error_exit "$LINENO: Error after calling insert_archive()."
 	fi
 done
 

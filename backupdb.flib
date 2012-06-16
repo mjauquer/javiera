@@ -94,12 +94,10 @@ is_backedup () {
 	local answer
 	match=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
 		hostname="%b" AND pathname="%b";' $3 $4))
-	echo "match: $match"
 	[[ $? -ne 0 ]] && return 1
 	match2=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
 		sha1="%b" AND hostname="" AND pathname="";' \
 		$(sha1sum $4 | cut -c1-40)))
-	echo "match2: $match2"
 	[[ $? -ne 0 ]] && return 1
 	if [ $match == '"1"' ]
 	then
