@@ -125,23 +125,35 @@ then
 	error_exit "$LINENO: $1 already exists in $(pwd)."
 fi
 
-# Create a temporary directory where to work in.
+# Create a temporary directory and move there all the files and
+# directories to be archived.
 tempdir=$(mktemp -d tmp.XXX)
 chmod 755 $tempdir
 mv ${pathnames[@]} $tempdir
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling mv command."
+fi
 cd $tempdir
-pathlist=( $(find $(ls)) )
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling cd command."
+fi
 
 # Create a tar file.
+pathlist=( $(find $(ls)) )
 tar -cf $1 ${pathlist[@]}
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling tar utility."
 fi
 
-# Update the backup database with data about the created tar file.
+# Update the backup database.
 backupdb -r .
-[[ $? -ne 0 ]] && exit 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling backupdb."
+fi
 
 #-----------------------------------------------------------------------
 # Update the backup database with the archive relationships.
@@ -152,7 +164,7 @@ handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Unable to establish connection to db."
+	error_exit "$LINENO: Unable to establish connection to $BACKUPDB_DBNAME database."
 fi
 
 # Separate in two different arrays directories and regular files.
@@ -193,11 +205,20 @@ done
 #-----------------------------------------------------------------------
 
 mv $1 ..
-[[ $? -ne 0 ]] && exit 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling mv command."
+fi
 cd ..
-[[ $? -ne 0 ]] && exit 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling cd command."
+fi
 rm -r $tempdir
-[[ $? -ne 0 ]] && exit 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling rm command."
+fi
 
 # Update the backup database with this last movement.
 shsql $handle $(printf 'UPDATE file SET pathname="%b" WHERE id=%b;' \
