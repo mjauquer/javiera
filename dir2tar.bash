@@ -58,6 +58,7 @@ usage () {
 #
 error_exit () {
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
@@ -65,10 +66,47 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-progname=$(basename $0)
+# If no argument were passed, print usage message and exit.
+[[ $# -eq 0 ]] && usage && exit
+
+# Variables declaration.
+declare progname=$(basename $0)
+
+declare -a pathnames # A list of the pathnames of the files and
+                     # directories that have been passed to this script.
+
+declare txtfile      # The pathname of the file passed as argument to
+                     # the --listed-in option.
+
+declare -a notfound  # A list of pathnames passed as arguments to this
+                     # script and that do not point to existing files or
+		     # directories in the filesystem.
+
+declare tempdir      # The pathname of a temporal directory where the
+                     # files and directories will be processed.
+
+declare handle       # Required by shsql. A connection to the database.
+
+declare user         # Required by shsql. The user name to be used to
+                     # while connecting to the database.
+
+declare password     # Required by shsql. The password to be used while
+                     # connecting to the database.
+
+declare dbname       # Required by shsql. The name of the database.
+
+declare -a regfiles  # Same as pathnames variable, but only contains
+                     # the pathnames that point to regular files.
+
+declare tarfile      # The pathname of the tar file to be created.
+
+declare archiver_id  # The id number in the file table of the database
+                     # of the created tar file.
+
+declare archived_id  # The id number in the file table of the database
+                     # of a file archived in the tar file.
 
 # Parse command line options.
-declare -a pathnames
 while getoptex "listed-in:" "$@"
 do
 	case "$OPTOPT" in
@@ -96,7 +134,6 @@ shift $(($OPTIND-1))
 pathnames+=( ${@:2} )
 
 # Check the existence of the files passed as arguments.
-declare -a notfound
 for pathname in ${pathnames[@]}
 do
 	if [ \( ! -d $pathname \) -a \( ! -f $pathname \) ]
@@ -111,8 +148,7 @@ regular files or directories in the filesystem:
 $(for file in ${notfound[@]}; do echo "$file"; done)"
 fi
 
-# Check for a well-formatted pathname of the output tar file.
-[[ $# -eq 0 ]] && usage && exit
+# Check if the pathname of the output tar file is a valid one.
 if [[ $1 =~ .*/$ ]]
 then
 	error_exit "$LINENO: First arg must be a regular filename."
@@ -125,7 +161,7 @@ then
 	error_exit "$LINENO: $1 already exists in $(pwd)."
 fi
 
-# Create a temporary directory and move there all the files and
+# Create a temporary directory and move into it all the files and
 # directories to be archived.
 tempdir=$(mktemp -d tmp.XXX)
 chmod 755 $tempdir
@@ -141,8 +177,8 @@ then
 fi
 
 # Create a tar file.
-pathlist=( $(find $(ls)) )
-tar -cf $1 ${pathlist[@]}
+pathnames=( $(find $(ls)) )
+tar -cf $1 ${pathnames[@]}
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling tar utility."
@@ -167,26 +203,26 @@ then
 	error_exit "$LINENO: Unable to establish connection to $BACKUPDB_DBNAME database."
 fi
 
-# Separate in two different arrays directories and regular files.
-declare -i ind1
-for pathname in ${pathlist[@]}
-do
-	path=$(readlink -f $pathname)
-	if [ -f $path ]
-	then
-		files[ind++]=$path
-	fi
-done
-
 # Get the id of the created tar file.
-tarpath="$(readlink -f $1)"
-if ! get_id $handle archiver_id $(hostname) $tarpath
+tarfile="$(readlink -f $1)"
+if ! get_id $handle archiver_id $(hostname) $tarfile
 then
 	error_exit "$LINENO: Error after calling get_id()."
 fi
 
+# Make a list of the regular files that have been archived.
+for pathname in ${pathnames[@]}
+do
+	pathname=$(readlink -f $pathname)
+	if [ -f $pathname ]
+	then
+		regfiles+=( $pathname )
+	fi
+done
+unset -v pathname
+
 # Insert archive relationships between the tar file and its content.
-for file in ${files[@]}
+for file in ${regfiles[@]}
 do
 	# Get the id of the archived file.
 	if ! get_id $handle archived_id $(hostname) $file
@@ -199,6 +235,7 @@ do
 		error_exit "$LINENO: Error after calling insert_archive()."
 	fi
 done
+unset -v file
 
 #-----------------------------------------------------------------------
 # Remove the temporary directory.
@@ -220,8 +257,25 @@ then
 	error_exit "$LINENO: Error after calling rm command."
 fi
 
+#-----------------------------------------------------------------------
 # Update the backup database with this last movement.
+#-----------------------------------------------------------------------
+
+# Update the pathname of the tar file.
 shsql $handle $(printf 'UPDATE file SET pathname="%b" WHERE id=%b;' \
 	$(readlink -f $1) $archiver_id)
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error while trying to update the database."
+fi
+
+# This will reflect in the database the deletion of the temporal
+# directory.
 backupdb -r .
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error while trying to update the database."
+fi
+
+# Close the connection to the database.
 shsqlend $handle
