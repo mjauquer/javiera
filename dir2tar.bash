@@ -66,9 +66,6 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# If no argument were passed, print usage message and exit.
-[[ $# -eq 0 ]] && usage && exit
-
 # Variables declaration.
 declare progname=$(basename $0)
 
@@ -87,14 +84,6 @@ declare tempdir      # The pathname of a temporal directory where the
 
 declare handle       # Required by shsql. A connection to the database.
 
-declare user         # Required by shsql. The user name to be used to
-                     # while connecting to the database.
-
-declare password     # Required by shsql. The password to be used while
-                     # connecting to the database.
-
-declare dbname       # Required by shsql. The name of the database.
-
 declare -a regfiles  # Same as pathnames variable, but only contains
                      # the pathnames that point to regular files.
 
@@ -105,6 +94,9 @@ declare archiver_id  # The id number in the file table of the database
 
 declare archived_id  # The id number in the file table of the database
                      # of a file archived in the tar file.
+
+# If no argument were passed, print usage message and exit.
+[[ $# -eq 0 ]] && usage && exit
 
 # Parse command line options.
 while getoptex "listed-in:" "$@"
@@ -200,12 +192,13 @@ handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Unable to establish connection to $BACKUPDB_DBNAME database."
+	error_exit "$LINENO: Error after calling shmysql utility."
 fi
 
 # Get the id of the created tar file.
 tarfile="$(readlink -f $1)"
-if ! get_id $handle archiver_id $(hostname) $tarfile
+get_id $handle archiver_id $(hostname) $tarfile
+if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling get_id()."
 fi
@@ -225,12 +218,15 @@ unset -v pathname
 for file in ${regfiles[@]}
 do
 	# Get the id of the archived file.
-	if ! get_id $handle archived_id $(hostname) $file
+	get_id $handle archived_id $(hostname) $file
+	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling get_id()."
 	fi
+
 	# Insert the archive relationship.
-	if ! insert_archive $handle $archiver_id $archived_id
+	insert_archive $handle $archiver_id $archived_id
+	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling insert_archive()."
 	fi

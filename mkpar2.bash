@@ -49,7 +49,8 @@ usage () {
 #   PARAMETER: MESSAGE An optional description of the error.
 #
 error_exit () {
-	echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
+	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
@@ -57,39 +58,75 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-PROGNAME=$(basename $0)
-
-# Check for command line correctness.
+# If no argument were passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
-declare -a NOTFILES
-for ARG
+
+# Variables declaration.
+declare progname=$(basename $0)
+
+declare -a notfiles   # A list of pathnames that do not correspond to
+                      # regular files.
+
+declare -a found_par2 # Used if there were par2 files in the current
+                      # directory before this script was called.
+
+declare -a inodes     # A list of the inodes of the files whose
+                      # pathnames were passed as arguments to this
+		      # script.
+
+declare -a files      # A list of the current pathnames of the files
+                      # whose pathnames were passed to this script
+		      # (needed because may have been changed since this
+		      # script was called).
+
+declare blocksize     # The block size of the par2 parity volumes.
+
+declare blockcount    # The number of parity blocks to be build.
+
+declare outputinfo    # The pathname of a text file where the output of
+                      # the par2 command will be writen.
+
+declare handle        # Required by shsql. A connection to the database.
+
+declare softw         # The name and version of the par2 command.
+
+declare session_id    # A number assigned by the database to the par2
+                      # session.
+
+# Check if all of the arguments are pathnames corresponding to regular
+# files.
+for arg
 do
-	if [ ! -f "$(readlink -f "$ARG")" ]
+	if [ ! -f "$(readlink -f "$arg")" ]
 	then
-		NOTFILES+=( "$ARG" )
+		notfiles+=( "$arg" )
 	fi
 done
-if [ ${#NOTFILES} -ne 0 ]
+unset -v arg
+
+# If any of the pathnames passed is not a regular file, exit with
+# message.
+if [ ${#notfiles} -ne 0 ]
 then
 	error_exit "$LINENO: Only regular files can be passed as arguments.
 The following arguments are not regular files:
-$(for notfile in ${NOTFILES[@]}; do echo "$notfile"; done)"
+$(for notfile in ${notfiles[@]}; do echo "$notfile"; done)"
 fi
 
 # Check if there are par2 files in the current working directory.
-declare -a FOUND_PAR2
-FOUND_PAR2="$(find . -regex '.*par2')"
-if [ "$FOUND_PAR2" ]
+found_par2="$(find . -regex '.*par2')"
+if [ "$found_par2" ]
 then
 	error_exit "$LINENO: Refuse to run if there are par2 files in the working directory."
 fi
 
 # Store the inodes of the files passed as arguments.
-declare -a INODES
-for ARG
+for arg
 do
-	INODES+=($(stat -c %i "$ARG"))
+	inodes+=($(stat -c %i "$arg"))
+	[ $? -ne 0 ] && error_exit
 done
+unset -v arg
 
 # For every file in PATH..., insert/update file's metadata in the db.
 backupdb "$@" .
@@ -100,30 +137,29 @@ fi
 
 # Get the pathnames of the files passed as arguments, after calling to
 # chpathn.
-declare -a FILES
-for (( i=0; i<${#INODES[@]}; i++ )) 
+for (( i=0; i<${#inodes[@]}; i++ )) 
 do
-	FILES+=($(find /home/marce/ -depth -inum ${INODES[i]} -type f))
+	files+=($(find /home/marce/ -depth -inum ${inodes[i]} -type f))
 done
 
 # Create parity files.
 
-BLOCKSIZE=262144
-BLOCKCOUNT=8 #1587
-OUTPUTINFO=par2info.txt
-par2 create -s${BLOCKSIZE} -c${BLOCKCOUNT} par2file ${FILES[@]} > $OUTPUTINFO
+blocksize=262144
+blockcount=8 #1587
+outputinfo=par2info.txt
+par2 create -s${blocksize} -c${blockcount} par2file ${files[@]} > $outputinfo
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling par2 utility"
 fi
-SOFTW="$(head -n 1 < $OUTPUTINFO)"
+softw="$(head -n 1 < $outputinfo)"
 
 #----------------------------------------------------------------------
 # Update the database.
 #----------------------------------------------------------------------
 
 # Setup a connection to the database.
-HANDLE=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
+handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
@@ -131,48 +167,55 @@ then
 fi
 
 # Insert data in 'par2create' tables.
-shsql $HANDLE $(printf 'INSERT INTO par2create (software, blocksize,
-	blockcount) VALUES ("%b","%b","%b");' "$SOFTW" $BLOCKSIZE \
-	$BLOCKCOUNT)
+shsql $handle $(printf 'INSERT INTO par2create (software, blocksize,
+	blockcount) VALUES ("%b","%b","%b");' "$softw" $blocksize \
+	$blockcount)
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error while trying to update the database."
 fi
 
 # Insert data in 'par2create_target' table.
-SESSIONID=$(shsql $HANDLE "SELECT LAST_INSERT_ID();")
-for FILE in  ${FILES[@]}
+session_id=$(shsql $handle "SELECT LAST_INSERT_ID();")
+for file in  ${files[@]}
 do
-	get_id $HANDLE FILEID $(hostname) $(readlink -f $FILE)
+	get_id $handle file_id $(hostname) $(readlink -f $file)
 	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error calling get_id()."
 	fi
-	shsql $HANDLE $(printf 'INSERT INTO par2create_target (session,
-		target) VALUES (%b,%b);' $SESSIONID $FILEID)
+	shsql $handle $(printf 'INSERT INTO par2create_target (session,
+		target) VALUES (%b,%b);' $session_id $file_id)
 	if [ $? -ne 0 ]
 	then
-		error_exit "$LINENO: Error while trying to update the database."
+		error_exit "$LINENO: Error after calling shsql."
 	fi
 done
+unset -v file
+unset -v file_id
 
 # Insert data in 'par2create_volset' table.
 
-for FILE in $(find . -regex .*par2) ./$OUTPUTINFO
+for file in $(find . -regex .*par2) ./$outputinfo
 do
-	insert_file $HANDLE $(hostname) $(readlink -f $FILE) 
+	insert_file $handle $(hostname) $(readlink -f $file) 
 	if [ $? -ne 0 ]
 	then
-		error_exit "$LINENO: Error while trying to update the database."
+		error_exit "$LINENO: Error after calling insert_file."
 	fi
-	get_id $HANDLE FILEID $(hostname) $(readlink -f $FILE)
-	shsql $HANDLE $(printf 'INSERT INTO par2create_volset (session,
-		volume_set) VALUES (%b,%b);' $SESSIONID $FILEID)
+	get_id $handle file_id $(hostname) $(readlink -f $file)
 	if [ $? -ne 0 ]
 	then
-		error_exit "$LINENO: Error while trying to update the database."
+		error_exit "$LINENO: Error calling get_id()."
+	fi
+	shsql $handle $(printf 'INSERT INTO par2create_volset (session,
+		volume_set) VALUES (%b,%b);' $session_id $file_id)
+	if [ $? -ne 0 ]
+	then
+		error_exit "$LINENO: Error after calling shsql."
 	fi
 done
+unset -v file
+unset -v file_id
 
-shsqlend $HANDLE
-
+shsqlend $handle

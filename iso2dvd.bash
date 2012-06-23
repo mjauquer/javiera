@@ -44,32 +44,68 @@ usage () {
 	EOF
 }
 
+#===  FUNCTION =========================================================
+#
+#       USAGE: error_exit [MESSAGE]
+#
+# DESCRIPTION: Function for exit due to fatal program error.
+#
+#   PARAMETER: MESSAGE An optional description of the error.
+#
+error_exit () {
+	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	[ -v handle ] && shsqlend $handle
+	exit 1
+}
+
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# Checking for a well-formatted command line.
+# If no argument were passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
+
+# Variables declaration.
+declare progname # This script's name.
+
+declare input    # The pathname of the image file to be burned.
+
+declare version  # The version of the cdrecord command.
+
+declare options  # The options to be passed to the cdrecord command.
+
+declare handle   # A connection to the database.
+
+progname=$(basename $0)
+
+# Checking for a well-formatted command line.
 if [ $# -ne 3 ]
 then
-	echo "dir2iso: three arguments are required." 1>&2
-	exit 1 
+	error_exit "$LINENO: Three arguments are required."
 elif [[ $1 =~ .*/$ ]]
 then
-	echo "iso2dvd: First arg must be a regular filename." 1>&2
-	exit 1
+	error_exit "$LINENO: First argument must be a regular filename."
 fi
 
 #-----------------------------------------------------------------------
 # Burn the DVD.
 #-----------------------------------------------------------------------
 
-version="$(cdrecord -version)"
-[[ $? -ne 0 ]] && exit 1
 options="-dummy -v -eject speed=4 dev=ATAPI:0,0,0" 
+version="$(cdrecord -version)"
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling cdrecord command."
+fi
 input=$(readlink -f $1)
-sudo cdrecord $options $(readlink -f $input)
-[[ $? -ne 0 ]] && exit 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after readlink command."
+fi
+if ! sudo cdrecord $options $(readlink -f $input)
+then
+	error_exit "$LINENO: Error after calling cdrecord command."
+fi
 
 #-----------------------------------------------------------------------
 # Update the backup database.
@@ -79,18 +115,15 @@ handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
-	echo "iso2dvd: Unable to establish connection to db." 1>&2
-	exit 1
+	error_exit "$LINENO: Error after calling shmysql utility."
 fi
-input=$(readlink -f $1)
 if ! get_id $handle imageid $(hostname) $input
 then
-	echo "iso2dvd: error in get_id ()." 1>&2
-	exit 1
+	error_exit "$LINENO: Error after calling get_id()."
 fi
 if ! insert_dvd $handle $imageid $2 $3
 then
-	echo "iso2dvd: error in insert_dvd ()." 1>&2
-	exit 1
+	error_exit "$LINENO: Error after calling insert_dvd()."
 fi
+
 shsqlend $handle

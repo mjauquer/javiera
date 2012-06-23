@@ -28,6 +28,7 @@
 #               the dots).
 
 source ~/code/bash/backupdb/backupdb.flib
+source ~/code/bash/backupdb/upvars/upvars.bash
 
 #===  FUNCTION =========================================================
 #
@@ -44,100 +45,186 @@ usage () {
 	EOF
 }
 
+#===  FUNCTION =========================================================
+#
+#       USAGE: error_exit [MESSAGE]
+#
+# DESCRIPTION: Function for exit due to fatal program error.
+#
+#   PARAMETER: MESSAGE An optional description of the error.
+#
+error_exit () {
+	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	[ -v handle ] && shsqlend $handle
+	exit 1
+}
+
+#===  FUNCTION =========================================================
+#
+#       USAGE: get_label HANDLE VARNAME 
+#
+# DESCRIPTION: Generate a label to be assigned to an image file. Store
+#              that label in the caller's variable VARNAME.
+#
+#  PARAMETERS: HANDLE  A connection to the database.
+#              VARNAME The name of a caller's variable.
+#
+get_label () {
+	local lastid
+	local label
+	lastid=$(shsql $1 $(printf 'SELECT MAX(id) FROM iso_metadata;'))
+	lastid=${lastid//\"}
+	lastid=${lastid:-0}
+	label=$(shsql $1 $(printf 'SELECT auto_increment FROM 
+		information_schema.tables WHERE
+		table_name="iso_metadata" AND
+		table_schema="%b";' $BACKUPDB_DBNAME ))
+	label=${label//\"}
+	label=${label:-1}
+	local $2 && upvar $2 $label
+}
+
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# Checking for a well-formatted command line.
+# Variables declaration.
+declare progname   # The name of this script.
+
+declare dir_inode  # The inode of the source directory passed as
+                   # argument.
+
+declare source_dir # The pathname of the source directory after calling
+                   # backupdb.
+
+declare handle     # Required by shsql. A connection to the database.
+
+declare label      # The label of the iso file that will be generated.
+
+declare ouput      # The pathname of the output image file.
+
+declare version    # The version of the mkisofs command.
+
+declare options    # The options to be passed to the mkisofs command.
+
+declare outputid   # The file_id number in the database for the created
+                   # output image file.
+
+progname=$(basename $0)
+
+# If no argument were passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
-if [ $# -ne 2 ]
+
+# Check if there already is in the current directory a file whose
+# pathname is the specified by OUTPUT.
+if [ -a "$2" ]
 then
-	echo "dir2iso: two arguments are required." 1>&2
-	exit 1 
-elif [ ! -d $1 ]
-then
-	echo "dir2iso: First arg must be an existing directory." 1>&2
-	exit 1
-elif [[ ! $2 =~ .*[^/]$ ]]
-then
-	echo "dir2iso: Second arg must be a regular filename." 1>&2
-	exit 1
+	error_exit "$LINENO: the specified output file already exists."
+else
+	output=$(readlink -f $2)
 fi
 
-# Update the backup database before attempting to create an iso file.
-input=$1
-[[ -a $2 ]] && rm $2
-backupdb -r $input
-[[ $? -ne 0 ]] && exit 1
+# Checking for a well-formatted command line.
+if [ $# -ne 2 ]
+then
+	error_exit "$LINENO: two arguments must be passed."
+elif [ ! -d $1 ]
+then
+	error_exit "$LINENO: first arg must be an existing directory."
+elif [[ ! $2 =~ .*[^/]$ ]]
+then
+	error_exit "$LINENO: second argument must be a regular filename."
+fi
+
+# Store the inode of the source directory passed as argument.
+dir_inode=$(stat -c %i "$1")
+
+# Update the backup database with the metadata of the files under the
+# source directory.
+backupdb -r $1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: error after calling backupdb script."
+fi
+
+# Get the pathname of the source directory passed as argument after
+# calling backupdb, because that script calls chpathn.
+source_dir=($(find /home/marce/ -depth -inum $dir_inode -type d))
+
+# Setup a connection to the database.
+handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
+	dbname=$BACKUPDB_DBNAME) 
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: error after calling shmysql."
+fi
 
 #-----------------------------------------------------------------------
 # Create an iso file.
 #-----------------------------------------------------------------------
 
 # Generate the label of the iso file to be created
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
+if ! get_label $handle label
+then
+	error_exit "$LINENO: error after calling get_label()."
+fi
+
+# Get the version of the mkisofs command.
+version="$(mkisofs --version)"
 if [ $? -ne 0 ]
 then
-	echo "dir2iso: Unable to establish connection to db." 1>&2
-	exit 1
+	error_exit "$LINENO: error after calling mkisofs."
 fi
-lastid=$(shsql $handle $(printf 'SELECT MAX(id) FROM iso_metadata;'))
-lastid=${lastid//\"}
-lastid=${lastid:-0}
-label=$(shsql $handle $(printf 'SELECT auto_increment FROM 
-	information_schema.tables WHERE table_name="iso_metadata" AND
-	table_schema="%b";' $BACKUPDB_DBNAME ))
-label=${label//\"}
-label=${label:-1}
-output=$2
-version="$(mkisofs --version)"
-[[ $? -ne 0 ]] && exit 1
+
+# Set the options to be passed to the mkisofs command.
 options="-V $label -iso-level 4 -allow-multidot -allow-lowercase \
 	-ldots -r" 
-mkisofs $options -o $output $input
-[[ $? -ne 0 ]] && exit 1
+
+# Make the image file.
+mkisofs $options -o $output $source_dir
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: error after calling mkisofs."
+fi
 
 #-----------------------------------------------------------------------
 # Update the backup database with data about the created iso file.
 #-----------------------------------------------------------------------
 
-output="$(readlink -f $output)"
-
-# Insert the new created file into db. Get its file_id number.
+# Insert the new created file into the database. Get its file_id number.
 if ! insert_file $handle $(hostname) $output
 then
-	echo "tar2iso: error in insert_file ()." 1>&2
-	exit 1
+	error_exit "$LINENO: error after calling insert_file()."
 fi
 if ! get_id $handle outputid $(hostname) $output
 then
-	echo "tar2iso: error in get_id ()." 1>&2
-	exit 1
+	error_exit "$LINENO: error after calling get_id()."
 fi
 
 # Insert details of the software and options used to create the file.
 shsql $handle $(printf 'UPDATE iso_metadata SET software="%b", 
 	used_options="%b" WHERE file_id=%b;' "$version" "$options" \
 	$outputid)
-[[ $? -ne 0 ]] && 
-	echo "tar2iso: error while inserting iso metadata into db." 1>&2
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: error after calling shsql."
+fi
 
 # Insert archive relationships between the iso file and its content.
-for file in $(find $input -type f)
+for file in $(find $source_dir -type f)
 do
 	file="$(readlink -f $file)"
 	if ! get_id $handle fileid $(hostname) $file
 	then
-		echo "tar2iso: error in get_id ()." 1>&2
-		exit 1
+		error_exit "$LINENO: error after calling get_id()."
 	fi
 	[[ $fileid == $outputid ]] && continue
 	if ! insert_archive $handle $outputid $fileid
 	then
-		echo "tar2iso: error in insert_archive ()." 1>&2
-		exit 1
+		error_exit "$LINENO: error after calling insert_archive()."
 	fi
+	unset -v fileid
 done
+unset -v file
 
 shsqlend $handle
