@@ -78,21 +78,17 @@ error_exit () {
 # Variables declaration.
 declare progname=$(basename $0)
 
-declare -a find_opts # A list of options to be passed to the find
-                     # command.
+declare -a find_opts   # A list of options to be passed to the find
+                       # command.
 
-declare -a inodes    # A list of inodes corresponding to the files or
-                     # directories passed as arguments to this script.
+declare -a dir_inodes  # A list of inodes corresponding to every
+                       # directory passed as argument.
 
-declare -a type_file # For each element of the inodes array, this array
-                     # stores a 'd' if the inode corresponds to a
-		     # directory or a 'f' if it corresponds to a file.
+declare -a file_inodes # A list of inodes corresponding to every file
+                       # passed as argument.
 
-declare -a files     # The list of pathnames to be processed by this
-                     # script.
-
-declare dir          # The pathname of a directory where to find files
-                     # to be processed by this script.
+declare -a files       # The list of pathnames to be processed by this
+                       # script.
 
 # Parse command line options.
 find_opts[0]="-maxdepth 1"
@@ -109,18 +105,17 @@ do
 done
 shift $(($OPTIND-1))
 
-# Change problematic pathnames saving previously the corresponding inode.
+# Change problematic pathnames saving previously the corresponding inode
+# of the pathnames passed as arguments to this scripts.
 for arg
 do
 	if [ -d "$arg" ]
 	then
-		type_file+=( d )
-		inodes+=($(stat -c %i "$arg"))
+		dir_inodes+=($(stat -c %i "$arg"))
 		[ $? -ne 0 ] && error_exit
 	elif [ -f "$arg" ]
 	then
-		type_file+=( f )
-		inodes+=($(stat -c %i "$arg"))
+		file_inodes+=($(stat -c %i "$arg"))
 		[ $? -ne 0 ] && error_exit
 	fi
 done
@@ -132,18 +127,18 @@ fi
 
 # Get the pathnames of the files and directories passed as arguments,
 # after calling to chpathn.
-for (( i=0; i<${#inodes[@]}; i++ )) 
+for inode in ${dir_inodes[@]}
 do
-	if [ ${type_file[i]} == d ]
-	then
-		dir=$(find /home/marce/testing -depth -inum ${inodes[i]} -type d)
-		files+=($(find $dir ${find_opts[@]} -type f))
-	fi
-	if [ ${type_file[i]} == f ]
-	then
-		files+=($(find /home/marce/ -depth -inum ${inodes[i]} -type f))
-	fi
+	dir=$(find /home/marce/ -depth -inum $inode -type d)
+	files+=($(find $dir ${find_opts[@]} -type f))
 done
+unset -v dir
+for inode in ${file_inodes[@]}
+do
+	echo "inode: $inode"
+	files+=($(find /home/marce/ -depth -inum $inode -type f))
+done
+unset -v inode
 
 #======================================================================
 # Update the database.
@@ -225,4 +220,6 @@ shsql $handle "SELECT id, pathname FROM file;" | (
 		fi
 	done
 )
+
+# Close the connection to the database.
 shsqlend $handle
