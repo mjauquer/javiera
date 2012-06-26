@@ -30,6 +30,7 @@
 
 source ~/code/bash/backupdb/backupdb.flib
 source ~/code/bash/backupdb/getoptx/getoptx.bash
+source ~/code/bash/chpathn/chpathn.flib
 
 
 #===  FUNCTION =========================================================
@@ -67,33 +68,43 @@ error_exit () {
 #-----------------------------------------------------------------------
 
 # Variables declaration.
-declare progname=$(basename $0)
+declare progname       # The name of this script.
 
-declare -a pathnames # A list of the pathnames of the files and
-                     # directories that have been passed to this script.
+declare -a pathnames   # A list of the pathnames of the files and
+                       # directories that have been passed to this script.
 
-declare txtfile      # The pathname of the file passed as argument to
-                     # the --listed-in option.
+declare txtfile        # The pathname of the file passed as argument to
+                       # the --listed-in option.
 
-declare -a notfound  # A list of pathnames passed as arguments to this
-                     # script and that do not point to existing files or
-		     # directories in the filesystem.
+declare -a notfound    # A list of pathnames passed as arguments to this
+                       # script and that do not point to existing files or
+		       # directories in the filesystem.
 
-declare tempdir      # The pathname of a temporal directory where the
-                     # files and directories will be processed.
+declare -a file_inodes # A list of the inodes corresponding to the
+                       # regular files passed as arguments to this
+		       # script.
 
-declare handle       # Required by shsql. A connection to the database.
+declare -a dir_inodes  # A list of the inodes corresponding to the
+                       # directories passed as arguments to this
+		       # script.
 
-declare -a regfiles  # Same as pathnames variable, but only contains
-                     # the pathnames that point to regular files.
+declare tempdir        # The pathname of a temporal directory where the
+                       # files and directories will be processed.
 
-declare tarfile      # The pathname of the tar file to be created.
+declare handle         # Required by shsql. A connection to the database.
 
-declare archiver_id  # The id number in the file table of the database
-                     # of the created tar file.
+declare -a regfiles    # Same as pathnames variable, but only contains
+                       # the pathnames that point to regular files.
 
-declare archived_id  # The id number in the file table of the database
-                     # of a file archived in the tar file.
+declare tarfile        # The pathname of the tar file to be created.
+
+declare archiver_id    # The id number in the file table of the database
+                       # of the created tar file.
+
+declare archived_id    # The id number in the file table of the database
+                       # of a file archived in the tar file.
+
+progname=$(basename $0)
 
 # If no argument were passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
@@ -106,6 +117,10 @@ do
 		            ;;
 	esac
 done
+
+# If this script was called with the  "listed-in" option, add to the
+# list of pathnames to be processed those which are listed in the text
+# file specified.
 if [ "$txtfile" ]
 then
 	if [ -a $(readlink -f "$txtfile") ]
@@ -133,6 +148,7 @@ do
 		notfound+=("$pathname")
 	fi
 done
+unset -v pathname
 if [ ${#notfound[@]} -ne 0 ]
 then
 	error_exit "$LINENO: The following arguments do not exist as
@@ -153,15 +169,101 @@ then
 	error_exit "$LINENO: $1 already exists in $(pwd)."
 fi
 
-# Create a temporary directory and move into it all the files and
-# directories to be archived.
-tempdir=$(mktemp -d tmp.XXX)
-chmod 755 $tempdir
-mv ${pathnames[@]} $tempdir
+# Change problematic pathnames saving previously the corresponding inode
+# of the pathnames passed as arguments to this scripts.
+for pathname in ${pathnames[@]}
+do
+	if [ -d "$pathname" ]
+	then
+		dir_inodes+=($(stat -c %i "$pathname"))
+		[ $? -ne 0 ] && error_exit
+	elif [ -f "$pathname" ]
+	then
+		file_inodes+=($(stat -c %i "$pathname"))
+		[ $? -ne 0 ] && error_exit
+	fi
+done
+unset -v pathname
+if ! backupdb -r ${pathnames[@]}
+then
+	error_exit "$LINENO: Error after calling backupdb."
+fi
+
+# After last command, pathnames might been changed.
+unset -v pathnames
+
+# Use the saved inodes to get the corresponding pathnames.
+for inode in ${dir_inodes[@]}
+do
+	pathnames=$(find /home/marce/ -depth -inum $inode -type d)
+done
+unset -v dir
+for inode in ${file_inodes[@]}
+do
+	pathnames+=($(find /home/marce/ -depth -inum $inode -type f))
+done
+unset -v inode
+
+# Connect to the database.
+handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
+	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Error after calling mv command."
+	error_exit "$LINENO: Error after calling shmysql utility."
 fi
+
+# Create a temporary directory and move into it all the files and
+# directories to be archived, and update the database with this changes.
+tempdir=$(mktemp -d tmp.XXX)
+chmod 755 $tempdir
+for pathname in ${pathnames[@]}
+do
+	get_parentmatcher parent_matcher $pathname
+	prefix="${pathname%/*}/"
+	if [ -d $pathname ]
+	then
+		for file in $(find $pathname -type f)
+		do
+			if ! get_id $handle file_id $(hostname) $file
+			then
+				error_exit "$LINENO: Error after calling get_id()."
+			fi
+			suffix="${file#$prefix}"
+		done
+	elif [ -f $pathname ]
+	then
+		if ! get_id $handle file_id $(hostname) $pathname
+		then
+			error_exit "$LINENO: Error after calling get_id()."
+		fi
+		suffix="${pathname#$prefix}"
+	fi
+	newpath=$(readlink -f $tempdir)/$suffix
+	ids+=( $file_id )
+	newpaths+=( $newpath )
+	dest="$tempdir/$(basename $pathname)"
+	if ! mv $pathname $dest
+	then
+		error_exit "$LINENO: Error after calling mv command."
+	fi
+	for (( ind=0; ind<${#ids[@]}; ind++ ))
+	do
+		if ! shsql $handle $(printf 'UPDATE file SET 
+			pathname="%b", mtime="%b" WHERE id=%b;' \
+			${newpaths[ind]} \
+			$(stat --format='%Y' $dest) ${ids[ind]})
+		then
+			error_exit "$LINENO: Error after calling shsql."
+		fi
+	done
+done
+unset -v dest
+unset -v newpaths
+unset -v ids
+unset -v newpath
+unset -v file_id
+unset -v pathname
+
 cd $tempdir
 if [ $? -ne 0 ]
 then
@@ -186,14 +288,6 @@ fi
 #-----------------------------------------------------------------------
 # Update the backup database with the archive relationships.
 #-----------------------------------------------------------------------
-
-# Connect to the database.
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error after calling shmysql utility."
-fi
 
 # Get the id of the created tar file.
 tarfile="$(readlink -f $1)"

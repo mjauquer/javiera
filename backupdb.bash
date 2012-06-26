@@ -125,8 +125,8 @@ then
 	error_exit "$LINENO: Error after calling chpathn."
 fi
 
-# Get the pathnames of the files and directories passed as arguments,
-# after calling to chpathn.
+# Get the pathnames of the files passed as arguments after calling to
+# chpathn.
 for inode in ${dir_inodes[@]}
 do
 	dir=$(find /home/marce/ -depth -inum $inode -type d)
@@ -135,7 +135,6 @@ done
 unset -v dir
 for inode in ${file_inodes[@]}
 do
-	echo "inode: $inode"
 	files+=($(find /home/marce/ -depth -inum $inode -type f))
 done
 unset -v inode
