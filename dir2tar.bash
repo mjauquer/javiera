@@ -63,6 +63,29 @@ error_exit () {
 	exit 1
 }
 
+#===  FUNCTION =========================================================
+#
+#       USAGE: predict_newpath FILE
+#
+# DESCRIPTION: Predict the new pathname of FILE if it would been moved
+#              to the temporal directory and store it in the 'newpaths'
+#              array, while storing its file id (from the database) in
+#              the 'ids' array, for further operation.
+#
+#  PARAMETERS: FILE  A connection to a database.
+#
+predict_newpath () {
+	local suffix
+	local file_id
+	if ! get_id $handle file_id $(hostname) $1
+	then
+		error_exit "$LINENO: Error after calling get_id()."
+	fi
+	ids+=( $file_id )
+	suffix=${1#$prefix}
+	newpaths+=( $tempdir/$suffix )
+}
+
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
@@ -212,40 +235,40 @@ then
 	error_exit "$LINENO: Error after calling shmysql utility."
 fi
 
-# Create a temporary directory and move into it all the files and
-# directories to be archived, and update the database with this changes.
-tempdir=$(mktemp -d tmp.XXX)
+# Create a temporal directory.
+tempdir=$(readlink -f $(mktemp -d tmp.XXX))
 chmod 755 $tempdir
+if [ ! -d $tempdir ]
+then
+	error_exit "$LINENO: Coudn't create a temporal directory."
+fi
+
+# Move the files and directories to be processed to the temporal
+# directory.
+declare -a ids
+declare -a newpaths
 for pathname in ${pathnames[@]}
 do
 	get_parentmatcher parent_matcher $pathname
-	prefix="${pathname%/*}/"
+	prefix=${pathname%/*}/
 	if [ -d $pathname ]
 	then
 		for file in $(find $pathname -type f)
 		do
-			if ! get_id $handle file_id $(hostname) $file
-			then
-				error_exit "$LINENO: Error after calling get_id()."
-			fi
-			suffix="${file#$prefix}"
+			predict_newpath $file
 		done
 	elif [ -f $pathname ]
 	then
-		if ! get_id $handle file_id $(hostname) $pathname
-		then
-			error_exit "$LINENO: Error after calling get_id()."
-		fi
-		suffix="${pathname#$prefix}"
+		predict_newpath $pathname
 	fi
-	newpath=$(readlink -f $tempdir)/$suffix
-	ids+=( $file_id )
-	newpaths+=( $newpath )
-	dest="$tempdir/$(basename $pathname)"
+	dest=$tempdir/$(basename $pathname)
 	if ! mv $pathname $dest
 	then
 		error_exit "$LINENO: Error after calling mv command."
 	fi
+
+	# After moving the files, update the database using the
+	# previously predicted pathnames of the files.
 	for (( ind=0; ind<${#ids[@]}; ind++ ))
 	do
 		if ! shsql $handle $(printf 'UPDATE file SET 
@@ -260,10 +283,9 @@ done
 unset -v dest
 unset -v newpaths
 unset -v ids
-unset -v newpath
-unset -v file_id
 unset -v pathname
 
+# Set the temporal directory as the working directory.
 cd $tempdir
 if [ $? -ne 0 ]
 then
