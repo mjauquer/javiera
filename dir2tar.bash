@@ -83,6 +83,7 @@ predict_newpath () {
 	fi
 	ids+=( $file_id )
 	suffix=${1#$prefix}
+	suffixes+=( $suffix )
 	newpaths+=( $tempdir/$suffix )
 }
 
@@ -116,8 +117,12 @@ declare tempdir        # The pathname of a temporal directory where the
 
 declare handle         # Required by shsql. A connection to the database.
 
-declare -a regfiles    # Same as pathnames variable, but only contains
-                       # the pathnames that point to regular files.
+
+declare -a ids         # A list of the file_ids in the database of the
+                       # files beeing archived.
+
+declare -a suffixes    # A list of the pathnames of the archived files
+                       # inside the archiver file. 
 
 declare tarfile        # The pathname of the tar file to be created.
 
@@ -218,14 +223,16 @@ unset -v pathnames
 # Use the saved inodes to get the corresponding pathnames.
 for inode in ${dir_inodes[@]}
 do
-	pathnames=$(find /home/marce/ -depth -inum $inode -type d)
+	pathnames=($(find /home/marce/ -depth -inum $inode -type d))
 done
-unset -v dir
+unset -v inode
+unset -v dir_inodes
 for inode in ${file_inodes[@]}
 do
 	pathnames+=($(find /home/marce/ -depth -inum $inode -type f))
 done
 unset -v inode
+unset -v file_inodes
 
 # Connect to the database.
 handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
@@ -245,7 +252,6 @@ fi
 
 # Move the files and directories to be processed to the temporal
 # directory.
-declare -a ids
 declare -a newpaths
 for pathname in ${pathnames[@]}
 do
@@ -279,10 +285,10 @@ do
 			error_exit "$LINENO: Error after calling shsql."
 		fi
 	done
+	unset -v ind
 done
 unset -v dest
 unset -v newpaths
-unset -v ids
 unset -v pathname
 
 # Set the temporal directory as the working directory.
@@ -299,9 +305,10 @@ if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling tar utility."
 fi
+tarfile=$(readlink -f $1)
 
 # Update the backup database.
-backupdb -r .
+backupdb $tarfile
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling backupdb."
@@ -312,42 +319,22 @@ fi
 #-----------------------------------------------------------------------
 
 # Get the id of the created tar file.
-tarfile="$(readlink -f $1)"
 get_id $handle archiver_id $(hostname) $tarfile
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling get_id()."
 fi
 
-# Make a list of the regular files that have been archived.
-for pathname in ${pathnames[@]}
-do
-	pathname=$(readlink -f $pathname)
-	if [ -f $pathname ]
-	then
-		regfiles+=( $pathname )
-	fi
-done
-unset -v pathname
-
 # Insert archive relationships between the tar file and its content.
-for file in ${regfiles[@]}
+for (( ind=0; ind<${#ids[@]}; ind++ ))
 do
-	# Get the id of the archived file.
-	get_id $handle archived_id $(hostname) $file
-	if [ $? -ne 0 ]
-	then
-		error_exit "$LINENO: Error after calling get_id()."
-	fi
-
-	# Insert the archive relationship.
-	insert_archive $handle $archiver_id $archived_id
+	insert_archive $handle $archiver_id ${ids[ind]} ${suffixes[ind]}
 	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling insert_archive()."
 	fi
 done
-unset -v file
+unset -v ind
 
 #-----------------------------------------------------------------------
 # Remove the temporary directory.

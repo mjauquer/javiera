@@ -255,8 +255,8 @@ is_insync () {
 #                          be passed between <">.
 #
 insert_archive () {
-	shsql $1 $(printf 'INSERT INTO archive (archiver, archived)
-		VALUES (%b, %b);' $2 $3)
+	shsql $1 $(printf 'INSERT INTO archive (archiver, archived,
+		archived_suffix) VALUES (%b, %b, "%b");' $2 $3 $4)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }

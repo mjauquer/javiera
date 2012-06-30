@@ -129,12 +129,14 @@ fi
 # chpathn.
 for inode in ${dir_inodes[@]}
 do
+	[[ ${#dir_inodes[@]} -eq 0 ]] && break
 	dir=$(find /home/marce/ -depth -inum $inode -type d)
 	files+=($(find $dir ${find_opts[@]} -type f))
 done
 unset -v dir
 for inode in ${file_inodes[@]}
 do
+	[[ ${#file_inodes[@]} -eq 0 ]] && break
 	files+=($(find /home/marce/ -depth -inum $inode -type f))
 done
 unset -v inode
