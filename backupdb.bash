@@ -32,6 +32,7 @@
 source ~/code/bash/backupdb/backupdb.flib
 source ~/code/bash/backupdb/getoptx/getoptx.bash
 source ~/code/bash/backupdb/pathname/pathname.flib
+source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================
 #
@@ -72,25 +73,17 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# If no argument were passed, print usage message and exit.
+declare progname       # The name of this script.
+
+progname=$(basename $0)
+
+# If no argument was passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
 
-# Variables declaration.
-declare progname=$(basename $0)
-
-declare -a find_opts   # A list of options to be passed to the find
-                       # command.
-
-declare -a dir_inodes  # A list of inodes corresponding to every
-                       # directory passed as argument.
-
-declare -a file_inodes # A list of inodes corresponding to every file
-                       # passed as argument.
-
-declare -a files       # The list of pathnames to be processed by this
-                       # script.
-
 # Parse command line options.
+declare -a find_opts  # A list of options to be passed to the find
+                      # command.
+
 find_opts[0]="-maxdepth 1"
 while getoptex "r recursive R" "$@"
 do
@@ -105,8 +98,12 @@ do
 done
 shift $(($OPTIND-1))
 
-# Change problematic pathnames saving previously the corresponding inode
-# of the pathnames passed as arguments to this scripts.
+# Save the corresponding inode of the pathnames passed as arguments to
+# this script.
+declare -a dir_inodes  # A list of inodes corresponding to every
+                       # directory passed as argument.
+declare -a file_inodes # A list of inodes corresponding to every file
+                       # passed as argument.
 for arg
 do
 	if [ -d "$arg" ]
@@ -119,27 +116,44 @@ do
 		[ $? -ne 0 ] && error_exit
 	fi
 done
-chpathn -rp "$@"
+unset -v arg
+
+# Look at the pathnames passed as arguments and change those that can be
+# problematic ones.
+declare -a log   # The output of the command chpathn --verbose.
+declare top_dirs # A list of directories where to find by inode the
+                 # the files and directories passed as arguments.
+log=($(chpathn -rp --verbose "$@"))
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling chpathn."
 fi
+if ! read_topdirs top_dirs ${log[@]}
+then
+	error_exit "$LINENO: Error after a call to read_topdirs()."
+fi
+unset -v log
 
 # Get the pathnames of the files passed as arguments after calling to
 # chpathn.
+declare -a files       # The list of pathnames to be processed by this
+                       # script.
 for inode in ${dir_inodes[@]}
 do
 	[[ ${#dir_inodes[@]} -eq 0 ]] && break
-	dir=$(find /home/marce/ -depth -inum $inode -type d)
+	dir=$(find ${top_dirs[@]} -depth -inum $inode -type d)
 	files+=($(find $dir ${find_opts[@]} -type f))
 done
 unset -v dir
+unset -v dir_inodes
 for inode in ${file_inodes[@]}
 do
 	[[ ${#file_inodes[@]} -eq 0 ]] && break
-	files+=($(find /home/marce/ -depth -inum $inode -type f))
+	files+=($(find ${top_dirs[@]} -depth -inum $inode -type f))
 done
 unset -v inode
+unset -v file_inodes
+unset -v top_dirs
 
 #======================================================================
 # Update the database.
@@ -156,15 +170,13 @@ fi
 for file in ${files[@]}
 do
 	file=$(readlink -f $file)
-	is_backedup $handle backedup $(hostname) $file
-	if [ $? -ne 0 ]
+	if ! is_backedup $handle backedup $(hostname) $file
 	then
 		error_exit "$LINENO: Error after calling is_backedup()."
 	fi
 	if [ $backedup == true ]
 	then
-		is_insync $handle insync $(hostname) $file
-		if [ $? -ne 0 ]
+		if ! is_insync $handle insync $(hostname) $file
 		then
 			error_exit "$LINENO: Error after calling is_insync()."
 		fi
@@ -172,23 +184,20 @@ do
 		then
 			continue
 		else
-			update_file $handle $(hostname) $file 
-			if [ $? -ne 0 ]
+			if ! update_file $handle $(hostname) $file 
 			then
 				error_exit "$LINENO: Error after calling update_file()."
 			fi
 		fi
 	elif [ $backedup == false ]
 	then
-		insert_file $handle $(hostname) $file 
-		if [ $? -ne 0 ]
+		if ! insert_file $handle $(hostname) $file 
 		then
 			error_exit "$LINENO: Error after calling insert_file()."
 		fi
 	elif [ $backedup == recycle ]
 	then
-		recycle_file $handle $(hostname) $file
-		if [ $? -ne 0 ]
+		if ! recycle_file $handle $(hostname) $file
 		then
 			error_exit "$LINENO: Error after calling recycle_file()."
 		fi
@@ -200,27 +209,28 @@ unset -v insync
 
 # Search in db for metadata whose file don't exist in PATH... anymore
 # and delete it from the database.
-tobedel=
-ind=0
+declare tobedel
+declare -i ind
 shsql $handle "SELECT id, pathname FROM file;" | (
 	while row=$(shsqlline)
 	do
 		eval set $row
 		if [[ ! -a "$2" ]]
 		then
-			tobedel[$ind]=$1
-			ind=$(($ind+1))
+			tobedel[ind]=$1
+			ind=$((ind+1))
 		fi
 	done
 	for id in ${tobedel[@]}
 	do
-		delete_file $handle $id
-		if [ $? -ne 0 ]
+		if ! delete_file $handle $id
 		then
 			error_exit "$LINENO: Error after calling delete_file()."
 		fi
 	done
 )
+unset -v tobedel
+unset -v ind
 
 # Close the connection to the database.
 shsqlend $handle
