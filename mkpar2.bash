@@ -24,6 +24,7 @@
 #               the dots).
 
 source ~/code/bash/backupdb/backupdb.flib
+source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================
 #
@@ -128,18 +129,26 @@ do
 done
 unset -v arg
 
-# For every file in PATH..., insert/update file's metadata in the db.
-backupdb "$@" .
+# Update the database with data about the files passed as arguments.
+declare -a log   # The output of the command backupdb --verbose.
+declare top_dirs # A list of directories where to find by inode the
+                 # files and directories passed as arguments.
+log=($(backupdb -r --verbose "$@" .))
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Error after calling backupdb script."
+	error_exit "$LINENO: Error after calling backupdb."
 fi
+if ! read_topdirs top_dirs ${log[@]}
+then
+	error_exit "$LINENO: Error after a call to read_topdirs()."
+fi
+unset -v log
 
 # Get the pathnames of the files passed as arguments, after calling to
 # chpathn.
 for (( i=0; i<${#inodes[@]}; i++ )) 
 do
-	files+=($(find /home/marce/ -depth -inum ${inodes[i]} -type f))
+	files+=($(find ${top_dirs[@]} -depth -inum ${inodes[i]} -type f))
 done
 
 # Create parity files.

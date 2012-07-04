@@ -52,6 +52,7 @@ usage () {
 	 -r
 	 -R
 	--recursive    Do all actions recursively.
+	--verbose      Print information about what is beeing done.
 	EOF
 }
 
@@ -85,7 +86,7 @@ declare -a find_opts  # A list of options to be passed to the find
                       # command.
 
 find_opts[0]="-maxdepth 1"
-while getoptex "r recursive R" "$@"
+while getoptex "r recursive R verbose" "$@"
 do
 	case "$OPTOPT" in
 		r)            find_opts[0]="-depth"
@@ -94,6 +95,7 @@ do
 		              ;;
 		R)            find_opts[0]="-depth"
 		              ;;
+		verbose)      verbose=true
 	esac
 done
 shift $(($OPTIND-1))
@@ -133,6 +135,19 @@ then
 	error_exit "$LINENO: Error after a call to read_topdirs()."
 fi
 unset -v log
+
+# If the --verbose option was given, print the content of the 'top_dirs'
+# array.
+if [[ $verbose == true ]]
+then
+	printf ' -----------\n Backupdb log:\n -----------\n'
+        printf ' * Top directories:\n'
+	for dir in ${top_dirs[@]}
+	do
+		echo "   $dir"
+	done
+	unset -v dir
+fi
 
 # Get the pathnames of the files passed as arguments after calling to
 # chpathn.

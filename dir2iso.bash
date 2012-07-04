@@ -29,6 +29,7 @@
 
 source ~/code/bash/backupdb/backupdb.flib
 source ~/code/bash/backupdb/upvars/upvars.bash
+source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================
 #
@@ -141,15 +142,24 @@ dir_inode=$(stat -c %i "$1")
 
 # Update the backup database with the metadata of the files under the
 # source directory.
-backupdb -r $1
+declare -a log   # The output of the command backupdb --verbose.
+declare top_dirs # A list of directories where to find by inode the
+                 # the files and directories passed as arguments.
+log=($(chpathn -rp --verbose "$@"))
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: error after calling backupdb script."
+	error_exit "$LINENO: Error after calling chpathn."
 fi
+if ! read_topdirs top_dirs ${log[@]}
+then
+	error_exit "$LINENO: Error after a call to read_topdirs()."
+fi
+unset -v log
+
 
 # Get the pathname of the source directory passed as argument after
 # calling backupdb, because that script calls chpathn.
-source_dir=($(find /home/marce/ -depth -inum $dir_inode -type d))
+source_dir=($(find ${top_dirs[@]} -depth -inum $dir_inode -type d))
 
 # Setup a connection to the database.
 handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \

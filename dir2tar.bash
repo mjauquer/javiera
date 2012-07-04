@@ -104,14 +104,6 @@ declare -a notfound    # A list of pathnames passed as arguments to this
                        # script and that do not point to existing files or
 		       # directories in the filesystem.
 
-declare -a file_inodes # A list of the inodes corresponding to the
-                       # regular files passed as arguments to this
-		       # script.
-
-declare -a dir_inodes  # A list of the inodes corresponding to the
-                       # directories passed as arguments to this
-		       # script.
-
 declare tempdir        # The pathname of a temporal directory where the
                        # files and directories will be processed.
 
@@ -197,8 +189,12 @@ then
 	error_exit "$LINENO: $1 already exists in $(pwd)."
 fi
 
-# Change problematic pathnames saving previously the corresponding inode
-# of the pathnames passed as arguments to this scripts.
+# Save the corresponding inode of the pathnames passed as arguments to
+# this script.
+declare -a dir_inodes  # A list of inodes corresponding to every
+                       # directory passed as argument.
+declare -a file_inodes # A list of inodes corresponding to every file
+                       # passed as argument.
 for pathname in ${pathnames[@]}
 do
 	if [ -d "$pathname" ]
@@ -212,10 +208,21 @@ do
 	fi
 done
 unset -v pathname
-if ! backupdb -r ${pathnames[@]}
+
+# Update the database with data about the files passed as arguments.
+declare -a log   # The output of the command backupdb --verbose.
+declare top_dirs # A list of directories where to find by inode the
+                 # files and directories passed as arguments.
+log=($(backupdb -r --verbose ${pathnames[@]}))
+if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling backupdb."
 fi
+if ! read_topdirs top_dirs ${log[@]}
+then
+	error_exit "$LINENO: Error after a call to read_topdirs()."
+fi
+unset -v log
 
 # After last command, pathnames might been changed.
 unset -v pathnames
@@ -223,13 +230,13 @@ unset -v pathnames
 # Use the saved inodes to get the corresponding pathnames.
 for inode in ${dir_inodes[@]}
 do
-	pathnames=($(find /home/marce/ -depth -inum $inode -type d))
+	pathnames=($(find ${top_dirs[@]} -depth -inum $inode -type d))
 done
 unset -v inode
 unset -v dir_inodes
 for inode in ${file_inodes[@]}
 do
-	pathnames+=($(find /home/marce/ -depth -inum $inode -type f))
+	pathnames+=($(find ${top_dirs[@]} -depth -inum $inode -type f))
 done
 unset -v inode
 unset -v file_inodes
