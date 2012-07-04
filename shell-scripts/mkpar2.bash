@@ -23,7 +23,7 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/backupdb.flib
+source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
 source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================

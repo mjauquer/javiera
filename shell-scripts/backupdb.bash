@@ -29,7 +29,7 @@
 #               the dots).
 #
 
-source ~/code/bash/backupdb/backupdb.flib
+source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
 source ~/code/bash/backupdb/getoptx/getoptx.bash
 source ~/code/bash/backupdb/pathname/pathname.flib
 source ~/code/bash/chpathn/chpathn.flib
