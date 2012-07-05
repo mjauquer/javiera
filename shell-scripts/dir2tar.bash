@@ -94,42 +94,14 @@ predict_newpath () {
 # Variables declaration.
 declare progname       # The name of this script.
 
-declare -a pathnames   # A list of the pathnames of the files and
-                       # directories that have been passed to this script.
-
-declare txtfile        # The pathname of the file passed as argument to
-                       # the --listed-in option.
-
-declare -a notfound    # A list of pathnames passed as arguments to this
-                       # script and that do not point to existing files or
-		       # directories in the filesystem.
-
-declare tempdir        # The pathname of a temporal directory where the
-                       # files and directories will be processed.
-
-declare handle         # Required by shsql. A connection to the database.
-
-
-declare -a ids         # A list of the file_ids in the database of the
-                       # files beeing archived.
-
-declare -a suffixes    # A list of the pathnames of the archived files
-                       # inside the archiver file. 
-
-declare tarfile        # The pathname of the tar file to be created.
-
-declare archiver_id    # The id number in the file table of the database
-                       # of the created tar file.
-
-declare archived_id    # The id number in the file table of the database
-                       # of a file archived in the tar file.
-
 progname=$(basename $0)
 
 # If no argument were passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
 
 # Parse command line options.
+declare txtfile        # The pathname of the file passed as argument to
+                       # the --listed-in option.
 while getoptex "listed-in:" "$@"
 do
 	case "$OPTOPT" in
@@ -141,6 +113,8 @@ done
 # If this script was called with the  "listed-in" option, add to the
 # list of pathnames to be processed those which are listed in the text
 # file specified.
+declare -a pathnames   # A list of the pathnames of the files and
+                       # directories that have been passed to this script.
 if [ "$txtfile" ]
 then
 	if [ -a $(readlink -f "$txtfile") ]
@@ -154,6 +128,8 @@ then
             	error_exit "$LINENO: $txtfile not found."
 	fi
 fi
+unset -v line
+unset -v txtfile
 shift $(($OPTIND-1))
 
 # Add to the list of pathnames to be processed, those which were passed
@@ -161,6 +137,9 @@ shift $(($OPTIND-1))
 pathnames+=( ${@:2} )
 
 # Check the existence of the files passed as arguments.
+declare -a notfound    # A list of pathnames passed as arguments to this
+                       # script and that do not point to existing files or
+		       # directories in the filesystem.
 for pathname in ${pathnames[@]}
 do
 	if [ \( ! -d $pathname \) -a \( ! -f $pathname \) ]
@@ -175,6 +154,7 @@ then
 regular files or directories in the filesystem:
 $(for file in ${notfound[@]}; do echo "$file"; done)"
 fi
+unset -v notfound
 
 # Check if the pathname of the output tar file is a valid one.
 if [[ $1 =~ .*/$ ]]
@@ -224,10 +204,8 @@ then
 fi
 unset -v log
 
-# After last command, pathnames might been changed.
-unset -v pathnames
-
-# Use the saved inodes to get the corresponding pathnames.
+# After last command, pathnames might been changed. Use the saved inodes
+# to get the corresponding pathnames.
 for inode in ${dir_inodes[@]}
 do
 	pathnames=($(find ${top_dirs[@]} -depth -inum $inode -type d))
@@ -242,6 +220,7 @@ unset -v inode
 unset -v file_inodes
 
 # Connect to the database.
+declare handle # Required by shsql. A connection to the database.
 handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
 	dbname=$BACKUPDB_DBNAME) 
 if [ $? -ne 0 ]
@@ -250,6 +229,8 @@ then
 fi
 
 # Create a temporal directory.
+declare tempdir        # The pathname of a temporal directory where the
+                       # files and directories will be processed.
 tempdir=$(readlink -f $(mktemp -d tmp.XXX))
 chmod 755 $tempdir
 if [ ! -d $tempdir ]
@@ -260,9 +241,13 @@ fi
 # Move the files and directories to be processed to the temporal
 # directory.
 declare -a newpaths
+declare -a ids       # A list of the file_ids in the database of the
+                     # files beeing archived.
+declare prefix
+declare -a suffixes  # A list of the pathnames of the archived files
+                     # inside the archiver file. 
 for pathname in ${pathnames[@]}
 do
-	get_parentmatcher parent_matcher $pathname
 	prefix=${pathname%/*}/
 	if [ -d $pathname ]
 	then
@@ -297,6 +282,7 @@ done
 unset -v dest
 unset -v newpaths
 unset -v pathname
+unset -v prefix
 
 # Set the temporal directory as the working directory.
 cd $tempdir
@@ -306,6 +292,7 @@ then
 fi
 
 # Create a tar file.
+declare tarfile  # The pathname of the tar file to be created.
 pathnames=( $(find $(ls)) )
 tar -cf $1 ${pathnames[@]}
 if [ $? -ne 0 ]
@@ -326,6 +313,8 @@ fi
 #-----------------------------------------------------------------------
 
 # Get the id of the created tar file.
+declare archiver_id    # The id number in the file table of the database
+                       # of the created tar file.
 get_id $handle archiver_id $(hostname) $tarfile
 if [ $? -ne 0 ]
 then
@@ -341,7 +330,10 @@ do
 		error_exit "$LINENO: Error after calling insert_archive()."
 	fi
 done
+unset -v ids
 unset -v ind
+unset -v tarfile
+unset -v suffixes
 
 #-----------------------------------------------------------------------
 # Remove the temporary directory.
@@ -358,6 +350,7 @@ then
 	error_exit "$LINENO: Error after calling cd command."
 fi
 rm -r $tempdir
+unset -v tempdir
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling rm command."
@@ -385,3 +378,4 @@ fi
 
 # Close the connection to the database.
 shsqlend $handle
+unset -v handle

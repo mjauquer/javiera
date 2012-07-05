@@ -13,11 +13,31 @@ CREATE TABLE file
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE flac_streaminfo
+CREATE TABLE audio_file
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                           REFERENCES file(id),
+	albumid          CHAR(36) NOT NULL, # musicbrainz id
+	artistid         CHAR(36) NOT NULL, # musicbrainz id
+	albumartistid    CHAR(36) NOT NULL, # musicbrainz id
+	trackid          CHAR(36) NOT NULL, # musicbrainz id
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE flac_file
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	audiofile_id     MEDIUMINT UNSIGNED NOT NULL
+	                           REFERENCES audio_file(id),
+	flacstream_id   MEDIUMINT UNSIGNED NOT NULL
+	                           REFERENCES audio_stream(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE flac_stream
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	total_samples    INT UNSIGNED NOT NULL,
 	sample_rate      MEDIUMINT UNSIGNED NOT NULL,
 	channels         TINYINT UNSIGNED NOT NULL,
@@ -37,18 +57,6 @@ CREATE TABLE flac_comments
 	album            VARCHAR(255),
 	tracknumber      TINYINT UNSIGNED,
 	totaltracks      TINYINT UNSIGNED,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE musicbrainz_ids
-(
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file_id          MEDIUMINT UNSIGNED NOT NULL
-	                           REFERENCES file(id),
-	albumid          CHAR(36),
-	artistid         CHAR(36),
-	albumartistid    CHAR(36),
-	trackid          CHAR(36),
 	PRIMARY KEY (id)
 );
 
@@ -110,4 +118,17 @@ CREATE TABLE par2create_volset
 	                           REFERENCES par2create(session_id),
 	volume_set       MEDIUMINT UNSIGNED NOT NULL
 	                           REFERENCES file(id)
+);
+
+CREATE TABLE container_file
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	file_id          MEDIUMINT UNSIGNED NOT NULL
+	                           REFERENCES file(id),
+	format_name      VARCHAR(10) NOT NULL,
+	format_long_name VARCHAR(36) NOT NULL,
+	start_time       DECIMAL NOT NULL,
+	duration         DECIMAL NOT NULL,
+	bit_rate         MEDIUMINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
 );

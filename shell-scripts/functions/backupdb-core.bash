@@ -24,7 +24,7 @@
 
 source ~/code/bash/backupdb/filetype/filetype.flib
 source ~/code/bash/backupdb/upvars/upvars.bash
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-flac.bash
+source ~/code/bash/backupdb/shell-scripts/functions/backupdb-audio.bash
 
 #===  FUNCTION =========================================================
 #
@@ -297,28 +297,23 @@ insert_dvd () {
 #                        about.
 #
 insert_file () {
+	local answer
+	local lastid
 	shsql $1 $(printf 'INSERT INTO file (mimetype, hostname, 
 		pathname, basename, sha1, fsize, mtime) VALUES ("%b", 
 		"%b", "%b", "%b", "%b", "%b", "%b");' \
 		$(file -b --mime-type $3) $2 $3 $(basename $3) \
 		$(sha1sum $3 | cut -c1-40) $(stat --format='%s %Y' $3))
 	[[ $? -ne 0 ]] && return 1
-	is_flac answer $3
-	[[ $? -ne 0 ]] && return 1
-	if [ $answer == "true" ]
+	lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
+	if [[ $(file -b --mime-type $3) =~ audio/.* ]]
 	then
-		local lastid
-		lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
-		[[ $? -ne 0 ]] && return 1
-		! insert_flacdata $1 $3 $lastid && return 1
+		! insert_audiofile $1 $3 $lastid && return 1
 	fi
 	is_iso answer $3
 	[[ $? -ne 0 ]] && return 1
-	if [ $answer == "true" ]
+	if [ $answer == true ]
 	then
-		local lastid
-		lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
-		[[ $? -ne 0 ]] && return 1
 		! insert_iso $1 $lastid && return 1
 	fi
 	return 0
@@ -385,12 +380,11 @@ delete_file () {
 	mimetype=$(shsql $1 $(printf 'SELECT mimetype FROM file 
 		WHERE id="%b";' $2))
 	[[ $? -ne 0 ]] && return 1
-	if [[ $mimetype = \"audio/x-flac\" ]]
+	if [[ $mimetype =~ \"audio/.* ]]
 	then
-		if ! delete_flacdata $1 $2 
+		if ! delete_audiofile $1 $2 
 		then
-			printf 'libbackupdb.sh: error in delete_flacdata
-				().' 1>&2
+			printf 'libbackupdb.sh: error in delete_audiofile().' 1>&2
 			return 1
 		fi
 	elif [[ $mimetype = \"application/x-iso9660-image\" ]]
@@ -484,7 +478,8 @@ recycle_file () {
 #                        about.
 #
 update_file () {
-	! get_id $1 id $2 $3 && return 1
+	local id=$(shsql $1 $(printf 'SELECT id FROM file WHERE 
+		hostname="%b" AND pathname="%b";' $2 $3))
 	! is_archived $1 archived $id && return 1
 	if [ $archived == "true" ]
 	then
@@ -497,15 +492,9 @@ update_file () {
 			$(stat --format='%s %Y' $3) \
 			$(sha1sum $3 | cut -c1-40))
 		[[ $? -ne 0 ]] && return 1
-		is_flac answer $3
-		[[ $? -ne 0 ]] && return 1
-		if [ $answer == "true" ]
+		if [[ $(file -b --mime-type $3) =~ audio/.* ]]
 		then
-			local id
-			id=$(shsql $1 $(printf 'SELECT id FROM file 
-				WHERE pathname="%b";' $3))
-			[[ $? -ne 0 ]] && return 1
-			! update_flacdata $1 $file $id && return 1
+			! update_audiofile $1 $file $id && return 1
 		fi
 	fi
 	return 0
