@@ -39,22 +39,28 @@ CREATE TABLE flac_file
 CREATE TABLE flac_comments
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	title            VARCHAR(255),
-	artist           VARCHAR(255),
-	artistsort       VARCHAR(255),
-	album            VARCHAR(255),
-	tracknumber      TINYINT UNSIGNED,
-	totaltracks      TINYINT UNSIGNED,
+	album            VARCHAR(255) NOT NULL,
+	artist           VARCHAR(255) NOT NULL,
+	artistsort       VARCHAR(255) NOT NULL,
+	discnumber       TINYINT UNSIGNED NOT NULL,
+	disctotal        TINYINT UNSIGNED NOT NULL,
+	title            VARCHAR(255) NOT NULL,
+	totaltracks      TINYINT UNSIGNED NOT NULL,
+	tracknumber      TINYINT UNSIGNED NOT NULL,
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE flac_stream
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	total_samples    INT UNSIGNED NOT NULL,
+	min_blocksize    MEDIUMINT UNSIGNED NOT NULL,
+	max_blocksize    MEDIUMINT UNSIGNED NOT NULL,
+	min_framesize    MEDIUMINT UNSIGNED NOT NULL,
+	max_framesize    MEDIUMINT UNSIGNED NOT NULL,
 	sample_rate      MEDIUMINT UNSIGNED NOT NULL,
 	channels         TINYINT UNSIGNED NOT NULL,
 	bits_per_sample  TINYINT UNSIGNED NOT NULL,
+	total_samples    INT UNSIGNED NOT NULL,
 	MD5_signature    CHAR(32) NOT NULL,
 	PRIMARY KEY (id)
 );
