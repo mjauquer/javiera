@@ -300,9 +300,9 @@ insert_file () {
 	local answer
 	local lastid
 	shsql $1 $(printf 'INSERT INTO file (mimetype, hostname, 
-		pathname, basename, sha1, fsize, mtime) VALUES ("%b", 
-		"%b", "%b", "%b", "%b", "%b", "%b");' \
-		$(file -b --mime-type $3) $2 $3 $(basename $3) \
+		pathname, sha1, fsize, mtime) VALUES ("%b", 
+		"%b", "%b", "%b", "%b", "%b");' \
+		$(file -b --mime-type $3) $2 $3 \
 		$(sha1sum $3 | cut -c1-40) $(stat --format='%s %Y' $3))
 	[[ $? -ne 0 ]] && return 1
 	lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
@@ -453,11 +453,10 @@ delete_isodata () {
 #                        about.
 #
 recycle_file () {
-	shsql $1 $(printf 'UPDATE file SET mimetype="%b",
-		hostname="%b", pathname="%b", basename="%b", 
-		fsize="%b", mtime="%b" WHERE sha1="%b" AND
-		hostname="" AND pathname="";' \
-		$(file -b --mime-type $3) $2 $3 $(basename $3)\
+	shsql $1 $(printf 'UPDATE file SET mimetype="%b", hostname="%b", 
+		pathname="%b", fsize="%b", mtime="%b" WHERE sha1="%b" 
+		AND hostname="" AND pathname="";' \
+		$(file -b --mime-type $3) $2 $3 \
 		$(stat --format='%s %Y' $3) \
 		$(sha1sum $3 | cut -c1-40))
 	[[ $? -ne 0 ]] && return 1
@@ -486,9 +485,9 @@ update_file () {
 		! insert_file $1 $2 $3 && return 1
 	else
 		shsql $1 $(printf 'UPDATE file SET mimetype="%b",
-			hostname="%b", pathname="%b", basename="%b", 
-			fsize="%b", mtime="%b" WHERE sha1="%b";' \
-			$(file -b --mime-type $3) $2 $3 $(basename $3)\
+			hostname="%b", pathname="%b", fsize="%b", 
+			mtime="%b" WHERE sha1="%b";' \
+			$(file -b --mime-type $3) $2 $3 \
 			$(stat --format='%s %Y' $3) \
 			$(sha1sum $3 | cut -c1-40))
 		[[ $? -ne 0 ]] && return 1

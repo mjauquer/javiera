@@ -6,7 +6,6 @@ CREATE TABLE file
 	mimetype         VARCHAR(64) NOT NULL,
 	hostname         VARCHAR(65) NOT NULL,
 	pathname         VARCHAR(256) NOT NULL,
-	basename         VARCHAR(256) NOT NULL,
 	sha1             CHAR(40) NOT NULL,
 	fsize            BIGINT UNSIGNED NOT NULL,
 	mtime            INT UNSIGNED NOT NULL,
@@ -30,8 +29,22 @@ CREATE TABLE flac_file
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	audiofile_id     MEDIUMINT UNSIGNED NOT NULL
 	                           REFERENCES audio_file(id),
-	flacstream_id   MEDIUMINT UNSIGNED NOT NULL
-	                           REFERENCES audio_stream(id),
+	flaccomments_id  MEDIUMINT UNSIGNED NOT NULL
+	                           REFERENCES flac_comments(id),
+	flacstream_id    MEDIUMINT UNSIGNED NOT NULL
+	                           REFERENCES flac_stream(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE flac_comments
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	title            VARCHAR(255),
+	artist           VARCHAR(255),
+	artistsort       VARCHAR(255),
+	album            VARCHAR(255),
+	tracknumber      TINYINT UNSIGNED,
+	totaltracks      TINYINT UNSIGNED,
 	PRIMARY KEY (id)
 );
 
@@ -43,20 +56,6 @@ CREATE TABLE flac_stream
 	channels         TINYINT UNSIGNED NOT NULL,
 	bits_per_sample  TINYINT UNSIGNED NOT NULL,
 	MD5_signature    CHAR(32) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE flac_comments
-(
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file_id          MEDIUMINT UNSIGNED NOT NULL
-	                           REFERENCES file(id),
-	title            VARCHAR(255),
-	artist           VARCHAR(255),
-	artistsort       VARCHAR(255),
-	album            VARCHAR(255),
-	tracknumber      TINYINT UNSIGNED,
-	totaltracks      TINYINT UNSIGNED,
 	PRIMARY KEY (id)
 );
 

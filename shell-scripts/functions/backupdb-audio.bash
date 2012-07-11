@@ -79,12 +79,12 @@ delete_audiofile () {
 	[[ $? -ne 0 ]] && return 1
 	shsql $1 $(printf 'DELETE FROM audio_file WHERE 
 		file_id="%b";' $2)
-	[[ $? -ne 0 ]] && echo 64 && return 1
+	[[ $? -ne 0 ]] && return 1
 
 	# Continue the delete process.
 	local mimetype=$(shsql $1 $(printf 'SELECT mimetype FROM file 
 		WHERE id="%b";' $2))
-	[[ $? -ne 0 ]] && echo 71 && return 1
+	[[ $? -ne 0 ]] && return 1
 	if [ $mimetype == \"audio/x-flac\" ]
 	then
 		! delete_flacfile $1 $audiofile_id && return 1
@@ -93,7 +93,7 @@ delete_audiofile () {
 	# Delete rest of data.
 	shsql $1 $(printf 'DELETE FROM flac_comments WHERE 
 		file_id="%b";' $2)
-	[[ $? -ne 0 ]] && echo 82 && return 1
+	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
@@ -137,14 +137,16 @@ insert_flacfile () {
 	local flacstream_id=$(shsql $1 "SELECT LAST_INSERT_ID();")
 	[[ $? -ne 0 ]] && return 1
 
-	# Insert an entry in the 'flac_file' table.
-	shsql $1 $(printf 'INSERT INTO flac_file (audiofile_id, 
-		flacstream_id) VALUES (%b, %b);' $audiofile_id \
-		$flacstream_id)
+	# Insert an entry in the 'flac_comments' table.
+	! insert_flaccomments $1 $2 && return 1
+	local flaccomments_id=$(shsql $1 "SELECT LAST_INSERT_ID();")
 	[[ $? -ne 0 ]] && return 1
 
-	# Insert rest of data.
-	! insert_flaccomments $1 $2 $3 && return 1
+	# Insert an entry in the 'flac_file' table.
+	shsql $1 $(printf 'INSERT INTO flac_file (audiofile_id,
+		flaccomments_id, flacstream_id) VALUES (%b, %b, %b);' \
+		$audiofile_id $flaccomments_id $flacstream_id)
+	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
@@ -183,20 +185,23 @@ update_flacfile () {
 
 	# Get involved ids.
 	local audiofile_id=$(shsql $1 $(printf 'SELECT id FROM audio_file 
-		WHERE file_id="%b";' $3))
+		WHERE file_id=%b;' $3))
 	[[ $? -ne 0 ]] && return 1
 	local flacfile_id=$(shsql $1 $(printf 'SELECT id FROM flac_file
-		WHERE audiofile_id="%b";' $audiofile_id))
+		WHERE audiofile_id=%b;' $audiofile_id))
 	[[ $? -ne 0 ]] && return 1
 	local flacstream_id=$(shsql $1 $(printf 'SELECT flacstream_id
-		FROM flac_file WHERE id="%b";' $flacfile_id))
+		FROM flac_file WHERE audiofile_id=%b;' $audiofile_id))
+	[[ $? -ne 0 ]] && return 1
+	local flaccomments_id=$(shsql $1 $(printf 'SELECT flaccomments_id
+		FROM flac_file WHERE audiofile_id=%b;' $audiofile_id))
 	[[ $? -ne 0 ]] && return 1
 
 	# Update the entry in the 'flac_stream' table.
 	! update_flacstream $1 $2 $flacstream_id && return 1
 
-	# Insert rest of data.
-	! update_flaccomments $1 $2 $3 && return 1
+	# Update the entry in the 'flac_comments' table.
+	! update_flaccomments $1 $2 $flaccomments_id && return 1
 	return 0
 }
 
@@ -224,7 +229,7 @@ delete_flacfile () {
 	# Delete the entry in the 'flac_file' table.
 	shsql $1 $(printf 'DELETE FROM flac_file WHERE id=%b;' \
 		$flacfile_id)
-	[[ $? -ne 0 ]] && echo 163 && return 1
+	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
@@ -245,11 +250,11 @@ insert_flacstream () {
 	local channels=\"$(metaflac --show-channels $2)\"
 	local bps=\"$(metaflac --show-bps $2)\"
 	local md5=\"$(metaflac --show-md5sum $2)\"
-	shsql $1 $(printf 'INSERT INTO flac_stream ( 
-		total_samples, sample_rate, channels, bits_per_sample, 
-		MD5_signature) VALUES (%b, %b, %b, %b, %b);' \
+	shsql $1 $(printf 'INSERT INTO flac_stream (total_samples, 
+		sample_rate, channels, bits_per_sample, MD5_signature) 
+		VALUES (%b, %b, %b, %b, %b);' \
 		"$tsamples" "$sample_rate" "$channels" "$bps" "$md5")
-	[[ $? -ne 0 ]] && echo sale && return 1
+	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
@@ -261,10 +266,10 @@ insert_flacstream () {
 #              PATHNAME and insert it in all the related tables in the
 #              database.
 #
-#  PARAMETERS: HANDLE  A connection to a database.
+#  PARAMETERS: HANDLE    A connection to a database.
 #              PATHNAME  A unix filesystem formatted string. 
-#              ID      The value of the 'id' column in the 'flac_stream'
-#                      table of the database.
+#              ID        The value of the 'id' column in the 
+#                        'flac_stream' of the database.
 #
 update_flacstream () {
 	local tsamples="\"$(metaflac --show-total-samples $2)\""
@@ -292,22 +297,20 @@ update_flacstream () {
 #                        'audio_file' table of the database.
 delete_flacstream () {
 	shsql $1 $(printf 'DELETE FROM flac_stream WHERE id=%b;' $2)
-	[[ $? -ne 0 ]] && echo 205 && return 1
+	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: insert_flaccomments HANDLE PATHNAME ID
+#       USAGE: insert_flaccomments HANDLE PATHNAME
 #
 # DESCRIPTION: Collect metadata related to the flac file pointed by
-#              PATHNAME and insert it in all the related tables in the
-#              database.
+#              PATHNAME and insert it in the 'flac_comments' table.
 #
 #  PARAMETERS: HANDLE    A connection to a database.
 #              PATHNAME  A unix filesystem formatted string. 
-#              ID        A number value related to the id column of the
-#                        database's file table.
+#
 insert_flaccomments () {
 	local title="$(metaflac --show-tag=title $2)"
 	title="${title##[Tt][Ii][Tt][Ll][Ee]=}"
@@ -337,9 +340,9 @@ insert_flaccomments () {
 	totaltracks="${totaltracks##[Tt][Oo][Tt][Aa][Ll][Tt][Rr][Aa][Cc][Kk][Ss]=}"
 	totaltracks=${totaltracks:-NULL} && [[ $totaltracks != NULL ]] && \
 		totaltracks="\"$totaltracks\""
-	shsql $1 $(printf 'INSERT INTO flac_comments (file_id, title, 
-		artist, artistsort, album, tracknumber, totaltracks) 
-		VALUES (%b, %b, %b, %b, %b, %b, %b);' $3 "$title" \
+	shsql $1 $(printf 'INSERT INTO flac_comments (title, artist, 
+		artistsort, album, tracknumber, totaltracks) 
+		VALUES (%b, %b, %b, %b, %b, %b);' "$title" \
 		"$artist" "$artistsort" "$album" "$tracknumber" \
 		"$totaltracks")
 	[[ $? -ne 0 ]] && return 1
@@ -356,8 +359,8 @@ insert_flaccomments () {
 #
 #  PARAMETERS: HANDLE    A connection to a database.
 #              PATHNAME  A unix filesystem formatted string. 
-#              ID        A number value related to the id column of the
-#                        database's file table.
+#              ID        The value of the 'id' column in the 
+#                        'flac_comments' of the database.
 update_flaccomments () {
 	local title="$(metaflac --show-tag=title $2)"
 	title="${title##[Tt][Ii][Tt][Ll][Ee]=}"
@@ -370,7 +373,7 @@ update_flaccomments () {
 	artist=${artist:-NULL} && [[ $artist != NULL ]] && \
 		artist="\"$artist\""
 	local artistsort="$(metaflac --show-tag=artistsort $2)"
-	artistsort="${artistsort##[Aa][Rr][Tt[Ii][Ss][Tt][Ss][Oo][Rr][Tt]=}"
+	artistsort="${artistsort##[Aa][Rr][Tt][Ii][Ss][Tt][Ss][Oo][Rr][Tt]=}"
 	escape_chars artistsort "$artistsort"
 	artistsort=${artistsort:-NULL} && [[ $artistsort != NULL ]] && \
 		artistsort="\"$artistsort\""
@@ -389,7 +392,7 @@ update_flaccomments () {
 		totaltracks="\"$totaltracks\""
 	shsql $1 $(printf 'UPDATE flac_comments SET title=%b, 
 		artist=%b, artistsort=%b, album=%b, tracknumber=%b, 
-		totaltracks=%b WHERE file_id=%b ;' "$title" "$artist" \
+		totaltracks=%b WHERE id=%b ;' "$title" "$artist" \
 		"$artistsort" "$album" "$tracknumber" "$totaltracks" $3)
 	[[ $? -ne 0 ]] && return 1
 	return 0
