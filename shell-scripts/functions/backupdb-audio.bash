@@ -89,11 +89,6 @@ delete_audiofile () {
 	then
 		! delete_flacfile $1 $audiofile_id && return 1
 	fi
-
-	# Delete rest of data.
-	shsql $1 $(printf 'DELETE FROM flac_comments WHERE 
-		file_id="%b";' $2)
-	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
@@ -219,9 +214,16 @@ delete_flacfile () {
 	local flacfile_id=$(shsql $1 $(printf 'SELECT id FROM
 		flac_file WHERE audiofile_id=%b;' $2))
 	[[ $? -ne 0 ]] && return 1
+	local flaccomments_id=$(shsql $1 $(printf 'SELECT 
+		flaccomments_id FROM flac_file WHERE id=%b;' \
+		$flacfile_id))
+	[[ $? -ne 0 ]] && return 1
 	local flacstream_id=$(shsql $1 $(printf 'SELECT flacstream_id
 		FROM flac_file WHERE id=%b;' $flacfile_id))
 	[[ $? -ne 0 ]] && return 1
+
+	# Delete the entry in the 'flac_comments' table.
+	! delete_flaccomments $1 $flaccomments_id && return 1
 
 	# Delete the entry in the 'flac_stream' table.
 	! delete_flacstream $1 $flacstream_id && return 1
@@ -268,8 +270,8 @@ insert_flacstream () {
 #
 #  PARAMETERS: HANDLE    A connection to a database.
 #              PATHNAME  A unix filesystem formatted string. 
-#              ID        The value of the 'id' column in the 
-#                        'flac_stream' of the database.
+#              ID        The value of the 'id' column in the
+#                        'flac_stream' table.
 #
 update_flacstream () {
 	local tsamples="\"$(metaflac --show-total-samples $2)\""
@@ -289,12 +291,12 @@ update_flacstream () {
 #
 #       USAGE: delete_flacstream HANDLE ID
 #
-# DESCRIPTION: Delete related metadata of the flac stream whose id value
-#              in the 'flac_stream' table is ID.
+# DESCRIPTION: Delete an entry in the 'flac_stream' table.
 #
-#  PARAMETERS: HANDLE    A connection to a database.
-#              ID        The value of the 'id' column in the
-#                        'audio_file' table of the database.
+#  PARAMETERS: HANDLE  A connection to a database.
+#              ID      The value of the 'id' column in the 'flac_stream'
+#                      table.
+#
 delete_flacstream () {
 	shsql $1 $(printf 'DELETE FROM flac_stream WHERE id=%b;' $2)
 	[[ $? -ne 0 ]] && return 1
@@ -394,6 +396,22 @@ update_flaccomments () {
 		artist=%b, artistsort=%b, album=%b, tracknumber=%b, 
 		totaltracks=%b WHERE id=%b ;' "$title" "$artist" \
 		"$artistsort" "$album" "$tracknumber" "$totaltracks" $3)
+	[[ $? -ne 0 ]] && return 1
+	return 0
+}
+
+#===  FUNCTION =========================================================
+#
+#       USAGE: delete_flaccomments HANDLE ID
+#
+# DESCRIPTION: Delete an entry in the 'flac_comments' table.
+#
+#  PARAMETERS: HANDLE  A connection to a database.
+#              ID      The value of the 'id' column in the
+#                      'flac_comments' table.
+#
+delete_flaccomments () {
+	shsql $1 $(printf 'DELETE FROM flac_comments WHERE id=%b;' $2)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
