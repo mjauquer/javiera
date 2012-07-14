@@ -96,6 +96,41 @@ delete_audiofile () {
 
 #===  FUNCTION =========================================================
 #
+#       USAGE: get_flacomments ARRAYNAME1 ARRAYNAME2 PATHNAME
+#
+# DESCRIPTION: Get the vorbis comments stored in the flac file pointed
+#              by PATHNAME. Store the left member of each comment in
+#              ARRAYNAME1 and the right ones in ARRAYNAME2, both
+#              situated in the caller's scope.
+#
+#  PARAMETERS: PATHNAME A unix filesystem formatted string. 
+#
+get_flacomments() {
+	local -a left
+	local -a right
+	local -i ind=0
+	local skip=true
+	metaflac --list --block-number=2 $3 | while read line
+	do
+		if [[ "$line" =~ right:.* ]]
+		then
+			skip=false
+			continue
+		fi
+		if [ $skip == false ]
+		then
+			line=${line##comment\[$ind\]: }
+			left+=${line%%=*}
+			right+=${line##*=}
+			ind=$((ind+1))
+		fi
+	done
+	local $1 && upvars -a${#left[@]} $1 "${left[@]}"
+	local $2 && upvars -a${#right[@]} $2 "${right[@]}"
+}
+
+#===  FUNCTION =========================================================
+#
 #       USAGE: get_flacfilemetadata PATHNAME ALBUMID ARTISTID ALBARTID 
 #                      TRACKID
 #
