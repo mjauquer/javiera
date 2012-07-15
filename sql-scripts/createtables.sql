@@ -15,38 +15,41 @@ CREATE TABLE file
 CREATE TABLE audio_file
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file_id          MEDIUMINT UNSIGNED NOT NULL
+	file             MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
-	albumid          CHAR(36) NOT NULL, # musicbrainz id
-	artistid         CHAR(36) NOT NULL, # musicbrainz id
-	albumartistid    CHAR(36) NOT NULL, # musicbrainz id
+	type             ENUM('flac', 'mp3', 'ogg') NOT NULL,
 	trackid          CHAR(36) NOT NULL, # musicbrainz id
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE audio_file_tags
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	audio_file       MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES audio_file(id),
+	tag              MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tag(id),
+	tag_deleted      ENUM('false', 'true') NOT NULL,
+	last_update      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	                 	ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE flac_file
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	audiofile_id     MEDIUMINT UNSIGNED NOT NULL
+	audio_file       MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES audio_file(id),
-	flaccomments_id  MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES flac_comments(id),
 	flacstream_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES flac_stream(id),
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE flac_comments
+CREATE TABLE tag
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	album            VARCHAR(255) NOT NULL,
-	artist           VARCHAR(255) NOT NULL,
-	artistsort       VARCHAR(255) NOT NULL,
-	discnumber       TINYINT UNSIGNED NOT NULL,
-	disctotal        TINYINT UNSIGNED NOT NULL,
-	title            VARCHAR(255) NOT NULL,
-	totaltracks      TINYINT UNSIGNED NOT NULL,
-	tracknumber      TINYINT UNSIGNED NOT NULL,
+	name             VARCHAR(256) NOT NULL,
+	text             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -143,7 +146,7 @@ CREATE TABLE container_file
 CREATE TABLE artist
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	uuid             CHAR(36) NOT NULL,
+	gid              CHAR(36) NOT NULL,
 	name             MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES artist_name(id),
 	sort_name        MEDIUMINT UNSIGNED NOT NULL
@@ -182,7 +185,7 @@ CREATE TABLE artist_credit_name
 CREATE TABLE recording
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	uuid             CHAR(36) NOT NULL,
+	gid              CHAR(36) NOT NULL,
 	name             MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES track_name(id),
 	artist_credit    MEDIUMINT UNSIGNED NOT NULL
@@ -219,10 +222,10 @@ CREATE TABLE track_name
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE instance # aka release
+CREATE TABLE `release`
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	uuid             CHAR(36) NOT NULL,
+	gid              CHAR(36) NOT NULL,
 	name             MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES release_name(id),
 	artist_credit    MEDIUMINT UNSIGNED NOT NULL
@@ -256,8 +259,8 @@ CREATE TABLE medium
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	tracklist        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tracklist(id),
-	instance          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES instance(id),
+	`release`          MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES `release`(id),
 	position         SMALLINT UNSIGNED NOT NULL,
 	format           MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES medium_format(id),

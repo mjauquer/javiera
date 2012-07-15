@@ -76,11 +76,15 @@ update_audiofile () {
 #                      table of the database.
 delete_audiofile () {
 	# Delete the entry in the 'audio_file' table.
-	local audiofile_id=$(shsql $1 $(printf 'SELECT id FROM
-		audio_file WHERE file_id="%b";' $2))
+	local audio_file=$(shsql $1 $(printf 'SELECT id FROM audio_file 
+		WHERE file="%b";' $2))
 	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'DELETE FROM audio_file WHERE 
-		file_id="%b";' $2)
+	shsql $1 $(printf 'DELETE FROM audio_file WHERE file="%b";' $2)
+	[[ $? -ne 0 ]] && return 1
+
+	# Delete entries in the 'audio_file_tags' table.
+	shsql $1 $(printf 'DELETE FROM audio_file_tags WHERE 
+		audio_file=%b;' $audio_file)
 	[[ $? -ne 0 ]] && return 1
 
 	# Continue the delete process.
@@ -89,14 +93,14 @@ delete_audiofile () {
 	[[ $? -ne 0 ]] && return 1
 	if [ $mimetype == \"audio/x-flac\" ]
 	then
-		! delete_flacfile $1 $audiofile_id && return 1
+		! delete_flacfile $1 $audio_file && return 1
 	fi
 	return 0
 }
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: get_flacomments ARRAYNAME1 ARRAYNAME2 PATHNAME
+#       USAGE: get_flacmetadata ARRAYNAME1 ARRAYNAME2 BLOCKNUM PATHNAME
 #
 # DESCRIPTION: Get the vorbis comments stored in the flac file pointed
 #              by PATHNAME. Store the left member of each comment in
@@ -105,70 +109,73 @@ delete_audiofile () {
 #
 #  PARAMETERS: PATHNAME A unix filesystem formatted string. 
 #
-get_flacomments() {
+get_flacmetadata() {
 	local -a left
 	local -a right
-	local -i ind=0
 	local skip=true
-	metaflac --list --block-number=2 $3 | while read line
+	local char
+	local line
+	local tempdir=$(readlink -f $(mktemp -d tmp.XXX))
+	if [ ! -d $tempdir ]
+	then
+		echo "Coudn't create a temporal directory."
+		return 1
+	fi
+	if [ $3 == 0 ]
+	then
+		char=":"
+	elif [ $3 == 2 ]
+	then
+		char="="
+	else
+		return 1
+	fi
+	metaflac --list --block-number=$3 $4 > $tempdir/tempfile.txt
+	while read line
 	do
-		if [[ "$line" =~ right:.* ]]
+		if [[ "$line" =~ length:.* ]]
 		then
 			skip=false
 			continue
 		fi
 		if [ $skip == false ]
 		then
-			line=${line##comment\[$ind\]: }
-			left+=${line%%=*}
-			right+=${line##*=}
-			ind=$((ind+1))
+			line="${line##*comment\[*\]: }"
+			[[ "$line" =~ comments:.* ]] && continue
+			if [[ "$line" =~ "vendor string:"* ]]
+			then
+				left+=( "vendor string" )
+				right+=( "${line##*string: }" )
+				continue
+			fi
+			left+=( "${line%%${char}*}" )
+			right+=( "${line##*${char}}" )
 		fi
-	done
+	done < $tempdir/tempfile.txt
+	rm -r $tempdir
+	[[ $? -ne 0 ]] && return 1
 	local $1 && upvars -a${#left[@]} $1 "${left[@]}"
 	local $2 && upvars -a${#right[@]} $2 "${right[@]}"
 }
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: get_flacfilemetadata PATHNAME ALBUMID ARTISTID ALBARTID 
-#                      TRACKID
+#       USAGE: get_flacfile PATHNAME TRACKID
 #
 # DESCRIPTION: Get metadata related to the flac file pointed by PATHNAME
 #              and store it in the variables ALBUMID, ARTISTID,
 #              ALBARTID and TRACKID declared in the caller's scope.
 #
 #  PARAMETERS: PATHNAME  A unix filesystem formatted string. 
-#              ALBUMID   The name of the variable declared in the
-#                        caller's scope where to store the musicbrainz's
-#                        album PUID.
-#              ARTISTID  The name of the variable declared in the
-#                        caller's scope where to store the musicbrainz's
-#                        artist PUID.
-#              ALBARTID  The name of the variable declared in the
-#                        caller's scope where to store the musicbrainz's
-#                        albumartist PUID.
 #              TRACKID   The name of the variable declared in the
 #                        caller's scope where to store the musicbrainz's
 #                        track PUID.
 #
-get_flacfilemetadata () {
-	local albumid="$(metaflac --show-tag=musicbrainz_albumid $1)"
-	albumid="${albumid##musicbrainz_albumid=}"
-	albumid="\"$albumid\""
-	local artistid="$(metaflac --show-tag=musicbrainz_artistid $1)"
-	artistid="${artistid##musicbrainz_artistid=}"
-	artistid="\"$artistid\""
-	local albartid="$(metaflac --show-tag=musicbrainz_albumartistid $1)"
-	albartid="${albartid##musicbrainz_albumartistid=}"
-	albartid="\"$albartid\""
+get_flacfile () {
 	local trackid="$(metaflac --show-tag=musicbrainz_trackid $1)"
 	trackid="${trackid##musicbrainz_trackid=}"
 	trackid="\"$trackid\""
-	local $2 && upvar $2 $albumid
-	local $3 && upvar $3 $artistid
-	local $4 && upvar $4 $albartid
-	local $5 && upvar $5 $trackid
+	local $2 && upvar $2 $trackid
 }
 
 #===  FUNCTION =========================================================
@@ -186,31 +193,37 @@ get_flacfilemetadata () {
 insert_flacfile () {
 
 	# Insert an entry in the 'audio_file' table.
-	get_flacfilemetadata $2 mbrz_albumid mbrz_artistid \
-		mbrz_albartid mbrz_trackid
+	get_flacfile $2 mbrz_trackid
 	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'INSERT INTO audio_file (file_id, 
-		albumid, artistid, albumartistid, trackid) VALUES (%b, 
-		%b, %b, %b, %b);' $3 "$mbrz_albumid" "$mbrz_artistid" \
-		"$mbrz_albartid" "$mbrz_trackid")
+	shsql $1 $(printf 'INSERT INTO audio_file (file, type, trackid) 
+		VALUES (%b, "%b", %b);' $3 flac "$mbrz_trackid")
 	[[ $? -ne 0 ]] && return 1
-	local audiofile_id=$(shsql $1 "SELECT LAST_INSERT_ID();")
+	local audio_file=$(shsql $1 "SELECT LAST_INSERT_ID();")
 	[[ $? -ne 0 ]] && return 1
+
+	# Insert entries in the 'tag' table.
+	local tags
+	insert_audiofiletags $1 tags $2 $audio_file
+	[[ $? -ne 0 ]] && return 1
+
+	# Insert entries in the 'audio_file_tags' table.
+	for tag in ${tags[@]}
+	do
+		shsql $1 $(printf 'INSERT INTO audio_file_tags 
+			(audio_file, tag, tag_deleted) 
+			VALUES (%b, %b, "false");' $audio_file $tag)
+		[[ $? -ne 0 ]] && return 1
+	done
 
 	# Insert an entry in the 'flac_stream' table.
 	! insert_flacstream $1 $2 && return 1
 	local flacstream_id=$(shsql $1 "SELECT LAST_INSERT_ID();")
 	[[ $? -ne 0 ]] && return 1
 
-	# Insert an entry in the 'flac_comments' table.
-	! insert_flaccomments $1 $2 && return 1
-	local flaccomments_id=$(shsql $1 "SELECT LAST_INSERT_ID();")
-	[[ $? -ne 0 ]] && return 1
-
 	# Insert an entry in the 'flac_file' table.
-	shsql $1 $(printf 'INSERT INTO flac_file (audiofile_id,
-		flaccomments_id, flacstream_id) VALUES (%b, %b, %b);' \
-		$audiofile_id $flaccomments_id $flacstream_id)
+	shsql $1 $(printf 'INSERT INTO flac_file (audio_file,
+		flacstream_id) VALUES (%b, %b);' \
+		$audio_file $flacstream_id)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -230,34 +243,87 @@ insert_flacfile () {
 update_flacfile () {
 
 	# Update the entry in the 'audio_file' table.
-	get_flacfilemetadata $2 mbrz_albumid mbrz_artistid \
-		mbrz_albartid mbrz_trackid
+	get_flacfile $2 mbrz_trackid
 	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'UPDATE audio_file SET albumid=%b, 
-		artistid=%b, albumartistid=%b, trackid=%b WHERE 
-		file_id=%b ;' "$mbrz_albumid" "$mbrz_artistid" \
-		"$mbrz_albartid" "$mbrz_trackid" $3)
+	shsql $1 $(printf 'UPDATE audio_file SET type="flac", trackid=%b 
+		WHERE file=%b ;' "$mbrz_trackid" $3)
 	[[ $? -ne 0 ]] && return 1
 
 	# Get involved ids.
-	local audiofile_id=$(shsql $1 $(printf 'SELECT id FROM audio_file 
-		WHERE file_id=%b;' $3))
+	local audio_file=$(shsql $1 $(printf 'SELECT id FROM audio_file 
+		WHERE file=%b;' $3))
 	[[ $? -ne 0 ]] && return 1
 	local flacfile_id=$(shsql $1 $(printf 'SELECT id FROM flac_file
-		WHERE audiofile_id=%b;' $audiofile_id))
+		WHERE audio_file=%b;' $audio_file))
 	[[ $? -ne 0 ]] && return 1
 	local flacstream_id=$(shsql $1 $(printf 'SELECT flacstream_id
-		FROM flac_file WHERE audiofile_id=%b;' $audiofile_id))
+		FROM flac_file WHERE audio_file=%b;' $audio_file))
 	[[ $? -ne 0 ]] && return 1
-	local flaccomments_id=$(shsql $1 $(printf 'SELECT flaccomments_id
-		FROM flac_file WHERE audiofile_id=%b;' $audiofile_id))
+
+	# Search the 'audio_file_tags' table for tags deleted from the
+	# audio file and update that table.
+	get_flacmetadata tagnames text 2 $2
+	shsql $handle "SELECT name, text, tag_deleted, tag
+       		FROM tag LEFT JOIN 
+		audio_file_tags ON audio_file_tags.tag=tag.id 
+		WHERE audio_file_tags.audio_file=$audio_file;" | (
+		local found=false
+		while row=$(shsqlline)
+		do
+			eval set $row
+			for (( ind=0; ind<${#tagnames[@]}; ind++ ))
+			do
+				if [ "$1" == "${tagnames[ind]}" ]
+				then
+					if [ "$2" == "${text[ind]}" ]
+					then
+						found=true
+						break
+					fi
+				fi
+			done
+			if [ \( $found == true \) -a \( $3 == "true" \) ]
+			then
+				shsql $handle $(printf 'UPDATE 
+					audio_file_tags 
+					SET tag_deleted="false" WHERE
+					audio_file=%b AND tag=%b;' \
+					$audio_file $4)
+			fi
+			if [ \( $found == false \) -a \( $3 == false \) ]
+			then
+				shsql $handle $(printf 'UPDATE 
+					audio_file_tags 
+					SET tag_deleted="true" WHERE
+					audio_file=%b AND tag=%b;' \
+					$audio_file $4)
+			fi
+			found=false
+		done
+	)
+
+	# Insert entries in the 'tag' table.
+	local tags
+	insert_audiofiletags $1 tags $2 $audio_file
 	[[ $? -ne 0 ]] && return 1
+
+	# Insert entries in the 'audio_file_tags' table.
+	for tag in ${tags[@]}
+	do
+		local match=$(shsql $1 $(printf 'SELECT COUNT(*) FROM 
+			audio_file_tags WHERE tag=%b;' $tag))
+		[[ $? -ne 0 ]] && return 1
+		if [ $match == '"0"' ]
+		then
+			shsql $1 $(printf 'INSERT INTO audio_file_tags 
+				(audio_file, tag, tag_deleted) VALUES 
+				(%b, %b, "false");' $audio_file $tag)
+			[[ $? -ne 0 ]] && return 1
+		fi
+	done
 
 	# Update the entry in the 'flac_stream' table.
 	! update_flacstream $1 $2 $flacstream_id && return 1
-
-	# Update the entry in the 'flac_comments' table.
-	! update_flaccomments $1 $2 $flaccomments_id && return 1
 	return 0
 }
 
@@ -273,18 +339,11 @@ update_flacfile () {
 #                      table of the database.
 delete_flacfile () {
 	local flacfile_id=$(shsql $1 $(printf 'SELECT id FROM
-		flac_file WHERE audiofile_id=%b;' $2))
-	[[ $? -ne 0 ]] && return 1
-	local flaccomments_id=$(shsql $1 $(printf 'SELECT 
-		flaccomments_id FROM flac_file WHERE id=%b;' \
-		$flacfile_id))
+		flac_file WHERE audio_file=%b;' $2))
 	[[ $? -ne 0 ]] && return 1
 	local flacstream_id=$(shsql $1 $(printf 'SELECT flacstream_id
 		FROM flac_file WHERE id=%b;' $flacfile_id))
 	[[ $? -ne 0 ]] && return 1
-
-	# Delete the entry in the 'flac_comments' table.
-	! delete_flaccomments $1 $flaccomments_id && return 1
 
 	# Delete the entry in the 'flac_stream' table.
 	! delete_flacstream $1 $flacstream_id && return 1
@@ -298,10 +357,10 @@ delete_flacfile () {
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: get_flacstreammetadata PATHNAME MINBCKSIZE MAXBCKSIZE
+#       USAGE: get_flacstream PATHNAME MINBCKSIZE MAXBCKSIZE
 #                      MINFRMSIZE TOTSAMPLES SAMPLERATE CHANNELS BPS MD5
 #
-# DESCRIPTION: Get metadata related to the flac stream of the flac file
+# DESCRIPTION: Get metadata related to the stream of the flac file
 #              pointed by PATHNAME and store it in the variables
 #              MINBCKSIZE, MAXBCKSIZE, MINFRMSIZE, MAXFRMSIZE,
 #              TOTSAMPLES, SAMPLERATE, CHANNELS, BPS and MD5, declared
@@ -336,16 +395,32 @@ delete_flacfile () {
 #                          caller's scope where to store the md5sum of
 #                          the original audio stream.
 #
-get_flacstreammetadata () {
-	local minbsze=\"$(metaflac --show-min-blocksize $1)\"
-	local maxbsze=\"$(metaflac --show-max-blocksize $1)\"
-	local minfsze=\"$(metaflac --show-min-framesize $1)\"
-	local maxfsze=\"$(metaflac --show-max-framesize $1)\"
-	local totsamp=\"$(metaflac --show-total-samples $1)\"
-	local samplerate=\"$(metaflac --show-sample-rate $1)\"
-	local chann=\"$(metaflac --show-channels $1)\"
-	local bpers=\"$(metaflac --show-bps $1)\"
-	local md5sum=\"$(metaflac --show-md5sum $1)\"
+get_flacstream () {
+	get_flacmetadata tagnames text 0 $1
+	[[ $? -ne 0 ]] && return 1
+	for (( ind=0; ind<${#tagnames[@]}; ind++ ))
+	do
+		case "${tagnames[ind]}" in
+			'minimum blocksize') minbsze="${text[ind]}"
+			                     ;;
+			'maximum blocksize') maxbsze="${text[ind]}"
+			                     ;;
+			'minimum framesize') minfsze="${text[ind]}"
+			                     ;;
+			'maximum framesize') maxfsze="${text[ind]}"
+			                     ;;
+			'sample_rate')       samplerate="${text[ind]}"
+			                     ;;
+			'channels')          chann="${text[ind]}"
+			                     ;;
+			'bits_per_sample')   bpers="${text[ind]}"
+			                     ;;
+			'total samples')     totsamp="${text[ind]}"
+			                     ;;
+			'MD5 signature')     md5sum="${text[ind]}"
+			                     ;;
+		esac
+	done
 	local $2 && upvar $2 $minbsze
 	local $3 && upvar $3 $maxbsze
 	local $4 && upvar $4 $minfsze
@@ -370,15 +445,17 @@ get_flacstreammetadata () {
 #              PATHNAME  A unix filesystem formatted string. 
 #
 insert_flacstream () {
-	get_flacstreammetadata $2 minbsize maxbsize minfsize maxfsize \
-		tsamples sample_rate channels bps md5
+	get_flacstream $2 minbsize maxbsize minfsize maxfsize tsamples \
+		sample_rate channels bps md5
 	[[ $? -ne 0 ]] && return 1
 	shsql $1 $(printf 'INSERT INTO flac_stream (min_blocksize,
 		max_blocksize, min_framesize, max_framesize, 
 		total_samples, sample_rate, channels, bits_per_sample,
-		MD5_signature) VALUES (%b,%b,%b,%b,%b,%b,%b,%b,%b);' \
-		$minbsize $maxbsize $minfsize $maxfsize $tsamples \
-		$sample_rate $channels $bps $md5)
+		MD5_signature) VALUES
+		("%b","%b","%b","%b","%b","%b","%b","%b","%b");' \
+		"$minbsize" "$maxbsize" "$minfsize" "$maxfsize" \
+		"$tsamples" \
+		"$sample_rate" "$channels" "$bps" "$md5")
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -397,15 +474,17 @@ insert_flacstream () {
 #                        'flac_stream' table.
 #
 update_flacstream () {
-	get_flacstreammetadata $2 minbsize maxbsize minfsize maxfsize \
-		tsamples sample_rate channels bps md5
+	get_flacstream $2 minbsize maxbsize minfsize maxfsize tsamples \
+	       	sample_rate channels bps md5
 	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'UPDATE flac_stream SET min_blocksize=%b,
-		max_blocksize=%b, min_framesize=%b, max_framesize=%b,
-		total_samples=%b, sample_rate=%b, channels=%b, 
-		bits_per_sample=%b, MD5_signature=%b WHERE id=%b;'\
-		$minbsize $maxbsize $minfsize $maxfsize $tsamples \
-		$sample_rate $channels $bps $md5 $3)
+	shsql $1 $(printf 'UPDATE flac_stream SET min_blocksize="%b",
+		max_blocksize="%b", min_framesize="%b", 
+		max_framesize="%b", total_samples="%b", 
+		sample_rate="%b", channels="%b", bits_per_sample="%b", 
+		MD5_signature="%b" WHERE id=%b;'\
+		"$minbsize" "$maxbsize" "$minfsize" "$maxfsize" \
+		"$tsamples" "$sample_rate" "$channels" "$bps" "$md5" \
+		$3)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -428,140 +507,59 @@ delete_flacstream () {
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: get_flaccommentsmetadata PATHNAME ALBUM ARTIST ARTISTSORT
-#                      DISCTOTAL TITLE TOTALTRACKS TRACKNUMBER
+#       USAGE: insert_tag HANDLE VARNAME TAGNAME TEXT
 #
-# DESCRIPTION: Get the comments of the flac file pointed by PATHNAME and
-#              store them in the variables ALBUM, ARTIST, ARTISTSORT,
-#              DISCNUMBER, DISCTOTAL, TITLE, TOTALTRACKS and TRACKNUMBER
-#              declared in the caller's scope.
+# DESCRIPTION: Search the 'tag' table for an entry with the specified
+#              TAGNAME and TEXT. If no entry is found, insert a new one.
+#              In either case, store the corresponding id number in the
+#              variable VARNAME.
 #
-#  PARAMETERS: PATHNAME    A unix filesystem formatted string. 
-#              ALBUM       The name of the variable declared in the
-#                          caller's scope where to store the name of the
-#                          album.
-#              ARTIST      The name of the variable declared in the
-#                          caller's scope where to store the name of the
-#                          artist.
-#              ARTISTSORT  The name of the variable declared in the
-#                          caller's scope where to store the sorted name
-#                          of the album.
-#              DISCNUMBER  The name of the variable declared in the
-#                          caller's scope where to store the number of
-#                          disc.
-#              DISCTOTAL   The name of the variable declared in the
-#                          caller's scope where to store the total
-#                          number of discs.
-#              TITLE       The name of the variable declared in the
-#                          caller's scope where to store the title.
-#              TOTALTRACKS The name of the variable declared in the
-#                          caller's scope where to store the total
-#                          number of tracks.
-#              TRACKNUMBER The name of the variable declared in the
-#                          caller's scope where to store the number of
-#                          track.
+#  PARAMETERS: HANDLE   A connection to a database.
+#              VARNAME  A variable in the caller's scope.
+#              TAGNAME  The left member of a tag.
+#              TEXT     The right member of a tag.
 #
-get_flaccommentsmetadata () {
-	local albu="$(metaflac --show-tag=album $1)"
-	albu="${albu##[Aa][Ll][Bb][Uu][Mm]=}"
-	escape_chars albu "$albu"
-	albu="\"$albu\""
-	local artis="$(metaflac --show-tag=artist $1)"
-	artis="${artis##[Aa][Rr][Tt][Ii][Ss][Tt]=}"
-	escape_chars artis "$artis"
-	artis="\"$artis\""
-	local artisor="$(metaflac --show-tag=artistsort $1)"
-	artisor="${artisor##[Aa][Rr][Tt][Ii][Ss][Tt][Ss][Oo][Rr][Tt]=}"
-	escape_chars artisor "$artisor"
-	artisor="\"$artisor\""
-	local discnum="$(metaflac --show-tag=discnumber $1)"
-	discnum="${discnum##[Dd][Ii][Ss][Cc][Nn][Uu][Mm][Bb][Ee][Rr]=}"
-	escape_chars discnum "$discnum"
-	discnum="\"$discnum\""
-	local disctot="$(metaflac --show-tag=disctotal $1)"
-	disctot="${disctot##[Dd][Ii][Ss][Cc][Tt][Oo][Tt][Aa][Ll]=}"
-	escape_chars disctot "$disctot"
-	disctot="\"$disctot\""
-	local titl="$(metaflac --show-tag=title $1)"
-	titl="${titl##[Tt][Ii][Tt][Ll][Ee]=}"
-	escape_chars titl "$titl"
-	titl="\"$titl\""
-	local tottracks="$(metaflac --show-tag=totaltracks $1)"
-	tottracks="${tottracks##[Tt][Oo][Tt][Aa][Ll][Tt][Rr][Aa][Cc][Kk][Ss]=}"
-	tottracks="\"$tottracks\""
-	local tracknum="$(metaflac --show-tag=tracknumber $1)"
-	tracknum="${tracknum##[Tt][Rr][Aa][Cc][Kk][Nn][Uu][Mm][Bb][Ee][Rr]=}"
-	tracknum="\"$tracknum\""
-	local $2 && upvar $2 "$albu"
-	local $3 && upvar $3 "$artis"
-	local $4 && upvar $4 "$artisor"
-	local $5 && upvar $5 "$discnum"
-	local $6 && upvar $6 "$disctot"
-	local $7 && upvar $7 "$titl"
-	local $8 && upvar $8 "$tottracks"
-	local $9 && upvar $9 "$tracknum"
+insert_tag () {
+	local match
+	local id
+	match=$(shsql $1 $(printf 'SELECT COUNT(*) FROM tag WHERE
+		name="%b" AND text="%b";' "$3" "$4"))
+	[[ $? -ne 0 ]] && return 1
+	if [ $match == '"0"' ]
+	then
+		shsql $1 $(printf 'INSERT INTO tag (name, text) 
+			VALUES ("%b", "%b");' "$3" "$4")
+		[[ $? -ne 0 ]] && return 1
+	fi
+	id=$(shsql $1 $(printf 'SELECT id FROM tag WHERE
+		name="%b" AND text="%b";' "$3" "$4"))
+	[[ $? -ne 0 ]] && return 1
+	local $2 && upvar $2 $id
 }
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: insert_flaccomments HANDLE PATHNAME
+#       USAGE: insert_audiofiletags HANDLE VARNAME PATHNAME AUDIOFILE_ID
 #
-# DESCRIPTION: Collect metadata related to the flac file pointed by
-#              PATHNAME and insert it in the 'flac_comments' table.
+# DESCRIPTION: Get the comments of the audio file whose id is
+#              AUDIOFILE_ID and insert them in the corresponding tables.
 #
 #  PARAMETERS: HANDLE    A connection to a database.
+#              VARNAME   A variable in the caller's scope.
 #              PATHNAME  A unix filesystem formatted string. 
+#              ID        The id number of the audio file in the table
+#                        'audio_file'.
 #
-insert_flaccomments () {
-	get_flaccommentsmetadata $2 album artist artistsort discnumber \
-		disctotal title totaltracks tracknumber
-	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'INSERT INTO flac_comments (album, artist,
-		artistsort, discnumber, disctotal, title, totaltracks,
-		tracknumber) VALUES (%b,%b,%b,%b,%b,%b,%b,%b);' \
-		"$album" "$artist" "$artistsort" "$discnumber" \
-		"$disctotal" "$title" "$totaltracks" "$tracknumber")
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: update_flaccomments HANDLE PATHNAME ID
-#
-# DESCRIPTION: Collect metadata related to the flac file pointed by
-#              PATHNAME and update it in all the related tables in the
-#              database.
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              PATHNAME  A unix filesystem formatted string. 
-#              ID        The value of the 'id' column in the 
-#                        'flac_comments' of the database.
-update_flaccomments () {
-	get_flaccommentsmetadata $2 album artist artistsort discnumber \
-		disctotal title totaltracks tracknumber
-	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'UPDATE flac_comments SET album=%b, artist=%b,
-		artistsort=%b, discnumber=%b, disctotal=%b, title=%b,
-		totaltracks=%b, tracknumber=%b WHERE id=%b ;' "$album" \
-		"$artist" "$artistsort" "$discnumber" "$disctotal" \
-		"$title" "$totaltracks" "$tracknumber" $3)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: delete_flaccomments HANDLE ID
-#
-# DESCRIPTION: Delete an entry in the 'flac_comments' table.
-#
-#  PARAMETERS: HANDLE  A connection to a database.
-#              ID      The value of the 'id' column in the
-#                      'flac_comments' table.
-#
-delete_flaccomments () {
-	shsql $1 $(printf 'DELETE FROM flac_comments WHERE id=%b;' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
+insert_audiofiletags () {
+	local -a tagsarr
+	if [ $(file -b --mime-type "$3") == audio/x-flac ]
+	then
+		get_flacmetadata tagnames text 2 $3
+	fi
+	for (( ind=0; ind<${#tagnames[@]}; ind++ ))
+	do
+		insert_tag $1 tag "${tagnames[ind]}" "${text[ind]}"
+		tagsarr+=( "$tag" )
+	done
+	local $2 && upvars -a${#tagsarr[@]} $2 "${tagsarr[@]}"
 }
