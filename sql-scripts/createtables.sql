@@ -12,6 +12,13 @@ CREATE TABLE file
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE file_type 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(64) NOT NULL,
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE audio_file
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -19,6 +26,13 @@ CREATE TABLE audio_file
 	                 	REFERENCES file(id),
 	type             ENUM('flac', 'mp3', 'ogg') NOT NULL,
 	trackid          CHAR(36) NOT NULL, # musicbrainz id
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE audio_file_type 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(64) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -88,6 +102,14 @@ CREATE TABLE archive
 	                 	REFERENCES file(id),
 	archived_suffix  VARCHAR(255) NOT NULL
 );
+
+CREATE TABLE archive_file_type 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(64) NOT NULL,
+	PRIMARY KEY (id)
+);
+
 
 CREATE TABLE dvd
 (
