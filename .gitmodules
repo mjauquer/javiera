@@ -7,6 +7,3 @@
 [submodule "upvars"]
 	path = upvars
 	url = git://github.com/mjauquer/bash-upvars.git
-[submodule "filetype"]
-	path = filetype
-	url = git@github.com:mjauquer/bash-filetype.git
