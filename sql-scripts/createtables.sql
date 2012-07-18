@@ -15,8 +15,36 @@ CREATE TABLE file
 CREATE TABLE file_type 
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name             VARCHAR(64) NOT NULL,
+	parent           MEDIUMINT UNSIGNED 
+	                 	REFERENCES file_type(id),
+	left_extent      MEDIUMINT UNSIGNED NOT NULL,
+	right_extent     MEDIUMINT UNSIGNED NOT NULL,
+	name             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file_type_name(id),
 	PRIMARY KEY (id)
+);
+
+CREATE TABLE file_type_name 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	extension        VARCHAR(12) NOT NULL,
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE mime 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	type             VARCHAR(75) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE l_file_type_mime 
+(
+	file_type        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file_type(id),
+	mime             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES mime(id)
 );
 
 CREATE TABLE audio_file
@@ -26,13 +54,6 @@ CREATE TABLE audio_file
 	                 	REFERENCES file(id),
 	type             ENUM('flac', 'mp3', 'ogg') NOT NULL,
 	trackid          CHAR(36) NOT NULL, # musicbrainz id
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE audio_file_type 
-(
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name             VARCHAR(64) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -102,14 +123,6 @@ CREATE TABLE archive
 	                 	REFERENCES file(id),
 	archived_suffix  VARCHAR(255) NOT NULL
 );
-
-CREATE TABLE archive_file_type 
-(
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name             VARCHAR(64) NOT NULL,
-	PRIMARY KEY (id)
-);
-
 
 CREATE TABLE dvd
 (
