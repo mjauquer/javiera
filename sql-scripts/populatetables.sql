@@ -1,80 +1,325 @@
-INSERT INTO file_type_name (id, extension, name) VALUES
-	('', '','Regular'),
-		('', '', 'Audio'),
-			('', '', 'Uncompressed'),
-				('', 'wav', 'Waveform Audio Format'),
-				('', 'aiff', 'Audio Interchange File Format'),
-			('', '', 'Compressed'),
-				('', '', 'Lossless'),
-				('', '', 'Lossy'),
-		('', '', 'Archive'),
-			('', '', 'Archiving only'),
-			('', '', 'Archiving and compression'),
-			( '','', 'Compression only'),
-			( '','', 'Disk image'),
-		('', '', 'Parity'),
-		('', '', 'Multimedia Container')
+INSERT INTO description (id, text) VALUES
+	('', 'Regular'),
+		('', 'Audio'),
+			('', 'Uncompressed'),
+				('', 'Waveform Audio Format'),
+				('', 'Audio Interchange File Format'),
+			('', 'Compressed'),
+				('', 'Lossless'),
+				('', 'Lossy'),
+		('', 'Archive'),
+			('', 'Archiving only'),
+			('', 'Archiving and compression'),
+			('', 'Compression only'),
+			('', 'Disk image'),
+		('', 'Parity'),
+		('', 'Multimedia Container')
 ;
 
-INSERT INTO file_type (id, parent, left_extent, right_extent, name) VALUES
-	('', NULL, '', '', (SELECT id FROM file_type_name WHERE name='Regular')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Audio')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Uncompressed')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Waveform Audio Format')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Audio Interchange File Format')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Compressed')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Lossless')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Lossy')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Archive')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Archiving only')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Archiving and compression')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Compression only')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Disk image')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Parity')),
-	('', '', '', '', (SELECT id FROM file_type_name WHERE name='Multimedia Container'))
-;
+INSERT INTO tree (id, name) VALUES ('', 'File type hierarchy');
 
-create TABLE aux_table 
-(
-	id    MEDIUMINT UNSIGNED NOT NULL,
-	name  VARCHAR(256) NOT NULL
-);
+INSERT INTO tree_node (id, parent_id) VALUES ('', NULL);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id) VALUES
+	(@tree_node_id, (SELECT id FROM tree WHERE name='File type hierarchy'));
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id) VALUES
+	(@tree_node_id, (SELECT id FROM description WHERE text='Regular'));
+SET @tree_node_id = NULL;
 
-INSERT INTO aux_table (id, name) 
-	SELECT file_type.id, file_type_name.name FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id;
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Regular')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id, 
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Audio')
+	);
+SET @tree_node_id = NULL;
 
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Regular') 
-	WHERE id=(SELECT id FROM aux_table WHERE name='Audio');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Audio') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Uncompressed');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Uncompressed') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Waveform Audio Format');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Uncompressed') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Audio Interchange File Format');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Audio') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Compressed');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Compressed') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Lossless');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Compressed') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Lossy');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Regular') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Archive');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Archive') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Archiving only');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Archive') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Archiving and compression');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Archive') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Compression only');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Archive') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Disk image');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Regular') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Parity');
-UPDATE file_type SET parent=(SELECT id FROM aux_table WHERE name='Regular') 
-	WHERE name=(SELECT id FROM aux_table WHERE name='Multimedia Container');
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Audio')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Uncompressed')
+	);
+SET @tree_node_id = NULL;
 
-DROP TABLE aux_table;
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Uncompressed')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Waveform Audio Format')
+	);
+SET @tree_node_id = NULL;
 
-INSERT INTO mime (id, type) VALUES
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Uncompressed')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Audio Interchange File Format')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Audio')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Compressed')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Compressed')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Lossless')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Compressed')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id, (SELECT id FROM description WHERE text='Lossy')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Regular')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Archive')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Archive')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Archiving only')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Archive')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Archiving and compression')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Archive')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Compression only')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Archive')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Disk image')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Regular')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Parity')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='Regular')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='File type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='Multimedia Container')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO mime_type (id, type) VALUES
 	('', 'audio/wav'),
 	('', 'audio/x-wav'),
 	('', 'audio/wave'),
@@ -92,112 +337,112 @@ INSERT INTO mime (id, type) VALUES
 	('', 'audio/vnd-qcelp')
 ;
 
-INSERT INTO l_file_type_mime (file_type, mime) 
+INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id) 
 	VALUES (
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Waveform Audio Format'), 
-		(SELECT id FROM mime WHERE type='audio/wav')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Waveform Audio Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/wav')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Waveform Audio Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-wav')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Waveform Audio Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-wav')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Waveform Audio Format'), 
-		(SELECT id FROM mime WHERE type='audio/wave')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Waveform Audio Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/wave')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Waveform Audio Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-pn-wav')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Waveform Audio Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-pn-wav')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Waveform Audio Format'), 
-		(SELECT id FROM mime WHERE type='audio/vnd-wave')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Waveform Audio Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/vnd-wave')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/aiff')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/aiff')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-aiff')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-aiff')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='sound/aiff')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='sound/aiff')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/rmf')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/rmf')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-rmf')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-rmf')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-pn-aiff')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-pn-aiff')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-gsm')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-gsm')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/mid')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/mid')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/x-midi')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/x-midi')
 	),
 	(
-		(SELECT file_type.id 
-			FROM file_type LEFT JOIN file_type_name ON file_type.name=file_type_name.id 
-			WHERE file_type_name.name='Audio Interchange File Format'), 
-		(SELECT id FROM mime WHERE type='audio/vnd-qcelp')
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text='Audio Interchange File Format'), 
+		(SELECT id FROM mime_type WHERE type='audio/vnd-qcelp')
 	)
 ;
 
 delimiter //
 
-CREATE PROCEDURE GENERATE_NESTED_SETS_MODEL_ON_file_type_TABLE()
+CREATE PROCEDURE generate_nested_sets_model(IN title VARCHAR(256))
 BEGIN
 
 	-- Create the stack table.
 	CREATE TABLE stack 
 	(
-		ID          INT AUTO_INCREMENT,
-		fileTypeID  INT NOT NULL,
-		leftExtent  INT,
-		rightExtent INT,
-		PRIMARY KEY (ID)
+		id           INT AUTO_INCREMENT,
+		node_id      INT NOT NULL,
+		left_extent  INT,
+		right_extent INT,
+		PRIMARY KEY (id)
 	);
 	
 	-- Use @counter to set the left and right extent.
@@ -209,14 +454,17 @@ BEGIN
 
 		-- Get the first row which is a child of parentid and
 		-- has not already been pushed onto the stack.
-		INSERT INTO stack (fileTypeID, leftExtent)
-			SELECT id, @counter
-				FROM file_type 
-				WHERE COALESCE(parent, 0) = COALESCE(@parentid, 0)
-				AND id NOT IN (SELECT fileTypeID FROM stack) LIMIT 1;
+		INSERT INTO stack (node_id, left_extent)
+			SELECT tree_node.id, @counter
+				FROM l_tree_node_to_tree AS link
+					INNER JOIN tree ON link.tree_id = tree.id
+					RIGHT JOIN tree_node ON link.tree_node_id = tree_node.id
+				WHERE name = title
+				AND COALESCE(parent_id, 0) = COALESCE(@parentid, 0)
+				AND tree_node.id NOT IN (SELECT node_id FROM stack) LIMIT 1;
 		
-		-- @id:    the ID value of the last inserted row.
-		-- @oldid: the ID value of the row at the top of the
+		-- @id:    the id value of the last inserted row.
+		-- @oldid: the id value of the row at the top of the
 		--         stack.
 		SET @id = LAST_INSERT_ID();
 		IF COALESCE(@id, 0) = COALESCE(@oldid, 0) 
@@ -233,9 +481,9 @@ BEGIN
 		THEN
 			-- No it haven't. Pop the row at the top of the
 			-- stack.
-			SELECT @id := ID
+			SELECT @id := id
 				FROM stack
-				WHERE rightExtent IS NULL ORDER BY ID DESC LIMIT 1;
+				WHERE right_extent IS NULL ORDER BY id DESC LIMIT 1;
 
 			-- Test if there are more rows to pop. Exit the
 			-- procedure if it is so.
@@ -245,26 +493,26 @@ BEGIN
 			END IF;
 
 			UPDATE stack
-			SET rightExtent = @counter
-			WHERE ID = @id;
+			SET right_extent = @counter
+			WHERE id = @id;
 
 			SET @counter = @counter + 1;
 
-			SELECT @parentid := parent
-			FROM file_type
-			WHERE id = (SELECT fileTypeID FROM stack WHERE ID = @id);
+			SELECT @parentid := parent_id
+			FROM tree_node
+			WHERE id = (SELECT node_id FROM stack WHERE id = @id);
 		ELSE
 			-- Move on to the next level. We take the parent
 			-- id of the next item from the id value of the
 			-- one that has been just inserted.
-			SELECT @parentid := fileTypeID
+			SELECT @parentid := node_id
 				FROM stack 
-				WHERE ID = @id;
+				WHERE id = @id;
 		END IF;
 	END LOOP loop1;
 
-UPDATE file_type ft INNER JOIN stack st ON st.fileTypeID = ft.id
-SET ft.left_extent = st.leftExtent, ft.right_extent = st.rightExtent;
+UPDATE tree_node ft INNER JOIN stack st ON st.node_id = ft.id
+SET ft.left_extent = st.left_extent, ft.right_extent = st.right_extent;
 
 SET @id = NULL;
 SET @oldid = NULL;
@@ -277,7 +525,7 @@ END;
 
 delimiter ;
 
-CALL GENERATE_NESTED_SETS_MODEL_ON_file_type_TABLE();
+CALL generate_nested_sets_model('File type hierarchy');
 
 DROP TABLE stack;
-DROP PROCEDURE GENERATE_NESTED_SETS_MODEL_ON_file_type_TABLE;
+DROP PROCEDURE generate_nested_sets_model;

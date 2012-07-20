@@ -12,39 +12,59 @@ CREATE TABLE file
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE file_type 
+CREATE TABLE tree
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	parent           MEDIUMINT UNSIGNED 
-	                 	REFERENCES file_type(id),
-	left_extent      MEDIUMINT UNSIGNED NOT NULL,
-	right_extent     MEDIUMINT UNSIGNED NOT NULL,
-	name             MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file_type_name(id),
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE file_type_name 
-(
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	extension        VARCHAR(12) NOT NULL,
 	name             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE mime 
+CREATE TABLE tree_node 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	parent_id        MEDIUMINT UNSIGNED 
+	                 	REFERENCES tree_node(id),
+	left_extent      MEDIUMINT UNSIGNED NOT NULL,
+	right_extent     MEDIUMINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE description 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	text             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE mime_type 
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	type             VARCHAR(75) NOT NULL,
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE l_file_type_mime 
+CREATE TABLE l_mime_type_to_tree_node 
 (
-	file_type        MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file_type(id),
-	mime             MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES mime(id)
+	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tree_node(id),
+	mime_type_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES mime_type(id)
+);
+
+CREATE TABLE l_tree_node_to_description
+(
+	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tree_node(id),
+	description_id      MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES description(id)
+);
+
+CREATE TABLE l_tree_node_to_tree
+(
+	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tree_node(id),
+	tree_id             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES description(id)
 );
 
 CREATE TABLE audio_file
