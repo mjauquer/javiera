@@ -1,17 +1,3 @@
-CREATE TABLE file 
-(
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	last_updated     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                 	ON UPDATE CURRENT_TIMESTAMP,
-	mimetype         VARCHAR(64) NOT NULL,
-	hostname         VARCHAR(65) NOT NULL,
-	pathname         VARCHAR(256) NOT NULL,
-	sha1             CHAR(40) NOT NULL,
-	fsize            BIGINT UNSIGNED NOT NULL,
-	mtime            INT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE tree
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -29,10 +15,57 @@ CREATE TABLE tree_node
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE l_tree_node_to_tree
+(
+	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tree_node(id),
+	tree_id             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES description(id)
+);
+
 CREATE TABLE description 
 (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	text             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE l_tree_node_to_description
+(
+	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tree_node(id),
+	description_id      MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES description(id)
+);
+
+CREATE TABLE file 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	last_updated     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	                 	ON UPDATE CURRENT_TIMESTAMP,
+	mime_type_id     MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES mime_type(id),
+	host_id          MEDIUMINT UNSIGNED 
+	                 	REFERENCES host(id),
+	path_id          MEDIUMINT UNSIGNED 
+	                 	REFERENCES path(id),
+	sha1             CHAR(40) NOT NULL,
+	fsize            BIGINT UNSIGNED NOT NULL,
+	mtime            INT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE host 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE path 
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -45,26 +78,10 @@ CREATE TABLE mime_type
 
 CREATE TABLE l_mime_type_to_tree_node 
 (
-	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	tree_node_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
-	mime_type_id        MEDIUMINT UNSIGNED NOT NULL
+	mime_type_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES mime_type(id)
-);
-
-CREATE TABLE l_tree_node_to_description
-(
-	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES tree_node(id),
-	description_id      MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES description(id)
-);
-
-CREATE TABLE l_tree_node_to_tree
-(
-	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES tree_node(id),
-	tree_id             MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES description(id)
 );
 
 CREATE TABLE audio_file
