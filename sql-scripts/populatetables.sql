@@ -20,9 +20,13 @@ INSERT INTO description (id, text)
 					('', 'lossy'),
 			('', 'archive'),
 				('', 'archiving only'),
+					('', 'tape archive'),
+					('', 'tar'),
 				('', 'archiving and compression'),
 				('', 'compression only'),
 				('', 'disk image'),
+					('', 'iso image'),
+					('', 'iso'),
 			('', 'parity'),
 			('', 'multimedia container')
 ;
@@ -267,6 +271,48 @@ INSERT INTO tree_node (id, parent_id)
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS node LEFT JOIN description
 			ON node.description_id = description.id 
+			WHERE text = 'archiving only')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name = 'file type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text = 'tape archive')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='archiving only')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='file type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='tar')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
 			WHERE text='archive')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -330,6 +376,48 @@ INSERT INTO tree_node (id, parent_id)
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS node LEFT JOIN description
 			ON node.description_id = description.id 
+			WHERE text='disk image')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='file type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='iso image')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
+			WHERE text='disk image')
+	);
+SET @tree_node_id = LAST_INSERT_ID();
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM tree WHERE name='file type hierarchy')
+	);
+INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+	VALUES (
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='iso')
+	);
+SET @tree_node_id = NULL;
+
+INSERT INTO tree_node (id, parent_id)
+	VALUES (
+		'',
+		(SELECT tree_node_id 
+			FROM l_tree_node_to_description AS node LEFT JOIN description
+			ON node.description_id = description.id 
 			WHERE text='regular')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -381,7 +469,12 @@ INSERT INTO mime_type (id, type) VALUES
 	('', 'audio/x-gsm'),
 	('', 'audio/mid'),
 	('', 'audio/x-midi'),
-	('', 'audio/vnd-qcelp')
+	('', 'audio/vnd-qcelp'),
+	('', 'audio/x-flac'),
+	('', 'application/x-iso9660-image'),
+	('', 'application/x-tar'),
+	('', 'text/plain'),
+	('', 'application/octet-stream')
 ;
 
 INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id) 
@@ -474,6 +567,24 @@ INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id)
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type='audio/vnd-qcelp')
+	),
+	(
+		(SELECT tree_node_id
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text = 'free lossless audio codec'),
+		(SELECT id FROM mime_type WHERE type = 'audio/x-flac')
+	),
+	(
+		(SELECT tree_node_id
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text = 'ISO image'),
+		(SELECT id FROM mime_type WHERE type = 'application/x-iso9660-image')
+	),
+	(
+		(SELECT tree_node_id
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text = 'tape archive'),
+		(SELECT id FROM mime_type WHERE type = 'application/x-tar')
 	)
 ;
 

@@ -76,20 +76,26 @@ update_audiofile () {
 #                      table of the database.
 delete_audiofile () {
 	# Delete the entry in the 'audio_file' table.
-	local audio_file=$(shsql $1 $(printf 'SELECT id FROM audio_file 
-		WHERE file="%b";' $2))
+	local audio_file=$(shsql $1 $(printf '
+		SELECT id FROM audio_file WHERE file="%b";' $2))
 	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf 'DELETE FROM audio_file WHERE file="%b";' $2)
+	shsql $1 $(printf '
+		DELETE FROM audio_file WHERE file="%b";' $2)
 	[[ $? -ne 0 ]] && return 1
 
 	# Delete entries in the 'audio_file_tags' table.
-	shsql $1 $(printf 'DELETE FROM audio_file_tags WHERE 
-		audio_file=%b;' $audio_file)
+	shsql $1 $(printf '
+		DELETE FROM audio_file_tags WHERE audio_file=%b;
+		' $audio_file)
 	[[ $? -ne 0 ]] && return 1
 
 	# Continue the delete process.
-	local mimetype=$(shsql $1 $(printf 'SELECT mimetype FROM file 
-		WHERE id="%b";' $2))
+	local mimetype=$(shsql $1 $(printf '
+		SELECT type
+		FROM file INNER JOIN mime_type ON file.mime_type_id =
+		mime_type.id
+		WHERE file.id="%b";
+		' $2))
 	[[ $? -ne 0 ]] && return 1
 	if [ $mimetype == \"audio/x-flac\" ]
 	then

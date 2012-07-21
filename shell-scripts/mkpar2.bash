@@ -176,16 +176,19 @@ then
 fi
 
 # Insert data in 'par2create' tables.
-shsql $handle $(printf 'INSERT INTO par2create (software, blocksize,
-	blockcount) VALUES ("%b","%b","%b");' "$softw" $blocksize \
-	$blockcount)
+shsql $handle $(printf '
+	INSERT INTO par2create (software, blocksize, blockcount)
+		VALUES ("%b","%b","%b");
+		' "$softw" $blocksize $blockcount)
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error while trying to update the database."
 fi
 
 # Insert data in 'par2create_target' table.
-session_id=$(shsql $handle "SELECT LAST_INSERT_ID();")
+session_id=$(shsql $handle "
+	SELECT LAST_INSERT_ID();
+	")
 for file in  ${files[@]}
 do
 	get_id $handle file_id $(hostname) $(readlink -f $file)
@@ -193,8 +196,10 @@ do
 	then
 		error_exit "$LINENO: Error calling get_id()."
 	fi
-	shsql $handle $(printf 'INSERT INTO par2create_target (session,
-		target) VALUES (%b,%b);' $session_id $file_id)
+	shsql $handle $(printf '
+		INSERT INTO par2create_target (session, target)
+			VALUES (%b,%b);
+		' $session_id $file_id)
 	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling shsql."
@@ -217,8 +222,10 @@ do
 	then
 		error_exit "$LINENO: Error calling get_id()."
 	fi
-	shsql $handle $(printf 'INSERT INTO par2create_volset (session,
-		volume_set) VALUES (%b,%b);' $session_id $file_id)
+	shsql $handle $(printf '
+		INSERT INTO par2create_volset (session, volume_set)
+			VALUES (%b,%b);
+		' $session_id $file_id)
 	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling shsql."

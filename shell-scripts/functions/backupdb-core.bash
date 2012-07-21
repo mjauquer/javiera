@@ -60,11 +60,18 @@ escape_chars () {
 #
 get_id () {
 	! is_backedup $1 backedup $3 $4 && return 1
-	if [ $backedup == "true" ]
+	if [ $backedup == true ]
 	then
 		local id
-		id=$(shsql $1 $(printf 'SELECT id FROM file WHERE 
-			hostname="%b" AND pathname="%b";' $3 $4))
+		id=$(shsql $1 $(printf '
+			SELECT file.id
+			FROM l_file_to_host AS link
+			INNER JOIN file ON link.file_id = file.id
+			INNER JOIN path ON file.path_id = path.id
+			INNER JOIN host ON link.host_id = host.id
+			WHERE host.name="%b"
+			AND path.name="%b";
+			' $3 $4))
 		[[ $? -ne 0 ]] && return 1
 		local $2 && upvar $2 $id
 	fi
@@ -90,20 +97,29 @@ get_id () {
 #                        about.
 #
 is_backedup () {
-	local match
-	local match2
+	local pathmatch
+	local shamatch
 	local answer
-	match=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
-		hostname="%b" AND pathname="%b";' $3 $4))
+	pathmatch=$(shsql $1 $(printf '
+		SELECT COUNT(*)
+		FROM l_file_to_host AS link
+		INNER JOIN file ON link.file_id = file.id
+		INNER JOIN path ON file.path_id = path.id
+		INNER JOIN host ON link.host_id = host.id
+		WHERE host.name="%b"
+		AND path.name="%b";
+		' $3 $4))
 	[[ $? -ne 0 ]] && return 1
-	match2=$(shsql $1 $(printf 'SELECT COUNT(*) FROM file WHERE
-		sha1="%b" AND hostname="" AND pathname="";' \
-		$(sha1sum $4 | cut -c1-40)))
+	shamatch=$(shsql $1 $(printf '
+		SELECT COUNT(*)
+		FROM file
+		WHERE sha1="%b";
+		' $(sha1sum $4 | cut -c1-40)))
 	[[ $? -ne 0 ]] && return 1
-	if [ $match == '"1"' ]
+	if [ $pathmatch == '"1"' ]
 	then
 		answer=true
-	elif [ $match2 == '"1"' ]
+	elif [ $shamatch == '"1"' ]
 	then
 		answer=recycle
 	else
@@ -129,8 +145,9 @@ is_backedup () {
 #
 is_archived () {
 	local count
-	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM archive
-		WHERE archived=%b;' $3))
+	count=$(shsql $1 $(printf '
+		SELECT COUNT(*) FROM archive WHERE archived=%b;
+		' $3))
 	[[ $? -ne 0 ]] && return 1
 	local answer
 	if [ $count == '"0"' ]
@@ -160,8 +177,9 @@ is_archived () {
 #
 is_indvd () {
 	local count
-	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM dvd
-		WHERE image_file=%b;' $3))
+	count=$(shsql $1 $(printf '
+		SELECT COUNT(*) FROM dvd WHERE image_file=%b;
+		' $3))
 	[[ $? -ne 0 ]] && return 1
 	local answer
 	if [ $count == '"0"' ]
@@ -191,8 +209,9 @@ is_indvd () {
 #
 is_archiver () {
 	local count
-	count=$(shsql $1 $(printf 'SELECT COUNT(*) FROM archive
-		WHERE archiver=%b;' $3))
+	count=$(shsql $1 $(printf '
+		SELECT COUNT(*) FROM archive WHERE archiver="%b";
+		' $3))
 	[[ $? -ne 0 ]] && return 1
 	local answer
 	if [ $count == '"0"' ]
@@ -223,8 +242,15 @@ is_archiver () {
 #
 is_insync () {
 	local tstamp
-	tstamp=$(shsql $1 $(printf 'SELECT last_updated FROM 
-		file WHERE hostname="%b" AND pathname="%b";' $3 $4))
+	tstamp=$(shsql $1 $(printf '
+		SELECT last_updated
+		FROM l_file_to_host AS link
+		INNER JOIN file ON link.file_id = file.id
+		INNER JOIN path ON file.path_id = path.id
+		INNER JOIN host ON link.host_id = host.id
+		WHERE host.name="%b"
+		AND path.name="%b";
+		' $3 $4))
 	[[ $? -ne 0 ]] && return 1
 	tstamp="${tstamp##\"}"
 	tstamp="${tstamp%%\"}"
@@ -256,8 +282,10 @@ is_insync () {
 #                          be passed between <">.
 #
 insert_archive () {
-	shsql $1 $(printf 'INSERT INTO archive (archiver, archived,
-		archived_suffix) VALUES (%b, %b, "%b");' $2 $3 $4)
+	shsql $1 $(printf '
+		INSERT INTO archive (archiver,archived,archived_suffix)
+		VALUES (%b, %b, "%b");
+		' $2 $3 $4)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -277,8 +305,10 @@ insert_archive () {
 #                            Must be passed between <">.
 #
 insert_dvd () {
-	shsql $1 $(printf 'INSERT INTO dvd (image_file, dvd_type,
-		dvd_trademark) VALUES (%b, "%b", "%b");' $2 $3 $4)
+	shsql $1 $(printf '
+		INSERT INTO dvd (image_file, dvd_type, dvd_trademark)
+		VALUES (%b, "%b", "%b");
+		' $2 $3 $4)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -298,14 +328,36 @@ insert_dvd () {
 #
 insert_file () {
 	local answer
-	local lastid
-	shsql $1 $(printf 'INSERT INTO file (mimetype, hostname, 
-		pathname, sha1, fsize, mtime) VALUES ("%b", 
-		"%b", "%b", "%b", "%b", "%b");' \
-		$(file -b --mime-type $3) $2 $3 \
-		$(sha1sum $3 | cut -c1-40) $(stat --format='%s %Y' $3))
+	shsql $1 $(printf '
+		INSERT INTO path (name) VALUE ("%b");
+		' $3)
 	[[ $? -ne 0 ]] && return 1
-	lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
+	local pathid=$(shsql $1 "
+		SELECT LAST_INSERT_ID();
+		")
+	[[ $? -ne 0 ]] && return 1
+	local hostid=$(shsql $1 $(printf '
+		SELECT id FROM host WHERE name="%b";
+		' $2))
+	[[ $? -ne 0 ]] && return 1
+	local mimeid=$(shsql $1 $(printf '
+		SELECT id FROM mime_type WHERE type="%b";
+		' $(file -b --mime-type $3)))
+	[[ $? -ne 0 ]] && return 1
+	shsql $1 $(printf '
+		INSERT INTO file (mime_type_id, path_id, sha1,
+			fsize, mtime)
+		VALUES (%b, %b, "%b", "%b", "%b");
+		' $mimeid $pathid $(sha1sum $3 | cut -c1-40) \
+		$(stat --format='%s %Y' $3))
+	[[ $? -ne 0 ]] && return 1
+	local lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
+	[[ $? -ne 0 ]] && return 1
+	shsql $1 $(printf '
+		INSERT INTO l_file_to_host (file_id, host_id)
+		VALUES (%b,%b);
+		' $lastid $hostid)
+	[[ $? -ne 0 ]] && return 1
 	if [[ $(file -b --mime-type $3) =~ audio/.* ]]
 	then
 		! insert_audiofile $1 $3 $lastid && return 1
@@ -331,8 +383,9 @@ insert_file () {
 #              ID        A number value related to the id column of the
 #                        database's file table.
 insert_iso () {
-	shsql $1 $(printf 'INSERT INTO iso_metadata (file_id) VALUE
-		(%b);' $2)
+	shsql $1 $(printf '
+		INSERT INTO iso_metadata (file_id) VALUE (%b);
+		' $2)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -357,8 +410,15 @@ delete_file () {
 	# NULL "pathname" and "hostname" columns in "file" table.
 	if [ \( $archived == true \) -o \( $indvd == true \) ]
 	then
-		shsql $1 $(printf 'UPDATE file SET pathname="",
-			hostname="" WHERE id=%b;' $2)
+		shsql $1 $(printf '
+			DELETE FROM l_file_to_host
+			WHERE file_id = %b;
+			' $2)
+		[[ $? -ne 0 ]] && return 1
+		shsql $1 $(printf '
+			UPDATE file SET path_id = NULL
+			WHERE id = %b;
+			' $2)
 		[[ $? -ne 0 ]] && return 1
 		return 0
 	fi
@@ -370,15 +430,19 @@ delete_file () {
 	# "archiver" column.
 	if [ $archiver == true ]
 	then
-		shsql $1 $(printf 'DELETE FROM archive WHERE
-			archiver="%b";' $2)
+		shsql $1 $(printf '
+			DELETE FROM archive WHERE archiver="%b";
+			' $2)
 		[[ $? -ne 0 ]] && return 1
 		delete_orphans $1
 		[[ $? -ne 0 ]] && return 1
 	fi
-	local mimetype
-	mimetype=$(shsql $1 $(printf 'SELECT mimetype FROM file 
-		WHERE id="%b";' $2))
+	local mimetype=$(shsql $1 $(printf '
+		SELECT type
+		FROM file INNER JOIN mime_type ON file.mime_type_id =
+		mime_type.id
+		WHERE file.id="%b";
+		' $2))
 	[[ $? -ne 0 ]] && return 1
 	if [[ $mimetype =~ \"audio/.* ]]
 	then
@@ -396,7 +460,9 @@ delete_file () {
 			return 1
 		fi
 	fi
-	shsql $1 $(printf 'DELETE FROM file WHERE id="%b";' $2)
+	shsql $1 $(printf '
+		DELETE FROM file WHERE id="%b";
+		' $2)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -412,9 +478,12 @@ delete_file () {
 #  PARAMETERS: HANDLE  A connection to a database.
 #
 delete_orphans () {
-	shsql $1 $(printf 'DELETE FROM file WHERE file.pathname IS NULL
+	shsql $1 $(printf '
+		DELETE FROM file
+		WHERE file.path_id IS NULL
 		AND NOT EXISTS (SELECT archived FROM archive WHERE
-		file.id=archive.archived);' $2)
+		file.id=archive.archived);
+		' $2)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -431,8 +500,9 @@ delete_orphans () {
 #                      database's file table.
 #
 delete_isodata () {
-	shsql $1 $(printf 'DELETE FROM iso_metadata WHERE 
-		file_id="%b";' $2)
+	shsql $1 $(printf '
+		DELETE FROM iso_metadata WHERE file_id="%b";
+		' $2)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -453,12 +523,33 @@ delete_isodata () {
 #                        about.
 #
 recycle_file () {
-	shsql $1 $(printf 'UPDATE file SET mimetype="%b", hostname="%b", 
-		pathname="%b", fsize="%b", mtime="%b" WHERE sha1="%b" 
-		AND hostname="" AND pathname="";' \
-		$(file -b --mime-type $3) $2 $3 \
-		$(stat --format='%s %Y' $3) \
-		$(sha1sum $3 | cut -c1-40))
+	local sha1=$(sha1sum $3 | cut -c1-40)
+	shsql $1 $(printf '
+		INSERT INTO path (name) VALUE ("%b");
+		' $3)
+	[[ $? -ne 0 ]] && return 1
+	local pathid=$(shsql $1 "
+		SELECT LAST_INSERT_ID();
+		")
+	shsql $1 $(printf '
+		UPDATE file 
+		SET path_id=%b, fsize="%b", mtime="%b"
+		WHERE sha1="%b";
+		' $pathid $(stat --format='%s %Y' $3) \
+		$sha1)
+	[[ $? -ne 0 ]] && return 1
+	local hostid=$(shsql $1 $(printf '
+		SELECT id FROM host WHERE name="%b";
+		' $2))
+	[[ $? -ne 0 ]] && return 1
+	local fileid=$(shsql $1 $(printf '
+		SELECT id FROM file WHERE sha1="%b";
+		' $sha1))
+	[[ $? -ne 0 ]] && return 1
+	shsql $1 $(printf '
+		INSERT INTO l_file_to_host (file_id, host_id)
+		VALUES (%b,%b);
+		' $fileid $hostid)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
@@ -477,18 +568,23 @@ recycle_file () {
 #                        about.
 #
 update_file () {
-	local id=$(shsql $1 $(printf 'SELECT id FROM file WHERE 
-		hostname="%b" AND pathname="%b";' $2 $3))
+	local id=$(shsql $1 $(printf '
+		SELECT id 
+		FROM file INNER JOIN path ON file.path_id = path.id
+		INNER JOIN host ON file.host_id = host.id
+		WHERE host.name="%b"
+		AND path.name="%b";
+		' $2 $3))
 	! is_archived $1 archived $id && return 1
 	if [ $archived == "true" ]
 	then
 		! insert_file $1 $2 $3 && return 1
 	else
-		shsql $1 $(printf 'UPDATE file SET mimetype="%b",
-			hostname="%b", pathname="%b", fsize="%b", 
-			mtime="%b" WHERE sha1="%b";' \
-			$(file -b --mime-type $3) $2 $3 \
-			$(stat --format='%s %Y' $3) \
+		shsql $1 $(printf '
+			UPDATE file
+			SET fsize="%b", mtime="%b" 
+			WHERE sha1="%b";
+			' $(stat --format='%s %Y' $3) \
 			$(sha1sum $3 | cut -c1-40))
 		[[ $? -ne 0 ]] && return 1
 		if [[ $(file -b --mime-type $3) =~ audio/.* ]]

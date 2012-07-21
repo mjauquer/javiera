@@ -269,10 +269,17 @@ do
 	# previously predicted pathnames of the files.
 	for (( ind=0; ind<${#ids[@]}; ind++ ))
 	do
-		if ! shsql $handle $(printf 'UPDATE file SET 
-			pathname="%b", mtime="%b" WHERE id=%b;' \
-			${newpaths[ind]} \
-			$(stat --format='%Y' $dest) ${ids[ind]})
+		if ! shsql $handle $(printf '
+			UPDATE path INNER JOIN file
+			ON file.path_id = path.id
+			SET name="%b"
+			WHERE file.id=%b;
+			' ${newpaths[ind]} ${ids[ind]})
+		then
+			error_exit "$LINENO: Error after calling shsql."
+		elif ! shsql $handle $(printf '
+			UPDATE file SET mtime="%b" WHERE id=%b;
+			' $(stat --format='%Y' $dest) ${ids[ind]})
 		then
 			error_exit "$LINENO: Error after calling shsql."
 		fi
@@ -361,8 +368,12 @@ fi
 #-----------------------------------------------------------------------
 
 # Update the pathname of the tar file.
-shsql $handle $(printf 'UPDATE file SET pathname="%b" WHERE id=%b;' \
-	$(readlink -f $1) $archiver_id)
+shsql $handle $(printf '
+			UPDATE path
+			INNER JOIN file ON file.path_id = path.id
+			SET name="%b"
+			WHERE file.id=%b;
+	' $(readlink -f $1) $archiver_id)
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error while trying to update the database."

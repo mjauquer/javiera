@@ -45,14 +45,22 @@ CREATE TABLE file
 	                 	ON UPDATE CURRENT_TIMESTAMP,
 	mime_type_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES mime_type(id),
-	host_id          MEDIUMINT UNSIGNED 
-	                 	REFERENCES host(id),
 	path_id          MEDIUMINT UNSIGNED 
 	                 	REFERENCES path(id),
+	host_id          MEDIUMINT UNSIGNED 
+	                 	REFERENCES host(id),
 	sha1             CHAR(40) NOT NULL,
 	fsize            BIGINT UNSIGNED NOT NULL,
 	mtime            INT UNSIGNED NOT NULL,
 	PRIMARY KEY (id)
+);
+
+CREATE TABLE l_file_to_host 
+(
+	file_id          MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file(id),
+	host_id          MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES host(id)
 );
 
 CREATE TABLE host 
@@ -159,6 +167,22 @@ CREATE TABLE archive
 	archived         MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
 	archived_suffix  VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE archive_file
+(
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	file_id          MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE l_file_to_archive_file 
+(
+	file_id         MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file(id),
+	archive_file_id MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES archive_file(id)
 );
 
 CREATE TABLE dvd

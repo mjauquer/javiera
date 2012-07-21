@@ -1,5 +1,6 @@
 DROP TABLES
 	archive,
+	archive_file,
 	artist,
 	artist_credit,
 	artist_credit_name,
@@ -15,6 +16,8 @@ DROP TABLES
 	flac_stream,
 	host,
 	iso_metadata,
+	l_file_to_archive_file,
+	l_file_to_host,
 	l_mime_type_to_tree_node,
 	l_tree_node_to_description,
 	l_tree_node_to_tree,

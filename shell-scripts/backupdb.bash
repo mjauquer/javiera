@@ -226,7 +226,10 @@ unset -v insync
 # and delete it from the database.
 declare tobedel
 declare -i ind
-shsql $handle "SELECT id, pathname FROM file;" | (
+shsql $handle "
+	SELECT file.id, name AS pathname
+	FROM file INNER JOIN path ON file.path_id = path.id;
+	" | (
 	while row=$(shsqlline)
 	do
 		eval set $row
@@ -238,10 +241,7 @@ shsql $handle "SELECT id, pathname FROM file;" | (
 	done
 	for id in ${tobedel[@]}
 	do
-		if ! delete_file $handle $id
-		then
-			error_exit "$LINENO: Error after calling delete_file()."
-		fi
+		! delete_file $handle $id
 	done
 )
 unset -v tobedel

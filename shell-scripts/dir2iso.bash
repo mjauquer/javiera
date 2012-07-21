@@ -73,13 +73,17 @@ error_exit () {
 get_label () {
 	local lastid
 	local label
-	lastid=$(shsql $1 $(printf 'SELECT MAX(id) FROM iso_metadata;'))
+	lastid=$(shsql $1 $(printf '
+		SELECT MAX(id) FROM iso_metadata;
+		'))
 	lastid=${lastid//\"}
 	lastid=${lastid:-0}
-	label=$(shsql $1 $(printf 'SELECT auto_increment FROM 
-		information_schema.tables WHERE
-		table_name="iso_metadata" AND
-		table_schema="%b";' $BACKUPDB_DBNAME ))
+	label=$(shsql $1 $(printf '
+		SELECT auto_increment FROM 
+			information_schema.tables WHERE
+			table_name="iso_metadata" AND
+			table_schema="%b";
+		' $BACKUPDB_DBNAME ))
 	label=${label//\"}
 	label=${label:-1}
 	local $2 && upvar $2 $label
@@ -212,8 +216,10 @@ then
 fi
 
 # Insert details of the software and options used to create the file.
-shsql $handle $(printf 'UPDATE iso_metadata SET software="%b", 
-	used_options="%b" WHERE file_id=%b;' "$version" "$options" \
+shsql $handle $(printf '
+	UPDATE iso_metadata
+	SET software="%b", used_options="%b"
+	WHERE file_id=%b;' "$version" "$options" \
 	$outputid)
 if [ $? -ne 0 ]
 then
