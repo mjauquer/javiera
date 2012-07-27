@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# mkpar2.bash <Functions for the backupdb.bash script.>
+# mkpar2.bash <Functions for the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,12 @@
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
 #               par2cmdline
-#               backupdb.flib
+#               javiera.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
+source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
 source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================
@@ -130,13 +130,13 @@ done
 unset -v arg
 
 # Update the database with data about the files passed as arguments.
-declare -a log   # The output of the command backupdb --verbose.
+declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # files and directories passed as arguments.
-log=($(backupdb -r --verbose "$@" .))
+log=($(javiera -r --verbose "$@" .))
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Error after calling backupdb."
+	error_exit "$LINENO: Error after calling javiera."
 fi
 if ! read_topdirs top_dirs ${log[@]}
 then
@@ -168,8 +168,8 @@ softw="$(head -n 1 < $outputinfo)"
 #----------------------------------------------------------------------
 
 # Setup a connection to the database.
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
+handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
+	dbname=$JAVIERA_DBNAME) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Unable to establish connection to db."

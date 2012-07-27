@@ -22,13 +22,13 @@
 #               under SOURCE directory.
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               backupdb.flib
+#               javiera.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
-source ~/code/bash/backupdb/upvars/upvars.bash
+source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
+source ~/code/bash/javiera/upvars/upvars.bash
 source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================
@@ -83,7 +83,7 @@ get_label () {
 			information_schema.tables WHERE
 			table_name="iso_metadata" AND
 			table_schema="%b";
-		' $BACKUPDB_DBNAME ))
+		' $JAVIERA_DBNAME ))
 	label=${label//\"}
 	label=${label:-1}
 	local $2 && upvar $2 $label
@@ -100,7 +100,7 @@ declare dir_inode  # The inode of the source directory passed as
                    # argument.
 
 declare source_dir # The pathname of the source directory after calling
-                   # backupdb.
+                   # javiera.
 
 declare handle     # Required by shsql. A connection to the database.
 
@@ -146,7 +146,7 @@ dir_inode=$(stat -c %i "$1")
 
 # Update the backup database with the metadata of the files under the
 # source directory.
-declare -a log   # The output of the command backupdb --verbose.
+declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
 log=($(chpathn -rp --verbose "$@"))
@@ -162,12 +162,12 @@ unset -v log
 
 
 # Get the pathname of the source directory passed as argument after
-# calling backupdb, because that script calls chpathn.
+# calling javiera, because that script calls chpathn.
 source_dir=($(find ${top_dirs[@]} -depth -inum $dir_inode -type d))
 
 # Setup a connection to the database.
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
+handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
+	dbname=$JAVIERA_DBNAME) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: error after calling shmysql."

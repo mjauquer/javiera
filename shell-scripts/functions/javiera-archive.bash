@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# backupdb.flib <Core functions of the backupdb.bash script.>
+# javiera.flib <Core functions of the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,8 +22,8 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/filetype/filetype.flib
-source ~/code/bash/backupdb/upvars/upvars.bash
+source ~/code/bash/javiera/filetype/filetype.flib
+source ~/code/bash/javiera/upvars/upvars.bash
 
 #===  FUNCTION =========================================================
 #
@@ -65,7 +65,7 @@ insert_archivefile () {
 	[[ $? -ne 0 ]] && return 1
 	local lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
 	[[ $? -ne 0 ]] && return 1
-	file_type=( $(mysql -u$BACKUPDB_USER -p$BACKUPDB_PASSWORD -e "USE javiera; CALL select_ancestor('file type hierarchy', 'archive', $mime_type);") )
+	file_type=( $(mysql -u$JAVIERA_USER -p$JAVIERA_PASSWORD -e "USE javiera; CALL select_ancestor('file type hierarchy', 'archive', $mime_type);") )
 	[[ $? -ne 0 ]] && return 1
 	case ${file_type[-1]} in
 		"disk image")    ! insert_diskimagefile $lastid $2 &&

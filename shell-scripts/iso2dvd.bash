@@ -22,12 +22,12 @@
 #               database with the pertinent data.
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               backupdb.flib
+#               javiera.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
+source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
 
 #===  FUNCTION =========================================================
 #
@@ -111,8 +111,8 @@ fi
 # Update the backup database.
 #-----------------------------------------------------------------------
 
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
+handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
+	dbname=$JAVIERA_DBNAME) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling shmysql utility."

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# backupdb.flacflib <Flac files functions of the backupdb.bash script.>
+# javiera.flacflib <Flac files functions of the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/upvars/upvars.bash
+source ~/code/bash/javiera/upvars/upvars.bash
 
 insert_audiofile () {
 

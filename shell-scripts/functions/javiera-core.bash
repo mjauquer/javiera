@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# backupdb.flib <Core functions of the backupdb.bash script.>
+# javiera.flib <Core functions of the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,10 +22,10 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/filetype/filetype.flib
-source ~/code/bash/backupdb/upvars/upvars.bash
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-archive.bash
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-audio.bash
+source ~/code/bash/javiera/filetype/filetype.flib
+source ~/code/bash/javiera/upvars/upvars.bash
+source ~/code/bash/javiera/shell-scripts/functions/javiera-archive.bash
+source ~/code/bash/javiera/shell-scripts/functions/javiera-audio.bash
 
 delete_file () {
 
@@ -85,14 +85,14 @@ delete_file () {
 	then
 		if ! delete_audiofile $1 $2 
 		then
-			printf 'libbackupdb.sh: error in delete_audiofile().' 1>&2
+			printf 'libjaviera.sh: error in delete_audiofile().' 1>&2
 			return 1
 		fi
 	elif [[ $mimetype = \"application/x-iso9660-image\" ]]
 	then
 		if ! delete_isodata $1 $2
 		then
-			printf 'libbackupdb.sh: error in delete_isodata
+			printf 'libjaviera.sh: error in delete_isodata
 				().' 1>&2
 			return 1
 		fi
@@ -276,8 +276,7 @@ insert_file () {
 	fsize=\'$fsize\'
 	local mtime=$(stat --format='%Y' $3)
 	mtime=\'$mtime\'
-	mysql --skip-reconnect -u$BACKUPDB_USER \
-		-p$BACKUPDB_PASSWORD -e "
+	mysql --skip-reconnect -u$user -p$pass -e "
 		USE javiera;
 		CALL insert_file (
 			$hostname,
@@ -292,8 +291,8 @@ insert_file () {
 
 	# Look at the mime-type of the file being registered in order to
 	# determine in what tables, rows must been inserted.
-	file_type=( $(mysql --skip-reconnect -u$BACKUPDB_USER \
-		-p$BACKUPDB_PASSWORD -e "
+	file_type=( $(mysql --skip-reconnect -u$user \
+		-p$pass -e "
 		USE javiera;
 		CALL select_ancestor (
 			'file type hierarchy',
@@ -303,8 +302,7 @@ insert_file () {
 	") )
 	[[ $? -ne 0 ]] && return 1
 
-	local lastid=$(mysql --skip-reconnect -u$BACKUPDB_USER \
-		-p$BACKUPDB_PASSWORD -e "
+	local lastid=$(mysql --skip-reconnect -u$user -p$pass -e "
 		SELECT LAST_INSERT_ID();
 	")
 	[[ $? -ne 0 ]] && return 1

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# backupdb.bash (See description below).
+# javiera.bash (See description below).
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,16 +22,16 @@
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
 #               getoptx
-#               backupdb.flib
+#               javiera.flib
 #               pathname.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 #
 
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
-source ~/code/bash/backupdb/getoptx/getoptx.bash
-source ~/code/bash/backupdb/pathname/pathname.flib
+source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
+source ~/code/bash/javiera/getoptx/getoptx.bash
+source ~/code/bash/javiera/pathname/pathname.flib
 source ~/code/bash/chpathn/chpathn.flib
 
 usage () {
@@ -43,7 +43,7 @@ usage () {
 # DESCRIPTION: Print a help message to stdout.
 
 	cat <<- EOF
-	Usage: backupdb.sh [OPTIONS] PATH...
+	Usage: javiera.sh [OPTIONS] PATH...
 	
 	Collect and store in a backup database metadata about files in 
 	the directories listed in PATH...
@@ -72,7 +72,13 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-declare progname       # The name of this script.
+declare progname               # The name of this script.
+
+declare user=$JAVIERA_USER     # A mysql user name.
+
+declare pass=$JAVIERA_PASSWORD # A mysql password.
+
+declare db=$JAVIERA_DBNAME     # A mysql database.
 
 progname=$(basename $0)
 
@@ -138,7 +144,7 @@ unset -v log
 # array.
 if [[ $verbose == true ]]
 then
-	printf ' -----------\n Backupdb log:\n -----------\n'
+	printf ' -----------\n Javiera log:\n -----------\n'
         printf ' * Top directories:\n'
 	for dir in ${top_dirs[@]}
 	do
@@ -173,8 +179,7 @@ unset -v top_dirs
 #======================================================================
 
 # Setup a connection to the database.
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
+handle=$(shmysql user=$user password=$pass dbname=$db) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Unable to establish connection to db."

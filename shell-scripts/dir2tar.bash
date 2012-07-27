@@ -22,14 +22,14 @@
 #               files founded in pathname...
 #
 # REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               backupdb.flib
+#               javiera.flib
 #               getoptx.bash
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/backupdb/shell-scripts/functions/backupdb-core.bash
-source ~/code/bash/backupdb/getoptx/getoptx.bash
+source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
+source ~/code/bash/javiera/getoptx/getoptx.bash
 source ~/code/bash/chpathn/chpathn.flib
 
 
@@ -190,13 +190,13 @@ done
 unset -v pathname
 
 # Update the database with data about the files passed as arguments.
-declare -a log   # The output of the command backupdb --verbose.
+declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # files and directories passed as arguments.
-log=($(backupdb -r --verbose ${pathnames[@]}))
+log=($(javiera -r --verbose ${pathnames[@]}))
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Error after calling backupdb."
+	error_exit "$LINENO: Error after calling javiera."
 fi
 if ! read_topdirs top_dirs ${log[@]}
 then
@@ -221,8 +221,8 @@ unset -v file_inodes
 
 # Connect to the database.
 declare handle # Required by shsql. A connection to the database.
-handle=$(shmysql user=$BACKUPDB_USER password=$BACKUPDB_PASSWORD \
-	dbname=$BACKUPDB_DBNAME) 
+handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
+	dbname=$JAVIERA_DBNAME) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling shmysql utility."
@@ -309,10 +309,10 @@ fi
 tarfile=$(readlink -f $1)
 
 # Update the backup database.
-backupdb $tarfile
+javiera $tarfile
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Error after calling backupdb."
+	error_exit "$LINENO: Error after calling javiera."
 fi
 
 #-----------------------------------------------------------------------
@@ -381,7 +381,7 @@ fi
 
 # This will reflect in the database the deletion of the temporal
 # directory.
-backupdb -r .
+javiera -r .
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error while trying to update the database."
