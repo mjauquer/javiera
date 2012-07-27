@@ -24,8 +24,8 @@
 
 source ~/code/bash/backupdb/upvars/upvars.bash
 
-#===  FUNCTION =========================================================
-#
+insert_audiofile () {
+
 #       USAGE: insert_audiofile HANDLE PATHNAME ID
 #
 # DESCRIPTION: Collect metadata related to the audio file pointed by
@@ -36,7 +36,7 @@ source ~/code/bash/backupdb/upvars/upvars.bash
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        The value of the 'id' column in the 'file'
 #                        table of the database.
-insert_audiofile () {
+
 	if [ $(file -b --mime-type "$2") == audio/x-flac ]
 	then
 		! insert_flacfile $1 $2 $3 && return 1
@@ -44,8 +44,8 @@ insert_audiofile () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+update_audiofile () {
+
 #       USAGE: update_audiofile HANDLE PATHNAME ID
 #
 # DESCRIPTION: Update metadata related to the audio file pointed by
@@ -56,7 +56,7 @@ insert_audiofile () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        The value of the 'id' column in the 'file'
 #                        table of the database.
-update_audiofile () {
+
 	if [ $(file -b --mime-type "$2") == audio/x-flac ]
 	then
 		! update_flacfile $1 $2 $3 && return 1
@@ -64,8 +64,8 @@ update_audiofile () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+delete_audiofile () {
+
 #       USAGE: delete_audiofile HANDLE ID
 #
 # DESCRIPTION: Delete related metadata of the audio file whose id value
@@ -74,7 +74,7 @@ update_audiofile () {
 #  PARAMETERS: HANDLE  A connection to a database.
 #              ID      The value of the 'id' column in the 'file'
 #                      table of the database.
-delete_audiofile () {
+
 	# Delete the entry in the 'audio_file' table.
 	local audio_file=$(shsql $1 $(printf '
 		SELECT id FROM audio_file WHERE file="%b";' $2))
@@ -104,8 +104,8 @@ delete_audiofile () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+get_flacmetadata() {
+
 #       USAGE: get_flacmetadata ARRAYNAME1 ARRAYNAME2 BLOCKNUM PATHNAME
 #
 # DESCRIPTION: Get the vorbis comments stored in the flac file pointed
@@ -115,7 +115,7 @@ delete_audiofile () {
 #
 #  PARAMETERS: PATHNAME A unix filesystem formatted string. 
 #
-get_flacmetadata() {
+
 	local -a left
 	local -a right
 	local skip=true
@@ -164,8 +164,8 @@ get_flacmetadata() {
 	local $2 && upvars -a${#right[@]} $2 "${right[@]}"
 }
 
-#===  FUNCTION =========================================================
-#
+get_flacfile () {
+
 #       USAGE: get_flacfile PATHNAME TRACKID
 #
 # DESCRIPTION: Get metadata related to the flac file pointed by PATHNAME
@@ -176,16 +176,15 @@ get_flacmetadata() {
 #              TRACKID   The name of the variable declared in the
 #                        caller's scope where to store the musicbrainz's
 #                        track PUID.
-#
-get_flacfile () {
+
 	local trackid="$(metaflac --show-tag=musicbrainz_trackid $1)"
 	trackid="${trackid##musicbrainz_trackid=}"
 	trackid="\"$trackid\""
 	local $2 && upvar $2 $trackid
 }
 
-#===  FUNCTION =========================================================
-#
+insert_flacfile () {
+	
 #       USAGE: insert_flacfile HANDLE PATHNAME ID
 #
 # DESCRIPTION: Collect metadata related to the flac file pointed by
@@ -196,7 +195,6 @@ get_flacfile () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        The value of the 'id' column in the 'file'
 #                        table of the database.
-insert_flacfile () {
 
 	# Insert an entry in the 'audio_file' table.
 	get_flacfile $2 mbrz_trackid
@@ -234,8 +232,8 @@ insert_flacfile () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+update_flacfile () {
+
 #       USAGE: update_flacfile HANDLE PATHNAME ID
 #
 # DESCRIPTION: Collect metadata related to the audio file pointed by
@@ -246,7 +244,6 @@ insert_flacfile () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        The value of the 'id' column in the 'file'
 #                        table of the database.
-update_flacfile () {
 
 	# Update the entry in the 'audio_file' table.
 	get_flacfile $2 mbrz_trackid
@@ -333,8 +330,8 @@ update_flacfile () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+delete_flacfile () {
+
 #       USAGE: delete_flacfile HANDLE ID
 #
 # DESCRIPTION: Delete related metadata of the flac file whose id value
@@ -343,7 +340,7 @@ update_flacfile () {
 #  PARAMETERS: HANDLE  A connection to a database.
 #              ID      The value of the 'id' column in the 'audio_file'
 #                      table of the database.
-delete_flacfile () {
+
 	local flacfile_id=$(shsql $1 $(printf 'SELECT id FROM
 		flac_file WHERE audio_file=%b;' $2))
 	[[ $? -ne 0 ]] && return 1
@@ -361,8 +358,8 @@ delete_flacfile () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+get_flacstream () {
+
 #       USAGE: get_flacstream PATHNAME MINBCKSIZE MAXBCKSIZE
 #                      MINFRMSIZE TOTSAMPLES SAMPLERATE CHANNELS BPS MD5
 #
@@ -400,8 +397,7 @@ delete_flacfile () {
 #              MD5         The name of the variable declared in the
 #                          caller's scope where to store the md5sum of
 #                          the original audio stream.
-#
-get_flacstream () {
+
 	get_flacmetadata tagnames text 0 $1
 	[[ $? -ne 0 ]] && return 1
 	for (( ind=0; ind<${#tagnames[@]}; ind++ ))
@@ -439,8 +435,8 @@ get_flacstream () {
 	
 }
 
-#===  FUNCTION =========================================================
-#
+insert_flacstream () {
+
 #       USAGE: insert_flacstream HANDLE PATHNAME
 #
 # DESCRIPTION: Collect metadata related to the audio file pointed by
@@ -449,8 +445,7 @@ get_flacstream () {
 #
 #  PARAMETERS: HANDLE    A connection to a database.
 #              PATHNAME  A unix filesystem formatted string. 
-#
-insert_flacstream () {
+
 	get_flacstream $2 minbsize maxbsize minfsize maxfsize tsamples \
 		sample_rate channels bps md5
 	[[ $? -ne 0 ]] && return 1
@@ -466,8 +461,8 @@ insert_flacstream () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+update_flacstream () {
+
 #       USAGE: update_flacstream HANDLE ID
 #
 # DESCRIPTION: Collect metadata related to the audio file pointed by
@@ -478,8 +473,7 @@ insert_flacstream () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        The value of the 'id' column in the
 #                        'flac_stream' table.
-#
-update_flacstream () {
+
 	get_flacstream $2 minbsize maxbsize minfsize maxfsize tsamples \
 	       	sample_rate channels bps md5
 	[[ $? -ne 0 ]] && return 1
@@ -495,8 +489,8 @@ update_flacstream () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+delete_flacstream () {
+
 #       USAGE: delete_flacstream HANDLE ID
 #
 # DESCRIPTION: Delete an entry in the 'flac_stream' table.
@@ -504,15 +498,14 @@ update_flacstream () {
 #  PARAMETERS: HANDLE  A connection to a database.
 #              ID      The value of the 'id' column in the 'flac_stream'
 #                      table.
-#
-delete_flacstream () {
+
 	shsql $1 $(printf 'DELETE FROM flac_stream WHERE id=%b;' $2)
 	[[ $? -ne 0 ]] && return 1
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
+insert_tag () {
+
 #       USAGE: insert_tag HANDLE VARNAME TAGNAME TEXT
 #
 # DESCRIPTION: Search the 'tag' table for an entry with the specified
@@ -524,8 +517,7 @@ delete_flacstream () {
 #              VARNAME  A variable in the caller's scope.
 #              TAGNAME  The left member of a tag.
 #              TEXT     The right member of a tag.
-#
-insert_tag () {
+
 	local match
 	local id
 	match=$(shsql $1 $(printf 'SELECT COUNT(*) FROM tag WHERE
@@ -543,8 +535,8 @@ insert_tag () {
 	local $2 && upvar $2 $id
 }
 
-#===  FUNCTION =========================================================
-#
+insert_audiofiletags () {
+
 #       USAGE: insert_audiofiletags HANDLE VARNAME PATHNAME AUDIOFILE_ID
 #
 # DESCRIPTION: Get the comments of the audio file whose id is
@@ -555,8 +547,7 @@ insert_tag () {
 #              PATHNAME  A unix filesystem formatted string. 
 #              ID        The id number of the audio file in the table
 #                        'audio_file'.
-#
-insert_audiofiletags () {
+
 	local -a tagsarr
 	if [ $(file -b --mime-type "$3") == audio/x-flac ]
 	then

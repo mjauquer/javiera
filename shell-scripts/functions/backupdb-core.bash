@@ -24,10 +24,108 @@
 
 source ~/code/bash/backupdb/filetype/filetype.flib
 source ~/code/bash/backupdb/upvars/upvars.bash
+source ~/code/bash/backupdb/shell-scripts/functions/backupdb-archive.bash
 source ~/code/bash/backupdb/shell-scripts/functions/backupdb-audio.bash
 
-#===  FUNCTION =========================================================
+delete_file () {
+
+#       USAGE: delete_file HANDLE ID
 #
+# DESCRIPTION: Delete from the database all the records corresponding
+#              with ID.
+#
+#  PARAMETERS: HANDLE  A connection to a database.
+#              ID      A number value related to the id column of the
+#                      database's file table.
+
+	! is_archived $1 archived $2 && return 1
+	! is_indvd $1 indvd $2 && return 1
+
+	# If it's an archived file or has been burned to a DVD do not
+	# delete from db. Instead, set
+	# NULL "pathname" and "hostname" columns in "file" table.
+	if [ \( $archived == true \) -o \( $indvd == true \) ]
+	then
+		shsql $1 $(printf '
+			DELETE FROM l_file_to_host
+				WHERE file_id = %b;
+			' $2)
+		[[ $? -ne 0 ]] && return 1
+		shsql $1 $(printf '
+			UPDATE file SET path_id = NULL
+				WHERE id = %b;
+			' $2)
+		[[ $? -ne 0 ]] && return 1
+		return 0
+	fi
+
+	! is_archivefile $1 archiver $2 && return 1
+
+	# If it's an archiver file, before deleting it from the db,
+	# delete from "archive" table every row with a value of ID in
+	# "archiver" column.
+	if [ $archiver == true ]
+	then
+		shsql $1 $(printf '
+			DELETE FROM archive WHERE archiver="%b";
+			' $2)
+		[[ $? -ne 0 ]] && return 1
+		delete_orphans $1
+		[[ $? -ne 0 ]] && return 1
+	fi
+	local mimetype=$(shsql $1 $(printf '
+		SELECT type
+			FROM file
+			INNER JOIN mime_type
+				ON file.mime_type_id = mime_type.id
+			WHERE file.id="%b";
+		' $2))
+	[[ $? -ne 0 ]] && return 1
+	if [[ $mimetype =~ \"audio/.* ]]
+	then
+		if ! delete_audiofile $1 $2 
+		then
+			printf 'libbackupdb.sh: error in delete_audiofile().' 1>&2
+			return 1
+		fi
+	elif [[ $mimetype = \"application/x-iso9660-image\" ]]
+	then
+		if ! delete_isodata $1 $2
+		then
+			printf 'libbackupdb.sh: error in delete_isodata
+				().' 1>&2
+			return 1
+		fi
+	fi
+	shsql $1 $(printf '
+		DELETE FROM file WHERE id="%b";
+		' $2)
+	[[ $? -ne 0 ]] && return 1
+	return 0
+}
+
+delete_orphans () {
+
+#       USAGE: delete_orphans HANDLE
+#
+# DESCRIPTION: Delete from table "file" all the records with
+#              pathname=NULL which do not exist as archived in table
+#              archive.
+#
+#  PARAMETERS: HANDLE  A connection to a database.
+
+	shsql $1 $(printf '
+		DELETE FROM file
+		WHERE file.path_id IS NULL
+		AND NOT EXISTS (SELECT archived FROM archive WHERE
+		file.id=archive.archived);
+		' $2)
+	[[ $? -ne 0 ]] && return 1
+	return 0
+}
+
+escape_chars () {
+
 #       USAGE: escape_chars VARNAME STRING
 #
 # DESCRIPTION: Edit STRING inserting backslashes in order to escape SQL
@@ -36,16 +134,15 @@ source ~/code/bash/backupdb/shell-scripts/functions/backupdb-audio.bash
 #
 #  PARAMETERS: VARNAME The name of a caller's variable.
 #              STRING  The string to be edited.
-#
-escape_chars () {
+
 	local string="$2"
 	string=${string//\"/\\\"}
 	string=${string//\'/\\\'}
 	local $1 && upvar $1 "$string"
 }
 
-#===  FUNCTION =========================================================
-#
+get_id () {
+
 #       USAGE: get_id HANDLE VARNAME HOSTNAME PATHNAME
 #
 # DESCRIPTION: Query the backup database for a file id number. Store the
@@ -57,8 +154,7 @@ escape_chars () {
 #                        is being query about is stored. 
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
-#
-get_id () {
+
 	! is_backedup $1 backedup $3 $4 && return 1
 	if [ $backedup == true ]
 	then
@@ -77,8 +173,8 @@ get_id () {
 	fi
 }
 
-#===  FUNCTION =========================================================
-#
+is_backedup () {
+
 #       USAGE: is_backedup HANDLE HOSTNAME PATHNAME
 #
 # DESCRIPTION: Do a query on the connected database to find out if data
@@ -95,137 +191,26 @@ get_id () {
 #                        is being query about is stored. 
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
-#
-is_backedup () {
-	local pathmatch
+
 	local shamatch
 	local answer
-	pathmatch=$(shsql $1 $(printf '
-		SELECT COUNT(*)
-		FROM l_file_to_host AS link
-		INNER JOIN file ON link.file_id = file.id
-		INNER JOIN path ON file.path_id = path.id
-		INNER JOIN host ON link.host_id = host.id
-		WHERE host.name="%b"
-		AND path.name="%b";
-		' $3 $4))
-	[[ $? -ne 0 ]] && return 1
 	shamatch=$(shsql $1 $(printf '
 		SELECT COUNT(*)
 		FROM file
 		WHERE sha1="%b";
 		' $(sha1sum $4 | cut -c1-40)))
 	[[ $? -ne 0 ]] && return 1
-	if [ $pathmatch == '"1"' ]
+	if [ $shamatch == '"1"' ]
 	then
 		answer=true
-	elif [ $shamatch == '"1"' ]
-	then
-		answer=recycle
 	else
 		answer=false
 	fi
 	local $2 && upvar $2 $answer
 }
 
-#===  FUNCTION =========================================================
-#
-#       USAGE: is_archived VARNAME HANDLE ID
-#
-# DESCRIPTION: Do a query on the connected database to find out if ID
-#              matchs the "archived" column of any row in the table
-#              "archive" in the backup database. Store "true" in the
-#              caller's VARNAME variable if it is so. Otherwise, store
-#              "false".
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              VARNAME   The name of a caller's variable.
-#              ID        A number value related to the id column of the
-#                        database's file table.
-#
-is_archived () {
-	local count
-	count=$(shsql $1 $(printf '
-		SELECT COUNT(*) FROM archive WHERE archived=%b;
-		' $3))
-	[[ $? -ne 0 ]] && return 1
-	local answer
-	if [ $count == '"0"' ]
-	then
-		answer="false"
-	else
-		answer="true"
-	fi
-	local $2 && upvar $2 $answer
-	return 0
-}
+is_insync () {
 
-#===  FUNCTION =========================================================
-#
-#       USAGE: is_indvd HANDLE ID
-#
-# DESCRIPTION: Do a query on the connected database to find out if ID
-#              matchs the "image_file" column of any row in the table
-#              "dvd" in the backup database. Store "true" in the
-#              caller's VARNAME variable if it is so. Otherwise, store
-#              "false".
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              VARNAME   The name of a caller's variable.
-#              ID        A number value related to the id column of the
-#                        database's file table.
-#
-is_indvd () {
-	local count
-	count=$(shsql $1 $(printf '
-		SELECT COUNT(*) FROM dvd WHERE image_file=%b;
-		' $3))
-	[[ $? -ne 0 ]] && return 1
-	local answer
-	if [ $count == '"0"' ]
-	then
-		answer="false"
-	else
-		answer="true"
-	fi
-	local $2 && upvar $2 $answer
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: is_archiver HANDLE ID
-#
-# DESCRIPTION: Do a query on the connected database to find out if ID
-#              matchs the "archiver" column of any row in the table
-#              "archive" in the backup database. Store "true" in the
-#              caller's VARNAME variable if it is so. Otherwise, store
-#              "false".
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              VARNAME   The name of a caller's variable.
-#              ID        A number value related to the id column of the
-#                        database's file table.
-#
-is_archiver () {
-	local count
-	count=$(shsql $1 $(printf '
-		SELECT COUNT(*) FROM archive WHERE archiver="%b";
-		' $3))
-	[[ $? -ne 0 ]] && return 1
-	local answer
-	if [ $count == '"0"' ]
-	then
-		answer="false"
-	else
-		answer="true"
-	fi
-	local $2 && upvar $2 $answer
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
 #       USAGE: is_insync HANDLE HOSTNAME PATHNAME
 #
 # DESCRIPTION: Do a query on the connected database to find out if data
@@ -239,8 +224,7 @@ is_archiver () {
 #                        is being query about is stored. 
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
-#
-is_insync () {
+
 	local tstamp
 	tstamp=$(shsql $1 $(printf '
 		SELECT last_updated
@@ -269,52 +253,8 @@ is_insync () {
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
-#       USAGE: insert_archive HANDLE ARCHIVER_ID ARCHIVED_ID
-#
-# DESCRIPTION: Insert in the archive table of the backup database a row.
-#
-#  PARAMETERS: HANDLE      A connection to a database.
-#              ARCHIVER_ID The file id number of the archiver file. Must
-#                          be passed between <">.
-#              ARCHIVED_ID The file id number of the archived file. Must
-#                          be passed between <">.
-#
-insert_archive () {
-	shsql $1 $(printf '
-		INSERT INTO archive (archiver,archived,archived_suffix)
-		VALUES (%b, %b, "%b");
-		' $2 $3 $4)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
+insert_file () {
 
-#===  FUNCTION =========================================================
-#
-#       USAGE: insert_dvd HANDLE IMAGE_ID DVD_TYPE DVD_TRADEMARK
-#
-# DESCRIPTION: Insert in the archive table of the backup database a row.
-#
-#  PARAMETERS: HANDLE        A connection to a database.
-#              IMAGE_ID      The file id number of the image file. Must
-#                            be passed between <">.
-#              DVD_TYPE      The type of the DVD burned. Usually, DVD-R,
-#                            DVD+R, etc. Must be passed between <">.
-#              DVD_TRADEMARK The trademark or manufacturer of the DVD.
-#                            Must be passed between <">.
-#
-insert_dvd () {
-	shsql $1 $(printf '
-		INSERT INTO dvd (image_file, dvd_type, dvd_trademark)
-		VALUES (%b, "%b", "%b");
-		' $2 $3 $4)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
 #       USAGE: insert_file HANDLE HOSTNAME PATHNAME
 #
 # DESCRIPTION: Collect metadata related to the file pointed by PATHNAME
@@ -325,237 +265,62 @@ insert_dvd () {
 #                        is being query about is stored. 
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
-#
-insert_file () {
-	local answer
-	shsql $1 $(printf '
-		INSERT INTO path (name) VALUE ("%b");
-		' $3)
+
+	local hostname=$2; hostname=\'$hostname\'
+	local pathname=$3; pathname=\'$pathname\'
+	local mime_type=$(file -b --mime-type $3)
+	mime_type=\'$mime_type\'
+	local sha1=$(sha1sum $3 | cut -c1-40)\
+	sha1=\'$sha1\'
+	local fsize=$(stat --format='%s' $3)
+	fsize=\'$fsize\'
+	local mtime=$(stat --format='%Y' $3)
+	mtime=\'$mtime\'
+	mysql --skip-reconnect -u$BACKUPDB_USER \
+		-p$BACKUPDB_PASSWORD -e "
+		USE javiera;
+		CALL insert_file (
+			$hostname,
+			$pathname,
+			$mime_type,
+			$sha1,
+			$fsize,
+			$mtime
+		);
+	"
 	[[ $? -ne 0 ]] && return 1
-	local pathid=$(shsql $1 "
+
+	# Look at the mime-type of the file being registered in order to
+	# determine in what tables, rows must been inserted.
+	file_type=( $(mysql --skip-reconnect -u$BACKUPDB_USER \
+		-p$BACKUPDB_PASSWORD -e "
+		USE javiera;
+		CALL select_ancestor (
+			'file type hierarchy',
+			'regular',
+			$mime_type
+		);
+	") )
+	[[ $? -ne 0 ]] && return 1
+
+	local lastid=$(mysql --skip-reconnect -u$BACKUPDB_USER \
+		-p$BACKUPDB_PASSWORD -e "
 		SELECT LAST_INSERT_ID();
-		")
+	")
 	[[ $? -ne 0 ]] && return 1
-	local hostid=$(shsql $1 $(printf '
-		SELECT id FROM host WHERE name="%b";
-		' $2))
-	[[ $? -ne 0 ]] && return 1
-	local mimeid=$(shsql $1 $(printf '
-		SELECT id FROM mime_type WHERE type="%b";
-		' $(file -b --mime-type $3)))
-	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf '
-		INSERT INTO file (mime_type_id, path_id, sha1,
-			fsize, mtime)
-		VALUES (%b, %b, "%b", "%b", "%b");
-		' $mimeid $pathid $(sha1sum $3 | cut -c1-40) \
-		$(stat --format='%s %Y' $3))
-	[[ $? -ne 0 ]] && return 1
-	local lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
-	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf '
-		INSERT INTO l_file_to_host (file_id, host_id)
-		VALUES (%b,%b);
-		' $lastid $hostid)
-	[[ $? -ne 0 ]] && return 1
-	if [[ $(file -b --mime-type $3) =~ audio/.* ]]
-	then
-		! insert_audiofile $1 $3 $lastid && return 1
-	fi
-	is_iso answer $3
-	[[ $? -ne 0 ]] && return 1
-	if [ $answer == true ]
-	then
-		! insert_iso $1 $lastid && return 1
-	fi
+
+	case ${file_type[-1]} in
+		audio)   ! insert_audiofile $1 $3 $lastid && return 1
+			 ;;
+                archive) ! insert_archivefile $1 $lastid $mime_type &&
+			 return 1
+		         ;;
+	esac
 	return 0
 }
 
-#===  FUNCTION =========================================================
-#
-#       USAGE: insert_iso HANDLE PATHNAME ID
-#
-# DESCRIPTION: Collect metadata related to the iso file pointed by
-#              PATHNAME and insert it in the related table in the
-#              database.
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              ID        A number value related to the id column of the
-#                        database's file table.
-insert_iso () {
-	shsql $1 $(printf '
-		INSERT INTO iso_metadata (file_id) VALUE (%b);
-		' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
+update_file () {
 
-#===  FUNCTION =========================================================
-#
-#       USAGE: delete_file HANDLE ID
-#
-# DESCRIPTION: Delete from the database all the records corresponding
-#              with ID.
-#
-#  PARAMETERS: HANDLE  A connection to a database.
-#              ID      A number value related to the id column of the
-#                      database's file table.
-#
-delete_file () {
-	! is_archived $1 archived $2 && return 1
-	! is_indvd $1 indvd $2 && return 1
-
-	# If it's an archived file or has been burned to a DVD do not
-	# delete from db. Instead, set
-	# NULL "pathname" and "hostname" columns in "file" table.
-	if [ \( $archived == true \) -o \( $indvd == true \) ]
-	then
-		shsql $1 $(printf '
-			DELETE FROM l_file_to_host
-			WHERE file_id = %b;
-			' $2)
-		[[ $? -ne 0 ]] && return 1
-		shsql $1 $(printf '
-			UPDATE file SET path_id = NULL
-			WHERE id = %b;
-			' $2)
-		[[ $? -ne 0 ]] && return 1
-		return 0
-	fi
-
-	! is_archiver $1 archiver $2 && return 1
-
-	# If it's an archiver file, before deleting it from the db,
-	# delete from "archive" table every row with a value of ID in
-	# "archiver" column.
-	if [ $archiver == true ]
-	then
-		shsql $1 $(printf '
-			DELETE FROM archive WHERE archiver="%b";
-			' $2)
-		[[ $? -ne 0 ]] && return 1
-		delete_orphans $1
-		[[ $? -ne 0 ]] && return 1
-	fi
-	local mimetype=$(shsql $1 $(printf '
-		SELECT type
-		FROM file INNER JOIN mime_type ON file.mime_type_id =
-		mime_type.id
-		WHERE file.id="%b";
-		' $2))
-	[[ $? -ne 0 ]] && return 1
-	if [[ $mimetype =~ \"audio/.* ]]
-	then
-		if ! delete_audiofile $1 $2 
-		then
-			printf 'libbackupdb.sh: error in delete_audiofile().' 1>&2
-			return 1
-		fi
-	elif [[ $mimetype = \"application/x-iso9660-image\" ]]
-	then
-		if ! delete_isodata $1 $2
-		then
-			printf 'libbackupdb.sh: error in delete_isodata
-				().' 1>&2
-			return 1
-		fi
-	fi
-	shsql $1 $(printf '
-		DELETE FROM file WHERE id="%b";
-		' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: delete_orphans HANDLE
-#
-# DESCRIPTION: Delete from table "file" all the records with
-#              pathname=NULL which do not exist as archived in table
-#              archive.
-#
-#  PARAMETERS: HANDLE  A connection to a database.
-#
-delete_orphans () {
-	shsql $1 $(printf '
-		DELETE FROM file
-		WHERE file.path_id IS NULL
-		AND NOT EXISTS (SELECT archived FROM archive WHERE
-		file.id=archive.archived);
-		' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: delete_isodata HANDLE ID
-#
-# DESCRIPTION: Delete from the database all the records corresponding
-#              with ID.
-#
-#  PARAMETERS: HANDLE  A connection to a database.
-#              ID      A number value related to the id column of the
-#                      database's file table.
-#
-delete_isodata () {
-	shsql $1 $(printf '
-		DELETE FROM iso_metadata WHERE file_id="%b";
-		' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: recycle_file HANDLE HOSTNAME PATHNAME
-#
-# DESCRIPTION: If there is a record in 'file' table with the sha1 value
-#              of the file pointed by PATHNAME and no value for columns
-#              'pathname'and 'hostname', reuse that record to insert
-#              metadata about that file in the database.
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              HOSTNAME  The name of the host machine where the file it
-#                        is being query about is stored. 
-#              PATHNAME  The pathname of the file it is being query
-#                        about.
-#
-recycle_file () {
-	local sha1=$(sha1sum $3 | cut -c1-40)
-	shsql $1 $(printf '
-		INSERT INTO path (name) VALUE ("%b");
-		' $3)
-	[[ $? -ne 0 ]] && return 1
-	local pathid=$(shsql $1 "
-		SELECT LAST_INSERT_ID();
-		")
-	shsql $1 $(printf '
-		UPDATE file 
-		SET path_id=%b, fsize="%b", mtime="%b"
-		WHERE sha1="%b";
-		' $pathid $(stat --format='%s %Y' $3) \
-		$sha1)
-	[[ $? -ne 0 ]] && return 1
-	local hostid=$(shsql $1 $(printf '
-		SELECT id FROM host WHERE name="%b";
-		' $2))
-	[[ $? -ne 0 ]] && return 1
-	local fileid=$(shsql $1 $(printf '
-		SELECT id FROM file WHERE sha1="%b";
-		' $sha1))
-	[[ $? -ne 0 ]] && return 1
-	shsql $1 $(printf '
-		INSERT INTO l_file_to_host (file_id, host_id)
-		VALUES (%b,%b);
-		' $fileid $hostid)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
-#===  FUNCTION =========================================================
-#
 #       USAGE: update_file HANDLE HOSTNAME PATHNAME
 #
 # DESCRIPTION: Collect metadata related to the file pointed by PATHNAME
@@ -566,8 +331,7 @@ recycle_file () {
 #                        is being query about is stored. 
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
-#
-update_file () {
+
 	local id=$(shsql $1 $(printf '
 		SELECT id 
 		FROM file INNER JOIN path ON file.path_id = path.id

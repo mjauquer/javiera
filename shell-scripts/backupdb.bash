@@ -34,15 +34,14 @@ source ~/code/bash/backupdb/getoptx/getoptx.bash
 source ~/code/bash/backupdb/pathname/pathname.flib
 source ~/code/bash/chpathn/chpathn.flib
 
-#===  FUNCTION =========================================================
-#
+usage () {
+
 #        NAME: usage
 #
 #       USAGE: usage
 #
 # DESCRIPTION: Print a help message to stdout.
-#
-usage () {
+
 	cat <<- EOF
 	Usage: backupdb.sh [OPTIONS] PATH...
 	
@@ -56,15 +55,14 @@ usage () {
 	EOF
 }
 
-#===  FUNCTION =========================================================
-#
+error_exit () {
+
 #       USAGE: error_exit [MESSAGE]
 #
 # DESCRIPTION: Function for exit due to fatal program error.
 #
 #   PARAMETER: MESSAGE An optional description of the error.
-#
-error_exit () {
+
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
 	[ -v handle ] && shsqlend $handle
 	exit 1
@@ -209,12 +207,6 @@ do
 		if ! insert_file $handle $(hostname) $file 
 		then
 			error_exit "$LINENO: Error after calling insert_file()."
-		fi
-	elif [ $backedup == recycle ]
-	then
-		if ! recycle_file $handle $(hostname) $file
-		then
-			error_exit "$LINENO: Error after calling recycle_file()."
 		fi
 	fi
 done

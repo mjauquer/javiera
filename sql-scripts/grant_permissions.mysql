@@ -1,0 +1,10 @@
+GRANT EXECUTE ON PROCEDURE javiera.get_ancestor
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_host_location
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_host_location
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.select_ancestor
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';

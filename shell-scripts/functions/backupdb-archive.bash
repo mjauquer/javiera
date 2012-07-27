@@ -32,17 +32,46 @@ source ~/code/bash/backupdb/upvars/upvars.bash
 # DESCRIPTION: Insert in the archive table of the backup database a row.
 #
 #  PARAMETERS: HANDLE      A connection to a database.
-#              ARCHIVER_ID The file id number of the archiver file. Must
+#              ID          The file id number of the archived file. Must
 #                          be passed between <">.
-#              ARCHIVED_ID The file id number of the archived file. Must
-#                          be passed between <">.
+#              ARCHIVE     The archive file id number of the archiver
+#                          file. Must be passed between <">.
 #
-insert_archive () {
+insert_filetoarchive () {
 	shsql $1 $(printf '
-		INSERT INTO archive (archiver,archived,archived_suffix)
-		VALUES (%b, %b, "%b");
-		' $2 $3 $4)
+		INSERT INTO l_file_to_archive_file (file_id,
+			archive_file_id)
+		VALUES (%b, %b);
+		' $2 $3)
 	[[ $? -ne 0 ]] && return 1
+	return 0
+}
+
+#===  FUNCTION =========================================================
+#
+#       USAGE: insert_archive_file HANDLE ID 'MIME'
+#
+# DESCRIPTION: Insert a row in the table 'archive_file' with the value
+#              ID in the column 'file_id'.
+#
+#  PARAMETERS: HANDLE A connection to a database.
+#              ID     An id value of the column 'id' in the table
+#                     'file'.
+#              MIME   The mime-type of the file.
+insert_archivefile () {
+	shsql $1 $(printf '
+		INSERT INTO archive_file (file_id) VALUE (%b);
+		' $2)
+	[[ $? -ne 0 ]] && return 1
+	local lastid=$(shsql $1 "SELECT LAST_INSERT_ID();")
+	[[ $? -ne 0 ]] && return 1
+	file_type=( $(mysql -u$BACKUPDB_USER -p$BACKUPDB_PASSWORD -e "USE javiera; CALL select_ancestor('file type hierarchy', 'archive', $mime_type);") )
+	[[ $? -ne 0 ]] && return 1
+	case ${file_type[-1]} in
+		"disk image")    ! insert_diskimagefile $lastid $2 &&
+		                 return 1
+			         ;;
+	esac
 	return 0
 }
 
@@ -106,7 +135,9 @@ insert_iso () {
 is_archived () {
 	local count
 	count=$(shsql $1 $(printf '
-		SELECT COUNT(*) FROM archive WHERE archived=%b;
+		SELECT COUNT(*)
+			FROM l_file_to_archive_file
+		       	WHERE file_id=%b;
 		' $3))
 	[[ $? -ne 0 ]] && return 1
 	local answer
@@ -122,7 +153,7 @@ is_archived () {
 
 #===  FUNCTION =========================================================
 #
-#       USAGE: is_archiver HANDLE ID
+#       USAGE: is_archivefile HANDLE ID
 #
 # DESCRIPTION: Do a query on the connected database to find out if ID
 #              matchs the "archiver" column of any row in the table
@@ -135,10 +166,12 @@ is_archived () {
 #              ID        A number value related to the id column of the
 #                        database's file table.
 #
-is_archiver () {
+is_archivefile () {
 	local count
 	count=$(shsql $1 $(printf '
-		SELECT COUNT(*) FROM archive WHERE archiver="%b";
+		SELECT COUNT(*)
+			FROM archive_file
+			WHERE file_id=%b;
 		' $3))
 	[[ $? -ne 0 ]] && return 1
 	local answer

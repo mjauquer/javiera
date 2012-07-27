@@ -3,6 +3,12 @@ INSERT INTO host (id, name)
 		('', 'cym')
 ;
 
+INSERT INTO location_type (id, type)
+	VALUES
+		('', 'host'),
+		('', 'archive')
+;
+
 INSERT INTO description (id, text)
 	VALUES 
 		('', 'regular'),
@@ -195,12 +201,11 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='free lossless audio format')
+		(SELECT id FROM description WHERE text='free lossless audio codec')
 	),(
 		@tree_node_id,
 		(SELECT id FROM description WHERE text='flac')
-	)
-;
+	);
 SET @tree_node_id = NULL;
 
 INSERT INTO tree_node (id, parent_id)
@@ -219,7 +224,8 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 	);
 INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
 	VALUES (
-		@tree_node_id, (SELECT id FROM description WHERE text='lossy')
+		@tree_node_id,
+		(SELECT id FROM description WHERE text='lossy')
 	);
 SET @tree_node_id = NULL;
 

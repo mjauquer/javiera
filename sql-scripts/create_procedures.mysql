@@ -1,0 +1,137 @@
+delimiter //
+
+CREATE PROCEDURE get_ancestor (
+		IN  tree       VARCHAR(256),
+		IN  father     VARCHAR(256),
+		IN  descendant VARCHAR(256),
+		OUT ancestor   VARCHAR(256)
+	) COMMENT "Parameters: IN <tree> VARCHAR(256), IN <father> VARCHAR(256), IN <descendant> VARCHAR(256), OUT <ancestor> MEDIUMINT
+                      Description: Find in the tree named <tree> a node which is an ancestor of that which is asociated to the description/mime-type <descendant> and its father is asociated to the description <father>. Store the resulting description in the variable named <ancestor>."
+
+BEGIN
+	DECLARE descendant_left MEDIUMINT;
+
+	IF tree = 'file type hierarchy'
+	THEN
+		SELECT left_extent INTO descendant_left
+			FROM l_mime_type_to_tree_node AS mime2tree
+			INNER JOIN mime_type
+				ON mime2tree.mime_type_id = mime_type.id
+			INNER JOIN tree_node AS node
+				ON mime2tree.tree_node_id = node.id
+			WHERE mime_type.type = descendant;
+
+		IF descendant_left IS NULL
+		THEN
+			SELECT left_extent INTO descendant_left
+				FROM l_tree_node_to_description AS node2desc
+				INNER JOIN description
+					ON node2desc.description_id = description.id
+				INNER JOIN tree_node AS node
+					ON node2desc.tree_node_id = node.id
+				WHERE description.text = descendant;
+		END IF;
+	END IF;
+	SELECT text INTO ancestor
+		FROM l_tree_node_to_tree AS node2tree
+		INNER JOIN tree
+			ON node2tree.tree_id = tree.id
+		INNER JOIN tree_node AS node
+			ON node2tree.tree_node_id = node.id
+		INNER JOIN l_tree_node_to_description node2desc
+			ON node.id = node2desc.tree_node_id
+		INNER JOIN description
+			ON description.id = node2desc.description_id
+		WHERE parent_id = (SELECT tree_node_id
+					FROM l_tree_node_to_description AS node2desc
+					INNER JOIN description
+						ON node2desc.description_id = description.id
+					WHERE text = father)
+		AND tree.name = tree
+		AND left_extent < descendant_left
+		AND right_extent > descendant_left;
+END;
+
+CREATE PROCEDURE insert_and_get_host_location (
+		IN  hostname         VARCHAR(256),
+		IN  pathname         VARCHAR(256),
+		OUT host_location_id MEDIUMINT
+	) COMMENT "Parameters: IN <hostname> VARCHAR(256), IN <pathname> VARCHAR(256), OUT <host_location_id> MEDIUMINT
+                      Description: Insert an entry in the 'location' and 'host_location' tables. Return the id field of the inserted row in the 'host_location' table."
+
+BEGIN
+	DECLARE hostid MEDIUMINT;
+	DECLARE pathid MEDIUMINT;
+
+	INSERT INTO host (id, name) VALUES ('', hostname);
+	SET hostid = LAST_INSERT_ID();
+
+	INSERT INTO path (id, name) VALUES ('', pathname);
+	SET pathid = LAST_INSERT_ID();
+
+	INSERT INTO location (id, location_type_id)
+		VALUES (
+			'',
+			(SELECT id FROM location_type WHERE type = 'host')
+		)
+	;
+
+	INSERT INTO host_location (id, location_id, host_id, path_id) VALUES ('', location_id, hostid, pathid);
+	SET host_location_id = LAST_INSERT_ID();
+END;
+
+CREATE PROCEDURE insert_file (
+		IN hostname  VARCHAR(256),
+		IN pathname  VARCHAR(256),
+		IN mimetype  VARCHAR(256),
+		IN sha1      CHAR(40),
+		IN fsize     BIGINT UNSIGNED,
+		IN mtime     INT UNSIGNED
+	) COMMENT "Parameters: IN <hostname> VARCHAR(256), IN <pathname> VARCHAR(256), IN mimetype VARCHAR(256), IN sha1 CHAR(40), IN fsize BIGINT UNSIGNED, IN mtime INT UNSIGNED.
+                      Description: Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables."
+
+BEGIN
+	DECLARE host_location_id MEDIUMINT;
+	CALL insert_and_get_host_location (hostname, pathname, host_location_id);
+
+	INSERT INTO file (mime_type_id, sha1, fsize, mtime) VALUES (
+		(SELECT id FROM mime_type WHERE type = mimetype),
+		sha1,
+		fsize,
+		mtime
+	);
+
+	INSERT INTO l_file_to_location (file_id, location_id) VALUES ( 
+		(SELECT LAST_INSERT_ID()),
+		(SELECT location_id FROM host_location WHERE id = host_location_id)
+	);
+
+END;
+
+CREATE PROCEDURE insert_host_location (
+		IN  hostname         VARCHAR(256),
+		IN  pathname         VARCHAR(256)
+	) COMMENT "Parameters: IN <hostname> VARCHAR(256), IN <pathname> VARCHAR(256)
+                      Description: Insert an entry in the 'location' and 'host_location' tables."
+
+BEGIN
+	DECLARE host_location_id MEDIUMINT;
+	CALL insert_and_get_host_location (hostname, pathname, host_location_id);
+END;
+
+CREATE PROCEDURE select_ancestor (
+		IN tree       VARCHAR(256),
+		IN father     VARCHAR(256),
+		IN descendant VARCHAR(256)
+	) COMMENT "Parameters: IN <tree> VARCHAR(256), IN <father> VARCHAR(256), IN <descendant> VARCHAR(256)
+                      Description: Select from the tree named <tree> a node which is an ancestor of that which is asociated to the description/mime-type <descendant> and its father is asociated to the description <father>."
+
+BEGIN
+	DECLARE ancestor VARCHAR(256);
+	CALL get_ancestor (tree, father, descendant, ancestor);
+	SELECT ancestor;
+END;
+
+//
+
+delimiter ;

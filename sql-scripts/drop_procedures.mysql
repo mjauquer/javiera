@@ -1,0 +1,5 @@
+DROP PROCEDURE get_ancestor;
+DROP PROCEDURE insert_file;
+DROP PROCEDURE insert_host_location;
+DROP PROCEDURE insert_and_get_host_location;
+DROP PROCEDURE select_ancestor;
