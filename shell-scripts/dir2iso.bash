@@ -27,8 +27,8 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
-source ~/code/bash/javiera/upvars/upvars.bash
+source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
+source ~/projects/javiera/upvars/upvars.bash
 source ~/code/bash/chpathn/chpathn.flib
 
 #===  FUNCTION =========================================================

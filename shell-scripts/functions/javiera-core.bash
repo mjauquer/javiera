@@ -22,10 +22,10 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/javiera/filetype/filetype.flib
-source ~/code/bash/javiera/upvars/upvars.bash
-source ~/code/bash/javiera/shell-scripts/functions/javiera-archive.bash
-source ~/code/bash/javiera/shell-scripts/functions/javiera-audio.bash
+source ~/projects/javiera/filetype/filetype.flib
+source ~/projects/javiera/upvars/upvars.bash
+source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash
+source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash
 
 delete_file () {
 

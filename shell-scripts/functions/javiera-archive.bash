@@ -22,8 +22,8 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/javiera/filetype/filetype.flib
-source ~/code/bash/javiera/upvars/upvars.bash
+source ~/projects/javiera/filetype/filetype.flib
+source ~/projects/javiera/upvars/upvars.bash
 
 #===  FUNCTION =========================================================
 #

@@ -22,7 +22,7 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/code/bash/javiera/upvars/upvars.bash
+source ~/projects/javiera/upvars/upvars.bash
 
 insert_audiofile () {
 

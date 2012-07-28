@@ -29,9 +29,9 @@
 #               the dots).
 #
 
-source ~/code/bash/javiera/shell-scripts/functions/javiera-core.bash
-source ~/code/bash/javiera/getoptx/getoptx.bash
-source ~/code/bash/javiera/pathname/pathname.flib
+source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
+source ~/projects/javiera/getoptx/getoptx.bash
+source ~/projects/javiera/pathname/pathname.flib
 source ~/code/bash/chpathn/chpathn.flib
 
 usage () {
