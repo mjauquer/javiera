@@ -170,10 +170,7 @@ unset -v inode
 unset -v file_inodes
 unset -v top_dirs
 
-#======================================================================
 # Update the database.
-#======================================================================
-
 for file in ${files[@]}
 do
 	file=$(readlink -f $file)
@@ -183,30 +180,3 @@ do
 	fi
 done
 unset -v file
-
-## Search in db for metadata whose file don't exist in PATH... anymore
-## and delete it from the database.
-#declare tobedel
-#declare -i ind
-#shsql $handle "
-#	SELECT file.id, name AS pathname
-#	FROM file INNER JOIN path ON file.path_id = path.id;
-#	" | (
-#	while row=$(shsqlline)
-#	do
-#		eval set $row
-#		if [[ ! -a "$2" ]]
-#		then
-#			tobedel[ind]=$1
-#			ind=$((ind+1))
-#		fi
-#	done
-#	for id in ${tobedel[@]}
-#	do
-#		! delete_file $handle $id
-#	done
-#)
-#unset -v tobedel
-#unset -v ind
-
-# Close the connection to the database.

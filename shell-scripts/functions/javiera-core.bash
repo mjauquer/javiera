@@ -27,83 +27,6 @@ source ~/projects/javiera/upvars/upvars.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash
 
-delete_file () {
-
-#       USAGE: delete_file HANDLE ID
-#
-# DESCRIPTION: Delete from the database all the records corresponding
-#              with ID.
-#
-#  PARAMETERS: HANDLE  A connection to a database.
-#              ID      A number value related to the id column of the
-#                      database's file table.
-
-	! is_archived $1 archived $2 && return 1
-	! is_indvd $1 indvd $2 && return 1
-
-	# If it's an archived file or has been burned to a DVD do not
-	# delete from db. Instead, set
-	# NULL "pathname" and "hostname" columns in "file" table.
-	if [ \( $archived == true \) -o \( $indvd == true \) ]
-	then
-		shsql $1 $(printf '
-			DELETE FROM l_file_to_host
-				WHERE file_id = %b;
-			' $2)
-		[[ $? -ne 0 ]] && return 1
-		shsql $1 $(printf '
-			UPDATE file SET path_id = NULL
-				WHERE id = %b;
-			' $2)
-		[[ $? -ne 0 ]] && return 1
-		return 0
-	fi
-
-	! is_archivefile $1 archiver $2 && return 1
-
-	# If it's an archiver file, before deleting it from the db,
-	# delete from "archive" table every row with a value of ID in
-	# "archiver" column.
-	if [ $archiver == true ]
-	then
-		shsql $1 $(printf '
-			DELETE FROM archive WHERE archiver="%b";
-			' $2)
-		[[ $? -ne 0 ]] && return 1
-		delete_orphans $1
-		[[ $? -ne 0 ]] && return 1
-	fi
-	local mimetype=$(shsql $1 $(printf '
-		SELECT type
-			FROM file
-			INNER JOIN mime_type
-				ON file.mime_type_id = mime_type.id
-			WHERE file.id="%b";
-		' $2))
-	[[ $? -ne 0 ]] && return 1
-	if [[ $mimetype =~ \"audio/.* ]]
-	then
-		if ! delete_audiofile $1 $2 
-		then
-			printf 'libjaviera.sh: error in delete_audiofile().' 1>&2
-			return 1
-		fi
-	elif [[ $mimetype = \"application/x-iso9660-image\" ]]
-	then
-		if ! delete_isodata $1 $2
-		then
-			printf 'libjaviera.sh: error in delete_isodata
-				().' 1>&2
-			return 1
-		fi
-	fi
-	shsql $1 $(printf '
-		DELETE FROM file WHERE id="%b";
-		' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
 delete_orphans () {
 
 #       USAGE: delete_orphans HANDLE
@@ -207,50 +130,6 @@ is_backedup () {
 		answer=false
 	fi
 	local $2 && upvar $2 $answer
-}
-
-is_insync () {
-
-#       USAGE: is_insync HANDLE HOSTNAME PATHNAME
-#
-# DESCRIPTION: Do a query on the connected database to find out if data
-#              about the file pointed by PATHNAME is up to date. Store 
-#              "true" in the caller's VARNAME variable if it is so. 
-#              Otherwise, store "false".
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              VARNAME   The name of a caller's variable.
-#              HOSTNAME  The name of the host machine where the file it
-#                        is being query about is stored. 
-#              PATHNAME  The pathname of the file it is being query
-#                        about.
-
-	local tstamp
-	tstamp=$(shsql $1 $(printf '
-		SELECT last_updated
-		FROM l_file_to_host AS link
-		INNER JOIN file ON link.file_id = file.id
-		INNER JOIN path ON file.path_id = path.id
-		INNER JOIN host ON link.host_id = host.id
-		WHERE host.name="%b"
-		AND path.name="%b";
-		' $3 $4))
-	[[ $? -ne 0 ]] && return 1
-	tstamp="${tstamp##\"}"
-	tstamp="${tstamp%%\"}"
-	tstamp=$(date --date="$tstamp" +%s)
-	local diff
-	diff=$(($tstamp-$(stat --format=%Y $4)))
-	[[ $? -ne 0 ]] && return 1
-	local answer
-	if [ $diff -lt 0 ]
-	then
-		answer="false"
-	else
-		answer="true"
-	fi
-	local $2 && upvar $2 $answer
-	return 0
 }
 
 process_file () {
