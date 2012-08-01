@@ -20,10 +20,6 @@
 #
 #  DESCRIPTION: Keep up to date a backup database.
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               getoptx
-#               javiera.flib
-#               pathname.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
@@ -178,71 +174,39 @@ unset -v top_dirs
 # Update the database.
 #======================================================================
 
-# Setup a connection to the database.
-handle=$(shmysql user=$user password=$pass dbname=$db) 
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Unable to establish connection to db."
-fi
-
 for file in ${files[@]}
 do
 	file=$(readlink -f $file)
-	if ! is_backedup $handle backedup $(hostname) $file
+	if ! process_file $(hostname) $file 
 	then
-		error_exit "$LINENO: Error after calling is_backedup()."
-	fi
-	if [ $backedup == true ]
-	then
-		if ! is_insync $handle insync $(hostname) $file
-		then
-			error_exit "$LINENO: Error after calling is_insync()."
-		fi
-		if [ $insync == true ]
-		then
-			continue
-		else
-			if ! update_file $handle $(hostname) $file 
-			then
-				error_exit "$LINENO: Error after calling update_file()."
-			fi
-		fi
-	elif [ $backedup == false ]
-	then
-		if ! insert_file $handle $(hostname) $file 
-		then
-			error_exit "$LINENO: Error after calling insert_file()."
-		fi
+		error_exit "$LINENO: Error after calling process_file()."
 	fi
 done
 unset -v file
-unset -v backedup
-unset -v insync
 
-# Search in db for metadata whose file don't exist in PATH... anymore
-# and delete it from the database.
-declare tobedel
-declare -i ind
-shsql $handle "
-	SELECT file.id, name AS pathname
-	FROM file INNER JOIN path ON file.path_id = path.id;
-	" | (
-	while row=$(shsqlline)
-	do
-		eval set $row
-		if [[ ! -a "$2" ]]
-		then
-			tobedel[ind]=$1
-			ind=$((ind+1))
-		fi
-	done
-	for id in ${tobedel[@]}
-	do
-		! delete_file $handle $id
-	done
-)
-unset -v tobedel
-unset -v ind
+## Search in db for metadata whose file don't exist in PATH... anymore
+## and delete it from the database.
+#declare tobedel
+#declare -i ind
+#shsql $handle "
+#	SELECT file.id, name AS pathname
+#	FROM file INNER JOIN path ON file.path_id = path.id;
+#	" | (
+#	while row=$(shsqlline)
+#	do
+#		eval set $row
+#		if [[ ! -a "$2" ]]
+#		then
+#			tobedel[ind]=$1
+#			ind=$((ind+1))
+#		fi
+#	done
+#	for id in ${tobedel[@]}
+#	do
+#		! delete_file $handle $id
+#	done
+#)
+#unset -v tobedel
+#unset -v ind
 
 # Close the connection to the database.
-shsqlend $handle

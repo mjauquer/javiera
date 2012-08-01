@@ -1,38 +1,38 @@
 delimiter //
 
 CREATE PROCEDURE get_ancestor (
-		IN  tree       VARCHAR(256),
-		IN  father     VARCHAR(256),
-		IN  descendant VARCHAR(256),
-		OUT ancestor   VARCHAR(256)
-	) COMMENT "Parameters: IN <tree> VARCHAR(256), IN <father> VARCHAR(256), IN <descendant> VARCHAR(256), OUT <ancestor> MEDIUMINT
-                      Description: Find in the tree named <tree> a node which is an ancestor of that which is asociated to the description/mime-type <descendant> and its father is asociated to the description <father>. Store the resulting description in the variable named <ancestor>."
+		IN  p_tree       VARCHAR(256),
+		IN  p_father     VARCHAR(256),
+		IN  p_descendant VARCHAR(256),
+		OUT p_ancestor   VARCHAR(256)
+	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256), OUT <p_ancestor> MEDIUMINT
+                      Description: Find in the tree named <p_tree> a node which is an ancestor of that which is asociated to the description/mime-type <p_descendant> and its father is asociated to the description <p_father>. Store the resulting description in the variable named <p_ancestor>."
 
 BEGIN
-	DECLARE descendant_left MEDIUMINT;
+	DECLARE v_descendant_left MEDIUMINT;
 
-	IF tree = 'file type hierarchy'
+	IF p_tree = 'file type hierarchy'
 	THEN
-		SELECT left_extent INTO descendant_left
+		SELECT left_extent INTO v_descendant_left
 			FROM l_mime_type_to_tree_node AS mime2tree
 			INNER JOIN mime_type
 				ON mime2tree.mime_type_id = mime_type.id
 			INNER JOIN tree_node AS node
 				ON mime2tree.tree_node_id = node.id
-			WHERE mime_type.type = descendant;
+			WHERE mime_type.type = p_descendant;
 
-		IF descendant_left IS NULL
+		IF v_descendant_left IS NULL
 		THEN
-			SELECT left_extent INTO descendant_left
+			SELECT left_extent INTO v_descendant_left
 				FROM l_tree_node_to_description AS node2desc
 				INNER JOIN description
 					ON node2desc.description_id = description.id
 				INNER JOIN tree_node AS node
 					ON node2desc.tree_node_id = node.id
-				WHERE description.text = descendant;
+				WHERE description.text = p_descendant;
 		END IF;
 	END IF;
-	SELECT text INTO ancestor
+	SELECT text INTO p_ancestor
 		FROM l_tree_node_to_tree AS node2tree
 		INNER JOIN tree
 			ON node2tree.tree_id = tree.id
@@ -46,90 +46,443 @@ BEGIN
 					FROM l_tree_node_to_description AS node2desc
 					INNER JOIN description
 						ON node2desc.description_id = description.id
-					WHERE text = father)
-		AND tree.name = tree
-		AND left_extent < descendant_left
-		AND right_extent > descendant_left;
+					WHERE text = p_father)
+		AND tree.name = p_tree
+		AND left_extent < v_descendant_left
+		AND right_extent > v_descendant_left;
+END;
+
+CREATE PROCEDURE insert_and_get_audio_file (
+		IN  p_file_id       MEDIUMINT UNSIGNED,
+		IN  p_recording_gid CHAR(36),
+		OUT p_audio_file_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_recording_gid> CHAR(36), OUT <p_audio_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted row in the 'file' table."
+
+BEGIN
+	DECLARE v_recording_id MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'audio_file' with the specified file_id. 
+	SELECT id INTO p_audio_file_id
+		FROM audio_file
+		WHERE file_id = p_file_id
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_audio_file_id IS NULL
+	THEN
+		INSERT INTO audio_file (id, file_id) VALUES (
+			'',
+			p_file_id
+		);
+		SELECT LAST_INSERT_ID() INTO p_audio_file_id;
+	END IF;
+
+	IF p_recording_gid IS NOT NULL
+	THEN
+		CALL insert_and_get_recording (p_recording_gid, NULL, NULL, v_recording_id);
+
+		CALL link_audio_file_to_recording (p_audio_file_id, v_recording_id);
+	END IF;
+
+END;
+
+CREATE PROCEDURE insert_and_get_file (
+		IN  p_hostname VARCHAR(256),
+		IN  p_pathname VARCHAR(256),
+		IN  p_mimetype VARCHAR(256),
+		IN  p_sha1     CHAR(40),
+		IN  p_fsize    BIGINT UNSIGNED,
+		IN  p_mtime    INT UNSIGNED,
+		OUT p_file_id  MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED, OUT <p_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted row in the 'file' table."
+
+BEGIN
+	DECLARE v_host_locatioin_id MEDIUMINT UNSIGNED;
+
+	CALL insert_and_get_host_location (p_hostname, p_pathname, v_host_locatioin_id);
+	
+	-- Check if an entry already exists in the table 'file' with the specified p_sha1. 
+	SELECT id INTO p_file_id
+		FROM file
+		WHERE sha1 = p_sha1;
+	
+	-- If it doesn't exist, create it.
+	IF p_file_id IS NULL
+	THEN
+		INSERT INTO file (mime_type_id, sha1, fsize, mtime) VALUES (
+			(SELECT id FROM mime_type WHERE type = p_mimetype),
+			p_sha1,
+			p_fsize,
+			p_mtime
+		);
+		SELECT LAST_INSERT_ID() INTO p_file_id;
+	END IF;
+
+END;
+
+CREATE PROCEDURE insert_and_get_flac_file (
+		IN  p_audio_file_id MEDIUMINT UNSIGNED,
+		OUT p_flac_file_id  MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_audio_file_id> MEDIUMINT UNSIGNED, OUT <p_flac_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'flac_file' table. Return the id field of the inserted row."
+
+BEGIN
+	-- Check if an entry already exists in the table 'flac_file' with the specified audio_file_id. 
+	SELECT id INTO p_flac_file_id
+		FROM flac_file
+		WHERE audio_file_id = p_audio_file_id;
+	
+	-- If it doesn't exist, create it.
+	IF p_flac_file_id IS NULL
+	THEN
+		INSERT INTO flac_file (id, audio_file_id) VALUES (
+			'',
+			p_audio_file_id
+		);
+		SELECT LAST_INSERT_ID() INTO p_flac_file_id;
+	END IF;
+END;
+
+CREATE PROCEDURE insert_and_get_flac_metadata_block (
+		IN  p_flac_file_id           MEDIUMINT UNSIGNED,
+		IN  p_label                  VARCHAR(256),
+		OUT p_flac_metadata_block_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, OUT <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'flac_metadata_block' table. Return the id field of the inserted row."
+
+BEGIN
+	INSERT INTO flac_metadata_block (id, label) VALUES ('', p_label);
+	SELECT LAST_INSERT_ID() INTO p_flac_metadata_block_id;
+
+	CALL link_flac_file_to_metadata_block (p_flac_file_id, p_flac_metadata_block_id);
+END;
+
+CREATE PROCEDURE insert_and_get_flac_metadata_entry (
+		IN  p_flac_metadata_block_id MEDIUMINT UNSIGNED,
+		OUT p_flac_metadata_entry_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED, OUT <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'flac_metadata_entry' table. Return the id field of the inserted row."
+
+BEGIN
+	INSERT INTO flac_metadata_entry (id) VALUES ('');
+	SELECT LAST_INSERT_ID() INTO p_flac_metadata_entry_id;
+
+	CALL link_flac_metadata_entry_to_block (p_flac_metadata_entry_id, p_flac_metadata_block_id);
 END;
 
 CREATE PROCEDURE insert_and_get_host_location (
-		IN  hostname         VARCHAR(256),
-		IN  pathname         VARCHAR(256),
-		OUT host_location_id MEDIUMINT
-	) COMMENT "Parameters: IN <hostname> VARCHAR(256), IN <pathname> VARCHAR(256), OUT <host_location_id> MEDIUMINT
+		IN  p_hostname         VARCHAR(256),
+		IN  p_pathname         VARCHAR(256),
+		OUT p_host_locatioin_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256), OUT <p_host_locatioin_id> MEDIUMINT
                       Description: Insert an entry in the 'location' and 'host_location' tables. Return the id field of the inserted row in the 'host_location' table."
 
 BEGIN
-	DECLARE hostid MEDIUMINT;
-	DECLARE pathid MEDIUMINT;
+	DECLARE v_host_id     MEDIUMINT UNSIGNED;
+	DECLARE v_path_id     MEDIUMINT UNSIGNED;
+	DECLARE v_location_id MEDIUMINT UNSIGNED;
 
-	INSERT INTO host (id, name) VALUES ('', hostname);
-	SET hostid = LAST_INSERT_ID();
+	-- Check if an entry already exists in the table 'host_location' with the specified p_hostname and p_pathname. 
+	SELECT host_location.id INTO p_host_locatioin_id
+		FROM host_location
+		INNER JOIN host ON host_location.host_id = host.id
+		INNER JOIN path ON host_location.path_id = path.id
+		WHERE host.name = p_hostname
+		AND path.name = p_pathname;
 
-	INSERT INTO path (id, name) VALUES ('', pathname);
-	SET pathid = LAST_INSERT_ID();
+	-- If it doesn't exist, create it.
+	IF p_host_locatioin_id IS NULL
+	THEN
+		INSERT INTO host (id, name) VALUES ('', p_hostname);
+		SET v_host_id = LAST_INSERT_ID();
 
-	INSERT INTO location (id, location_type_id)
-		VALUES (
+		INSERT INTO path (id, name) VALUES ('', p_pathname);
+		SET v_path_id = LAST_INSERT_ID();
+
+		INSERT INTO location (id, location_type_id)
+			VALUES (
+				'',
+				(SELECT id FROM location_type WHERE type = 'host')
+			)
+		;
+		SET v_location_id = LAST_INSERT_ID();
+
+		INSERT INTO host_location (id, location_id, host_id, path_id) VALUES (
 			'',
-			(SELECT id FROM location_type WHERE type = 'host')
-		)
-	;
-
-	INSERT INTO host_location (id, location_id, host_id, path_id) VALUES ('', location_id, hostid, pathid);
-	SET host_location_id = LAST_INSERT_ID();
+			v_location_id,
+			v_host_id,
+			v_path_id
+		);
+		SET p_host_locatioin_id = LAST_INSERT_ID();
+	END IF;
 END;
 
-CREATE PROCEDURE insert_file (
-		IN hostname  VARCHAR(256),
-		IN pathname  VARCHAR(256),
-		IN mimetype  VARCHAR(256),
-		IN sha1      CHAR(40),
-		IN fsize     BIGINT UNSIGNED,
-		IN mtime     INT UNSIGNED
-	) COMMENT "Parameters: IN <hostname> VARCHAR(256), IN <pathname> VARCHAR(256), IN mimetype VARCHAR(256), IN sha1 CHAR(40), IN fsize BIGINT UNSIGNED, IN mtime INT UNSIGNED.
-                      Description: Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables."
+CREATE PROCEDURE insert_and_get_recording (
+		IN  p_gid              CHAR(36),
+		IN  p_track_name_id    MEDIUMINT UNSIGNED,
+		IN  p_artist_credit_id MEDIUMINT UNSIGNED,
+		OUT p_recording_id     MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_gid> CHAR(36), IN <p_track_name_id> MEDIUMINT, IN <p_artist_credit_id> MEDIUMINT, OUT <p_recording_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'recording' table. Return the id field of the inserted row."
 
 BEGIN
-	DECLARE host_location_id MEDIUMINT;
-	CALL insert_and_get_host_location (hostname, pathname, host_location_id);
 
-	INSERT INTO file (mime_type_id, sha1, fsize, mtime) VALUES (
-		(SELECT id FROM mime_type WHERE type = mimetype),
-		sha1,
-		fsize,
-		mtime
+	-- Check if an entry already exists in the table 'recording' with the specified p_gid. 
+	SELECT recording.id INTO p_recording_id
+		FROM recording
+		WHERE recording.gid = p_gid
+	;
+
+	-- If it doesn't exist, create it.
+	IF p_recording_id IS NULL
+	THEN
+		INSERT INTO recording (id, gid, track_name_id, artist_credit_id) VALUES (
+			'',
+			p_gid,
+			p_track_name_id,
+			p_artist_credit_id
+		);
+		SELECT LAST_INSERT_ID() INTO p_recording_id;
+	END IF;
+END;
+
+CREATE PROCEDURE insert_audio_file (
+		IN  p_file_id       MEDIUMINT UNSIGNED,
+		IN  p_recording_gid CHAR(36)
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_recording_gid> CHAR(36).
+                      Description: Insert an entry in the 'audio_file', 'recording' and 'l_audio_file_to_recording' tables."
+
+BEGIN
+	DECLARE v_audio_file_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_audio_file (p_file_id, p_recording_gid, v_audio_file_id);
+END;
+
+CREATE PROCEDURE insert_flac_file (
+		IN p_audio_file_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_audio_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'flac_file' table."
+
+BEGIN
+	DECLARE v_flac_file_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_flac_file (p_audio_file_id, v_flac_file_id);
+END;
+
+CREATE PROCEDURE insert_flac_metadata_block (
+		IN p_flac_file_id MEDIUMINT UNSIGNED,
+		IN p_label VARCHAR(256)
+	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_label> VARCHAR(256).
+                      Description: Insert an entry in the 'recording' table."
+
+BEGIN
+	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_flac_metadata_block (p_flac_file_id, p_label, v_flac_metadata_block_id);
+END;
+
+CREATE PROCEDURE insert_flac_streaminfo_metadata_entry (
+		IN p_flac_file_id MEDIUMINT UNSIGNED,
+		IN p_column1      VARCHAR(256),
+		IN p_column2      VARCHAR(256)
+	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_column1> VARCHAR(256), IN <p_column2> VARCHAR(256).
+                      Description: Insert an entry in the 'flac_streaminfo_metadata_entry' table."
+
+BEGIN
+	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
+	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id. 
+	SELECT flac_metadata_block_id INTO v_flac_metadata_block_id
+		FROM l_flac_file_to_metadata_block AS file2block
+		INNER JOIN flac_metadata_block AS block
+			ON file2block.flac_metadata_block_id = block.id
+		WHERE block.label = 'streaminfo';
+	
+	-- If it doesn't exist, create it.
+	IF v_flac_metadata_block_id IS NULL
+	THEN
+		CALL insert_and_get_flac_metadata_block (p_flac_file_id, 'streaminfo', v_flac_metadata_block_id);
+	END IF;
+	
+	-- Create an entry in the 'flac_metadata_entry' table.
+	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
+
+	-- Finally, create an entry in the 'flac_streaminfo_metadata_entry' table.
+	INSERT INTO flac_streaminfo_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
+		v_flac_metadata_entry_id,
+		p_column1,
+		p_column2
 	);
+END;
 
-	INSERT INTO l_file_to_location (file_id, location_id) VALUES ( 
-		(SELECT LAST_INSERT_ID()),
-		(SELECT location_id FROM host_location WHERE id = host_location_id)
+CREATE PROCEDURE insert_flac_vorbiscomment_metadata_entry (
+		IN p_flac_file_id MEDIUMINT UNSIGNED,
+		IN p_column1      VARCHAR(256),
+		IN p_column2      VARCHAR(256)
+	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_column1> VARCHAR(256), IN <p_column2> VARCHAR(256).
+                      Description: Insert an entry in the 'flac_vorbiscomment_metadata_entry' table."
+
+BEGIN
+	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
+	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id. 
+	SELECT flac_metadata_block_id INTO v_flac_metadata_block_id
+		FROM l_flac_file_to_metadata_block AS file2block
+		INNER JOIN flac_metadata_block AS block
+			ON file2block.flac_metadata_block_id = block.id
+		WHERE block.label = 'vorbiscomment';
+	
+	-- If it doesn't exist, create it.
+	IF v_flac_metadata_block_id IS NULL
+	THEN
+		CALL insert_and_get_flac_metadata_block (p_flac_file_id, 'vorbiscomment', v_flac_metadata_block_id);
+	END IF;
+	
+	-- Create an entry in the 'flac_metadata_entry' table.
+	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
+
+	-- Finally, create an entry in the 'flac_vorbiscomment_metadata_entry' table.
+	INSERT INTO flac_vorbiscomment_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
+		v_flac_metadata_entry_id,
+		p_column1,
+		p_column2
 	);
-
 END;
 
 CREATE PROCEDURE insert_host_location (
-		IN  hostname         VARCHAR(256),
-		IN  pathname         VARCHAR(256)
-	) COMMENT "Parameters: IN <hostname> VARCHAR(256), IN <pathname> VARCHAR(256)
+		IN  p_hostname         VARCHAR(256),
+		IN  p_pathname         VARCHAR(256)
+	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256)
                       Description: Insert an entry in the 'location' and 'host_location' tables."
 
 BEGIN
-	DECLARE host_location_id MEDIUMINT;
-	CALL insert_and_get_host_location (hostname, pathname, host_location_id);
+	DECLARE v_host_location_id MEDIUMINT;
+	CALL insert_and_get_host_location (p_hostname, p_pathname, v_host_location_id);
+END;
+
+CREATE PROCEDURE link_audio_file_to_recording (
+		IN p_audio_file_id MEDIUMINT UNSIGNED,
+		IN p_recording_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_audio_file_id> MEDIUMINT UNSIGNED, IN <p_recording_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_audio_file_to_recording' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_audio_file_to_recording' with the specified p_audio_file_id and p_recording_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_audio_file_to_recording
+		WHERE audio_file_id = p_audio_file_id
+		AND recording_id = p_recording_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_audio_file_to_recording (audio_file_id, recording_id) VALUES ( 
+			p_audio_file_id,
+			p_recording_id
+		);
+	END IF;
+END;
+
+CREATE PROCEDURE link_file_to_location (
+		IN p_file_id     MEDIUMINT UNSIGNED,
+		IN p_location_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_location_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_file_to_location' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_file_to_location' with the specified p_file_id and p_location_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_file_to_location
+		WHERE file_id = p_file_id
+		AND location_id = p_location_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_file_to_location (file_id, location_id) VALUES ( 
+			p_file_id,
+			p_location_id
+		);
+	END IF;
+END;
+
+CREATE PROCEDURE link_flac_file_to_metadata_block (
+		IN p_flac_file_id MEDIUMINT UNSIGNED,
+		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_audio_file_to_recording' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id and p_flac_metadata_block_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_flac_file_to_metadata_block
+		WHERE flac_file_id = p_flac_file_id
+		AND flac_metadata_block_id = p_flac_metadata_block_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_flac_file_to_metadata_block (flac_file_id, flac_metadata_block_id) VALUES ( 
+			p_flac_file_id,
+			p_flac_metadata_block_id
+		);
+	END IF;
+END;
+
+CREATE PROCEDURE link_flac_metadata_entry_to_block (
+		IN p_flac_metadata_entry_id MEDIUMINT UNSIGNED,
+		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED, IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_flac_metadata_entry_to_block' table."
+
+BEGIN
+	INSERT INTO l_flac_metadata_entry_to_block (flac_metadata_entry_id, flac_metadata_block_id) VALUES ( 
+		p_flac_metadata_entry_id,
+		p_flac_metadata_block_id
+	);
+END;
+
+CREATE PROCEDURE process_file (
+		IN  p_hostname VARCHAR(256),
+		IN  p_pathname VARCHAR(256),
+		IN  p_mimetype VARCHAR(256),
+		IN  p_sha1     CHAR(40),
+		IN  p_fsize    BIGINT UNSIGNED,
+		IN  p_mtime    INT UNSIGNED
+	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED.
+                      Description: Process file's metadata and do the pertinent insertions."
+
+BEGIN
+	DECLARE v_host_locatioin_id MEDIUMINT UNSIGNED;
+	DECLARE v_file_id         MEDIUMINT UNSIGNED;
+	DECLARE v_location_id     MEDIUMINT UNSIGNED;
+
+	CALL insert_and_get_host_location (p_hostname, p_pathname, v_host_locatioin_id);
+	SELECT location_id INTO v_location_id
+		FROM host_location
+		WHERE id = v_host_locatioin_id;
+	CALL insert_and_get_file (p_hostname, p_pathname, p_mimetype, p_sha1, p_fsize, p_mtime, v_file_id);
+	CALL link_file_to_location (v_file_id, v_location_id);
 END;
 
 CREATE PROCEDURE select_ancestor (
-		IN tree       VARCHAR(256),
-		IN father     VARCHAR(256),
-		IN descendant VARCHAR(256)
-	) COMMENT "Parameters: IN <tree> VARCHAR(256), IN <father> VARCHAR(256), IN <descendant> VARCHAR(256)
-                      Description: Select from the tree named <tree> a node which is an ancestor of that which is asociated to the description/mime-type <descendant> and its father is asociated to the description <father>."
+		IN p_tree       VARCHAR(256),
+		IN p_father     VARCHAR(256),
+		IN p_descendant VARCHAR(256)
+	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256)
+                      Description: Select from the tree named <p_tree> a node which is an ancestor of that which is asociated to the description/mime-type <p_descendant> and its father is asociated to the description <p_father>."
 
 BEGIN
-	DECLARE ancestor VARCHAR(256);
-	CALL get_ancestor (tree, father, descendant, ancestor);
-	SELECT ancestor;
+	DECLARE v_ancestor VARCHAR(256);
+	CALL get_ancestor (p_tree, p_father, p_descendant, v_ancestor);
+	SELECT v_ancestor;
 END;
 
 //

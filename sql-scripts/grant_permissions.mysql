@@ -1,10 +1,40 @@
 GRANT EXECUTE ON PROCEDURE javiera.get_ancestor
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
-GRANT EXECUTE ON PROCEDURE javiera.insert_file
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_audio_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_flac_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_flac_metadata_block
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_flac_metadata_entry
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_host_location
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_recording
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_audio_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_flac_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_flac_metadata_block
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_flac_streaminfo_metadata_entry
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_flac_vorbiscomment_metadata_entry
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_host_location
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
-GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_host_location
+GRANT EXECUTE ON PROCEDURE javiera.link_audio_file_to_recording
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.link_file_to_location
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.link_flac_file_to_metadata_block
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.link_flac_metadata_entry_to_block
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.process_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.select_ancestor
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';

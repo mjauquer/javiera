@@ -253,32 +253,42 @@ is_insync () {
 	return 0
 }
 
-insert_file () {
+process_file () {
 
-#       USAGE: insert_file HANDLE HOSTNAME PATHNAME
+#       USAGE: process_file HANDLE HOSTNAME PATHNAME
 #
-# DESCRIPTION: Collect metadata related to the file pointed by PATHNAME
-#              and insert it in the db's file table.
+# DESCRIPTION: Collect metadata related to the file located in HOSTNAME
+#              with PATHNAME and do the pertinent insertions.
 #
-#  PARAMETERS: HANDLE    A connection to a database.
-#              HOSTNAME  The name of the host machine where the file it
+#  PARAMETERS: HOSTNAME  The name of the host machine where the file it
 #                        is being query about is stored. 
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 
-	local hostname=$2; hostname=\'$hostname\'
-	local pathname=$3; pathname=\'$pathname\'
-	local mime_type=$(file -b --mime-type $3)
-	mime_type=\'$mime_type\'
-	local sha1=$(sha1sum $3 | cut -c1-40)\
-	sha1=\'$sha1\'
-	local fsize=$(stat --format='%s' $3)
-	fsize=\'$fsize\'
-	local mtime=$(stat --format='%Y' $3)
-	mtime=\'$mtime\'
-	mysql --skip-reconnect -u$user -p$pass -e "
+	local lastid_bef=$(mysql --skip-reconnect -u$user -p$pass \
+		--skip-column-names -e "
+
 		USE javiera;
-		CALL insert_file (
+		SELECT MAX(id) FROM file;
+
+	")
+	[[ $? -ne 0 ]] && return 1
+
+	local hostname=$1; hostname=\'$hostname\'
+	local pathname=$2; pathname=\'$pathname\'
+	local mime_type=$(file -b --mime-type $2)
+	mime_type=\'$mime_type\'
+	local sha1=$(sha1sum $2 | cut -c1-40)
+	sha1=\'$sha1\'
+	local fsize=$(stat --format='%s' $2)
+	fsize=\'$fsize\'
+	local mtime=$(stat --format='%Y' $2)
+	mtime=\'$mtime\'
+	local lastid=$(mysql --skip-reconnect -u$user -p$pass \
+		--skip-column-names -e "
+
+		USE javiera;
+		CALL process_file (
 			$hostname,
 			$pathname,
 			$mime_type,
@@ -286,73 +296,32 @@ insert_file () {
 			$fsize,
 			$mtime
 		);
-	"
+		SELECT MAX(id) FROM file;
+
+	")
 	[[ $? -ne 0 ]] && return 1
 
-	# Look at the mime-type of the file being registered in order to
+	# If there was not an insertion, return 0
+	[[ $lastid_bef == $lastid ]] && return 0
+
+	# Look at the mime-type of the inserted file in order to
 	# determine in what tables, rows must been inserted.
-	file_type=( $(mysql --skip-reconnect -u$user \
-		-p$pass -e "
+	file_type=( $(mysql --skip-reconnect -u$user -p$pass \
+		--skip-column-names -e "
+
 		USE javiera;
 		CALL select_ancestor (
 			'file type hierarchy',
 			'regular',
 			$mime_type
 		);
+
 	") )
 	[[ $? -ne 0 ]] && return 1
 
-	local lastid=$(mysql --skip-reconnect -u$user -p$pass -e "
-		SELECT LAST_INSERT_ID();
-	")
-	[[ $? -ne 0 ]] && return 1
-
 	case ${file_type[-1]} in
-		audio)   ! insert_audiofile $1 $3 $lastid && return 1
+		audio)   ! insert_audio_file $2 $lastid && return 1
 			 ;;
-                archive) ! insert_archivefile $1 $lastid $mime_type &&
-			 return 1
-		         ;;
 	esac
-	return 0
-}
-
-update_file () {
-
-#       USAGE: update_file HANDLE HOSTNAME PATHNAME
-#
-# DESCRIPTION: Collect metadata related to the file pointed by PATHNAME
-#              and update all the related records in the database.
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              HOSTNAME  The name of the host machine where the file it
-#                        is being query about is stored. 
-#              PATHNAME  The pathname of the file it is being query
-#                        about.
-
-	local id=$(shsql $1 $(printf '
-		SELECT id 
-		FROM file INNER JOIN path ON file.path_id = path.id
-		INNER JOIN host ON file.host_id = host.id
-		WHERE host.name="%b"
-		AND path.name="%b";
-		' $2 $3))
-	! is_archived $1 archived $id && return 1
-	if [ $archived == "true" ]
-	then
-		! insert_file $1 $2 $3 && return 1
-	else
-		shsql $1 $(printf '
-			UPDATE file
-			SET fsize="%b", mtime="%b" 
-			WHERE sha1="%b";
-			' $(stat --format='%s %Y' $3) \
-			$(sha1sum $3 | cut -c1-40))
-		[[ $? -ne 0 ]] && return 1
-		if [[ $(file -b --mime-type $3) =~ audio/.* ]]
-		then
-			! update_audiofile $1 $file $id && return 1
-		fi
-	fi
 	return 0
 }

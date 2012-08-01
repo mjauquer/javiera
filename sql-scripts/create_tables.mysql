@@ -53,10 +53,8 @@ CREATE TABLE artist_name (
 
 CREATE TABLE audio_file (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file             MEDIUMINT UNSIGNED NOT NULL
+	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
-	type             ENUM('flac', 'mp3', 'ogg') NOT NULL,
-	trackid          CHAR(36) NOT NULL, # musicbrainz id
 	PRIMARY KEY (id)
 );
 
@@ -126,24 +124,37 @@ CREATE TABLE file (
 
 CREATE TABLE flac_file (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	audio_file       MEDIUMINT UNSIGNED NOT NULL
+	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES audio_file(id),
-	flacstream_id    MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES flac_stream(id),
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE flac_stream (
+CREATE TABLE flac_metadata_block (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	min_blocksize    MEDIUMINT UNSIGNED NOT NULL,
-	max_blocksize    MEDIUMINT UNSIGNED NOT NULL,
-	min_framesize    MEDIUMINT UNSIGNED NOT NULL,
-	max_framesize    MEDIUMINT UNSIGNED NOT NULL,
-	sample_rate      MEDIUMINT UNSIGNED NOT NULL,
-	channels         TINYINT UNSIGNED NOT NULL,
-	bits_per_sample  TINYINT UNSIGNED NOT NULL,
-	total_samples    INT UNSIGNED NOT NULL,
-	MD5_signature    CHAR(32) NOT NULL,
+	label            VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE flac_metadata_entry (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE flac_streaminfo_metadata_entry (
+	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES flac_metadata_entry(id),
+	column1                VARCHAR(256) NOT NULL,
+	column2                VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE flac_vorbiscomment_metadata_entry (
+	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES flac_metadata_entry(id),
+	column1                VARCHAR(256) NOT NULL,
+	column2                VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -163,6 +174,13 @@ CREATE TABLE host_location
 	path_id          MEDIUMINT UNSIGNED 
 	                 	REFERENCES path(id),
 	PRIMARY KEY (id)
+);
+
+CREATE TABLE l_audio_file_to_recording (
+	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES audio_file(id),
+	recording_id     MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES recording(id)
 );
 
 CREATE TABLE l_file_to_location (
@@ -186,6 +204,20 @@ CREATE TABLE l_file_to_sw_session (
 	sw_session_id    MEDIUMINT UNSIGNED NOT NULL
 	                    	REFERENCES sw_session(id),
 	PRIMARY KEY (id)
+);
+
+CREATE TABLE l_flac_file_to_metadata_block (
+	flac_file_id           MEDIUMINT UNSIGNED NOT NULL
+		               		REFERENCES flac_file(id),
+	flac_metadata_block_id MEDIUMINT UNSIGNED NOT NULL
+			               	REFERENCES metadata_block(id)
+);
+
+CREATE TABLE l_flac_metadata_entry_to_block (
+	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES flac_metadata_entry(id),
+	flac_metadata_block_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES flac_metadata_block(id)
 );
 
 CREATE TABLE l_mime_type_to_tree_node (
@@ -282,9 +314,9 @@ CREATE TABLE path (
 CREATE TABLE recording (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	gid              CHAR(36) NOT NULL,
-	name             MEDIUMINT UNSIGNED NOT NULL
+	track_name_id    MEDIUMINT UNSIGNED
 	                 	REFERENCES track_name(id),
-	artist_credit    MEDIUMINT UNSIGNED NOT NULL
+	artist_credit_id MEDIUMINT UNSIGNED
 	                 	REFERENCES artist_credit(id),
 	PRIMARY KEY (id)
 );

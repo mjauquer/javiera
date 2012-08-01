@@ -1,5 +1,5 @@
-source ~/code/bash/backupdb/sql-scripts/drop_procedures.sql;
-source ~/code/bash/backupdb/sql-scripts/drop_tables.sql;
-source ~/code/bash/backupdb/sql-scripts/create_procedures.sql;
-source ~/code/bash/backupdb/sql-scripts/create_tables.sql;
-source ~/code/bash/backupdb/sql-scripts/populate_tables.sql;
+source ~/projects/javiera/sql-scripts/drop_procedures.mysql;
+source ~/projects/javiera/sql-scripts/drop_tables.mysql;
+source ~/projects/javiera/sql-scripts/create_procedures.mysql;
+source ~/projects/javiera/sql-scripts/create_tables.mysql;
+source ~/projects/javiera/sql-scripts/populate_tables.mysql;
