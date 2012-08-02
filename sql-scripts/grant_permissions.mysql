@@ -1,5 +1,9 @@
 GRANT EXECUTE ON PROCEDURE javiera.get_ancestor
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_archive_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_archive_location
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_audio_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_file
@@ -10,9 +14,17 @@ GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_flac_metadata_block
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_flac_metadata_entry
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_host
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_host_location
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_path
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_recording
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_archive_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_archive_location
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_audio_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
@@ -33,6 +45,8 @@ GRANT EXECUTE ON PROCEDURE javiera.link_file_to_location
 GRANT EXECUTE ON PROCEDURE javiera.link_flac_file_to_metadata_block
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.link_flac_metadata_entry_to_block
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.process_archived_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.process_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';

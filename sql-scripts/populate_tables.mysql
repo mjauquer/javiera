@@ -3,12 +3,6 @@ INSERT INTO host (id, name)
 		('', 'cym')
 ;
 
-INSERT INTO location_type (id, type)
-	VALUES
-		('', 'host'),
-		('', 'archive')
-;
-
 INSERT INTO description (id, text)
 	VALUES 
 		('', 'regular'),

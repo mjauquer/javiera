@@ -9,8 +9,8 @@ CREATE TABLE archive_location (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	location_id      MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES location(id),
-	archive_id       MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES host(id),
+	archive_file_id  MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES archive_file(id),
 	path_id          MEDIUMINT UNSIGNED 
 	                 	REFERENCES path(id),
 	PRIMARY KEY (id)
@@ -58,30 +58,6 @@ CREATE TABLE audio_file (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE audio_file_tags (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	audio_file       MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES audio_file(id),
-	tag              MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES tag(id),
-	tag_deleted      ENUM('false', 'true') NOT NULL,
-	last_update      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                 	ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE container_file (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file_id          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file(id),
-	format_name      VARCHAR(10) NOT NULL,
-	format_long_name VARCHAR(36) NOT NULL,
-	start_time       DECIMAL NOT NULL,
-	duration         DECIMAL NOT NULL,
-	bit_rate         MEDIUMINT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE country (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(256) NOT NULL,
@@ -103,7 +79,7 @@ CREATE TABLE disk_image_file (
 
 CREATE TABLE dvd (
 	id                  MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	time                TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	burned_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	                    	ON UPDATE CURRENT_TIMESTAMP,
 	disk_image_file_id  MEDIUMINT UNSIGNED NOT NULL
 	           	    	REFERENCES disk_image_file(id),
@@ -197,13 +173,11 @@ CREATE TABLE l_file_to_parity_file (
 	                 	REFERENCES parity_file(id)
 );
 
-CREATE TABLE l_file_to_sw_session (
-	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file_id          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file(id),
-	sw_session_id    MEDIUMINT UNSIGNED NOT NULL
-	                    	REFERENCES sw_session(id),
-	PRIMARY KEY (id)
+CREATE TABLE l_file_to_software_session (
+	file_id             MEDIUMINT UNSIGNED NOT NULL
+	                    	REFERENCES file(id),
+	software_session_id MEDIUMINT UNSIGNED NOT NULL
+	                    	REFERENCES software_session(id)
 );
 
 CREATE TABLE l_flac_file_to_metadata_block (
@@ -243,15 +217,6 @@ CREATE TABLE l_tree_node_to_tree (
 
 CREATE TABLE location (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	location_type_id MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES location_type(id),
-
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE location_type (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	type             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -281,20 +246,21 @@ CREATE TABLE mime_type (
 );
 
 CREATE TABLE mkisofs_session (
-	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	sw_session_id    MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES sw_session(id),
-	options          VARCHAR(255) NOT NULL,
+	id                  SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`timestamp`         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	software_session_id MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES software_session(id),
+	options             VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE par2create_session (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	time             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	sw_session_id    MEDIUMINT UNSIGNED NOT NULL
-	                    	REFERENCES sw_session(id),
-	blocksize        MEDIUMINT UNSIGNED NOT NULL,
-	blockcount       MEDIUMINT UNSIGNED NOT NULL,
+	id                  MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`timestamp`         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	software_session_id MEDIUMINT UNSIGNED NOT NULL
+	                    	REFERENCES software_session(id),
+	blocksize           MEDIUMINT UNSIGNED NOT NULL,
+	blockcount          MEDIUMINT UNSIGNED NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -350,7 +316,7 @@ CREATE TABLE software (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE sw_session (
+CREATE TABLE software_session (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	time             TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	                 	ON UPDATE CURRENT_TIMESTAMP,

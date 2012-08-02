@@ -21,8 +21,7 @@
 #  DESCRIPTION: Create a tar archive named NAME and include in it the
 #               files founded in pathname...
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               javiera.flib
+# REQUIREMENTS: javiera-core.bash
 #               getoptx.bash
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
@@ -32,14 +31,12 @@ source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
 source ~/projects/javiera/getoptx/getoptx.bash
 source ~/code/bash/chpathn/chpathn.flib
 
+usage () {
 
-#===  FUNCTION =========================================================
-#
 #       USAGE: usage
 #
 # DESCRIPTION: Print a help message to stdout.
-#
-usage () {
+	
 	cat <<- EOF
 	Usage: dir2tar TAR_NAME pathname...
 	dir2tar --listed-in TEXT_FILE TAR_NAME
@@ -49,42 +46,34 @@ usage () {
 	EOF
 }
 
-#===  FUNCTION =========================================================
-#
+error_exit () {
+
 #       USAGE: error_exit [MESSAGE]
 #
 # DESCRIPTION: Function for exit due to fatal program error.
 #
 #   PARAMETER: MESSAGE An optional description of the error.
-#
-error_exit () {
+
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
 	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
-#===  FUNCTION =========================================================
+predict_pathname_inside_archive () {
+
+#       USAGE: predict_pathname_inside_archive PATHNAME
 #
-#       USAGE: predict_newpath FILE
+# DESCRIPTION: Predict the future path of the file pointed by PATHNAME
+#              inside the archive file to be created. Store it in the
+#              'suffixes' array and its sha1 fingerprint in the 'sha1s'
+#              array.
 #
-# DESCRIPTION: Predict the new pathname of FILE if it would been moved
-#              to the temporal directory and store it in the 'newpaths'
-#              array, while storing its file id (from the database) in
-#              the 'ids' array, for further operation.
-#
-#  PARAMETERS: FILE  A connection to a database.
-#
-predict_newpath () {
+#  PARAMETERS: PATHNAME The unix pathname of the file being processed.
+
 	local suffix
-	local file_id
-	if ! get_id $handle file_id $(hostname) $1
-	then
-		error_exit "$LINENO: Error after calling get_id()."
-	fi
-	ids+=( $file_id )
+	sha1s+=( $(sha1sum $1 | cut -c1-40) )
 	suffix=${1#$prefix}
 	suffixes+=( $suffix )
-	newpaths+=( $tempdir/$suffix )
 }
 
 #-----------------------------------------------------------------------
@@ -92,7 +81,13 @@ predict_newpath () {
 #-----------------------------------------------------------------------
 
 # Variables declaration.
-declare progname       # The name of this script.
+declare progname               # The name of this script.
+
+declare user=$JAVIERA_USER     # A mysql user name.
+
+declare pass=$JAVIERA_PASSWORD # A mysql password.
+
+declare db=$JAVIERA_DBNAME     # A mysql database.
 
 progname=$(basename $0)
 
@@ -102,6 +97,7 @@ progname=$(basename $0)
 # Parse command line options.
 declare txtfile        # The pathname of the file passed as argument to
                        # the --listed-in option.
+
 while getoptex "listed-in:" "$@"
 do
 	case "$OPTOPT" in
@@ -113,8 +109,9 @@ done
 # If this script was called with the  "listed-in" option, add to the
 # list of pathnames to be processed those which are listed in the text
 # file specified.
-declare -a pathnames   # A list of the pathnames of the files and
-                       # directories that have been passed to this script.
+declare -a pathnames # A list of the pathnames of the files and
+                     # directories that have been passed to this script.
+
 if [ "$txtfile" ]
 then
 	if [ -a $(readlink -f "$txtfile") ]
@@ -140,6 +137,7 @@ pathnames+=( ${@:2} )
 declare -a notfound    # A list of pathnames passed as arguments to this
                        # script and that do not point to existing files or
 		       # directories in the filesystem.
+
 for pathname in ${pathnames[@]}
 do
 	if [ \( ! -d $pathname \) -a \( ! -f $pathname \) ]
@@ -175,6 +173,7 @@ declare -a dir_inodes  # A list of inodes corresponding to every
                        # directory passed as argument.
 declare -a file_inodes # A list of inodes corresponding to every file
                        # passed as argument.
+
 for pathname in ${pathnames[@]}
 do
 	if [ -d "$pathname" ]
@@ -193,6 +192,7 @@ unset -v pathname
 declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # files and directories passed as arguments.
+
 log=($(javiera -r --verbose ${pathnames[@]}))
 if [ $? -ne 0 ]
 then
@@ -219,15 +219,6 @@ done
 unset -v inode
 unset -v file_inodes
 
-# Connect to the database.
-declare handle # Required by shsql. A connection to the database.
-handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
-	dbname=$JAVIERA_DBNAME) 
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error after calling shmysql utility."
-fi
-
 # Create a temporal directory.
 declare tempdir        # The pathname of a temporal directory where the
                        # files and directories will be processed.
@@ -238,14 +229,14 @@ then
 	error_exit "$LINENO: Coudn't create a temporal directory."
 fi
 
-# Move the files and directories to be processed to the temporal
+# Copy the files and directories to be processed to the temporal
 # directory.
-declare -a newpaths
-declare -a ids       # A list of the file_ids in the database of the
-                     # files beeing archived.
+declare -a sha1s     # See comments in predict_pathname_inside_archive
+                     # function.
 declare prefix
 declare -a suffixes  # A list of the pathnames of the archived files
-                     # inside the archiver file. 
+                     # inside the archive file. 
+
 for pathname in ${pathnames[@]}
 do
 	prefix=${pathname%/*}/
@@ -253,41 +244,19 @@ do
 	then
 		for file in $(find $pathname -type f)
 		do
-			predict_newpath $file
+			predict_pathname_inside_archive $file
 		done
 	elif [ -f $pathname ]
 	then
-		predict_newpath $pathname
+		predict_pathname_inside_archive $pathname
 	fi
 	dest=$tempdir/$(basename $pathname)
-	if ! mv $pathname $dest
+	if ! cp -r $pathname $dest
 	then
 		error_exit "$LINENO: Error after calling mv command."
 	fi
-
-	# After moving the files, update the database using the
-	# previously predicted pathnames of the files.
-	for (( ind=0; ind<${#ids[@]}; ind++ ))
-	do
-		if ! shsql $handle $(printf '
-			UPDATE path INNER JOIN file
-			ON file.path_id = path.id
-			SET name="%b"
-			WHERE file.id=%b;
-			' ${newpaths[ind]} ${ids[ind]})
-		then
-			error_exit "$LINENO: Error after calling shsql."
-		elif ! shsql $handle $(printf '
-			UPDATE file SET mtime="%b" WHERE id=%b;
-			' $(stat --format='%Y' $dest) ${ids[ind]})
-		then
-			error_exit "$LINENO: Error after calling shsql."
-		fi
-	done
-	unset -v ind
 done
 unset -v dest
-unset -v newpaths
 unset -v pathname
 unset -v prefix
 
@@ -300,6 +269,7 @@ fi
 
 # Create a tar file.
 declare tarfile  # The pathname of the tar file to be created.
+
 pathnames=( $(find $(ls)) )
 tar -cf $1 ${pathnames[@]}
 if [ $? -ne 0 ]
@@ -308,7 +278,7 @@ then
 fi
 tarfile=$(readlink -f $1)
 
-# Update the backup database.
+# Insert in the database metadata about the created tar file.
 javiera $tarfile
 if [ $? -ne 0 ]
 then
@@ -319,74 +289,64 @@ fi
 # Update the backup database with the archive relationships.
 #-----------------------------------------------------------------------
 
-# Get the id of the created tar file.
-declare archiver_id    # The id number in the file table of the database
-                       # of the created tar file.
-get_id $handle archiver_id $(hostname) $tarfile
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error after calling get_id()."
-fi
-
 # Insert archive relationships between the tar file and its content.
-for (( ind=0; ind<${#ids[@]}; ind++ ))
+declare archive_sha1  # The sha1 fingerprint of the created tar file.
+declare filesha1 # The sha1 fingerprint of an archived file.
+
+tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
+for (( ind=0; ind<${#sha1s[@]}; ind++ ))
 do
-	insert_archive $handle $archiver_id ${ids[ind]} ${suffixes[ind]}
+	filesha1=${sha1s[ind]}; filesha1=\"$filesha1\"
+	suffix=${suffixes[ind]};  suffix=\"$suffix\"
+	
+	mysql --skip-reconnect -u$user -p$pass \
+		--skip-column-names -e "
+
+		USE javiera;
+		CALL process_archived_file (
+			$tarsha1,
+			$filesha1,
+			$suffix
+		);
+	"
 	if [ $? -ne 0 ]
 	then
-		error_exit "$LINENO: Error after calling insert_archive()."
+		error_exit "$LINENO: Error after calling mysql."
 	fi
 done
-unset -v ids
+unset -v filesha1
 unset -v ind
-unset -v tarfile
+unset -v sha1s
+unset -v suffix
 unset -v suffixes
+unset -v tarfile
+unset -v tarsha1
 
-#-----------------------------------------------------------------------
-# Remove the temporary directory.
-#-----------------------------------------------------------------------
+# Move tar to the final directory.
+declare tarbname # Tar file's basename.
 
-mv $1 ..
-if [ $? -ne 0 ]
+tarbname=$(basename $1)
+if ! mv $1 ..
 then
 	error_exit "$LINENO: Error after calling mv command."
 fi
-cd ..
-if [ $? -ne 0 ]
+
+if ! cd ..
 then
 	error_exit "$LINENO: Error after calling cd command."
 fi
+
+# Insert in the database tar file's new pathname.
+if ! process_file $(hostname) $(readlink -f $tarbname)
+then
+	error_exit "$LINENO: Error after calling process_file()."
+fi
+unset -v tarbname
+
+# Remove the temporary directory.
 rm -r $tempdir
-unset -v tempdir
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling rm command."
 fi
-
-#-----------------------------------------------------------------------
-# Update the backup database with this last movement.
-#-----------------------------------------------------------------------
-
-# Update the pathname of the tar file.
-shsql $handle $(printf '
-			UPDATE path
-			INNER JOIN file ON file.path_id = path.id
-			SET name="%b"
-			WHERE file.id=%b;
-	' $(readlink -f $1) $archiver_id)
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error while trying to update the database."
-fi
-
-# This will reflect in the database the deletion of the temporal
-# directory.
-javiera -r .
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error while trying to update the database."
-fi
-
-# Close the connection to the database.
-shsqlend $handle
-unset -v handle
+unset -v tempdir

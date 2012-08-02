@@ -22,7 +22,6 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/filetype/filetype.flib
 source ~/projects/javiera/upvars/upvars.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash
@@ -134,10 +133,11 @@ is_backedup () {
 
 process_file () {
 
-#       USAGE: process_file HANDLE HOSTNAME PATHNAME
+#       USAGE: process_file HOSTNAME PATHNAME
 #
 # DESCRIPTION: Collect metadata related to the file located in HOSTNAME
-#              with PATHNAME and do the pertinent insertions.
+#              pointed by PATHNAME and call the pertinent procedures in
+#              the database.
 #
 #  PARAMETERS: HOSTNAME  The name of the host machine where the file it
 #                        is being query about is stored. 
@@ -200,6 +200,8 @@ process_file () {
 
 	case ${file_type[-1]} in
 		audio)   ! insert_audio_file $2 $lastid && return 1
+			 ;;
+		archive) ! insert_archive_file $2 $lastid && return 1
 			 ;;
 	esac
 	return 0
