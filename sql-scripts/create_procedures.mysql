@@ -77,31 +77,31 @@ END;
 
 CREATE PROCEDURE insert_and_get_archive_location (
 		IN  p_archive_file_id     MEDIUMINT UNSIGNED,
-		IN  p_path_id             MEDIUMINT UNSIGNED,
+		IN  p_pathname            VARCHAR(256),
 		OUT p_archive_location_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_archive_file_id> MEDIUMINT UNSIGNED, IN <p_path_id> VARCHAR(256), OUT <p_archive_location_id> MEDIUMINT
+	) COMMENT "Parameters: IN <p_archive_file_id> MEDIUMINT UNSIGNED, IN <p_pathname> VARCHAR(256), OUT <p_archive_location_id> MEDIUMINT
                       Description: Insert an entry in the 'location' and 'archive_location' tables. Return the id field of the inserted row in the 'archive_location' table."
 
 BEGIN
 	DECLARE v_location_id MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'archive_location' with the specified p_hostname and p_path_id. 
+	-- Check if an entry already exists in the table 'archive_location' with the specified p_hostname and p_pathname. 
 	SELECT archive_location.id INTO p_archive_location_id
 		FROM archive_location
 		WHERE archive_file_id = p_archive_file_id
-		AND path_id = p_path_id;
+		AND pathname = p_pathname;
 
 	-- If it doesn't exist, create it.
 	IF p_archive_location_id IS NULL
 	THEN
-		INSERT INTO location (id) VALUES ('') ;
+		INSERT INTO location (id) VALUES ('');
 		SELECT LAST_INSERT_ID() INTO v_location_id;
 
-		INSERT INTO archive_location (id, location_id, archive_file_id, path_id) VALUES (
+		INSERT INTO archive_location (id, location_id, archive_file_id, pathname) VALUES (
 			'',
 			v_location_id,
 			p_archive_file_id,
-			p_path_id
+			p_pathname
 		);
 		SELECT LAST_INSERT_ID() INTO p_archive_location_id;
 	END IF;
@@ -143,20 +143,29 @@ BEGIN
 END;
 
 CREATE PROCEDURE insert_and_get_file (
-		IN  p_hostname VARCHAR(256),
+		IN  p_fs_uuid  VARCHAR(256),
 		IN  p_pathname VARCHAR(256),
 		IN  p_mimetype VARCHAR(256),
 		IN  p_sha1     CHAR(40),
 		IN  p_fsize    BIGINT UNSIGNED,
 		IN  p_mtime    INT UNSIGNED,
 		OUT p_file_id  MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED, OUT <p_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted row in the 'file' table."
+	) COMMENT "Parameters: IN <p_fs_uuid> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED, OUT <p_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'file', 'location', 'file_system_location' and 'l_file_to_location' tables. Return the id field of the inserted row in the 'file' table."
 
 BEGIN
-	DECLARE v_host_location_id MEDIUMINT UNSIGNED;
+	DECLARE v_count                   MEDIUMINT UNSIGNED;
+	DECLARE v_file_system_location_id MEDIUMINT UNSIGNED;
+	DECLARE v_location_id             MEDIUMINT UNSIGNED;
 
-	CALL insert_and_get_host_location (p_hostname, p_pathname, v_host_location_id);
+	CALL insert_and_get_file_system_location (p_fs_uuid, p_pathname, v_file_system_location_id);
+
+	SELECT location.id INTO v_location_id
+		FROM location
+		INNER JOIN file_system_location AS fs_location
+			ON fs_location.location_id = location.id
+		WHERE fs_location.id = v_file_system_location_id
+	;
 	
 	-- Check if an entry already exists in the table 'file' with the specified p_sha1. 
 	SELECT id INTO p_file_id
@@ -173,6 +182,79 @@ BEGIN
 			p_mtime
 		);
 		SELECT LAST_INSERT_ID() INTO p_file_id;
+	END IF;
+
+	-- Check if an entry already exists in the table 'l_file_to_location' that is related to v_file_id and v_file_system_location_id.
+	SELECT COUNT(*) INTO v_count
+		FROM l_file_to_location AS link
+		INNER JOIN location
+			ON link.location_id = v_location_id
+		WHERE link.file_id = p_file_id
+		AND   location.id = v_location_id
+	;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		CALL link_file_to_location (p_file_id, v_location_id);
+	END IF;
+
+END;
+
+CREATE PROCEDURE insert_and_get_file_system (
+		IN  p_uuid           CHAR(36),
+		OUT p_file_system_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN p_uuid CHAR(36), OUT <p_file_system_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry into the 'file_system' table. Return the id field of the inserted row in the 'file_system' table."
+
+BEGIN
+
+	-- Check if an entry already exists in the table 'file_system' with the specified p_uuid. 
+	SELECT id INTO p_file_system_id
+		FROM file_system
+		WHERE uuid = p_uuid;
+	
+	-- If it doesn't exist, create it.
+	IF p_file_system_id IS NULL
+	THEN
+		INSERT INTO file_system (uuid) VALUES (p_uuid);
+		SELECT LAST_INSERT_ID() INTO p_file_system_id;
+	END IF;
+
+END;
+
+CREATE PROCEDURE insert_and_get_file_system_location (
+		IN  p_uuid                    CHAR(36),
+		IN  p_pathname                VARCHAR(256),
+		OUT p_file_system_location_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN p_uuid CHAR(36), IN p_pathname VARCHAR(256), OUT <p_file_system_location_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry into the 'file_system_location' and 'location' tables. Return the id field of the inserted row in the 'file_system_location' table."
+
+BEGIN
+	DECLARE v_location_id    MEDIUMINT UNSIGNED;
+	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
+
+	CALL insert_and_get_file_system (p_uuid, v_file_system_id);
+
+	-- Check if an entry already exists in the table 'file_system_location' with the specified p_uuid and p_pathname.
+	SELECT id INTO p_file_system_location_id
+		FROM file_system_location
+		WHERE file_system_id = v_file_system_id
+		AND pathname = p_pathname
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_file_system_location_id IS NULL
+	THEN
+		INSERT INTO location (id) VALUES ('');
+		SELECT LAST_INSERT_ID() INTO v_location_id;
+
+		INSERT INTO file_system_location (location_id, file_system_id, pathname) VALUES (
+			v_location_id,
+			v_file_system_id,
+			p_pathname
+		);
+		SELECT LAST_INSERT_ID() INTO p_file_system_location_id;
 	END IF;
 
 END;
@@ -227,6 +309,59 @@ BEGIN
 	CALL link_flac_metadata_entry_to_block (p_flac_metadata_entry_id, p_flac_metadata_block_id);
 END;
 
+CREATE PROCEDURE insert_and_get_hard_disk_partition (
+		IN  p_hostname               VARCHAR(256),
+		IN  p_device_name            VARCHAR(256),
+		IN  p_file_system_uuid       CHAR(36),
+		OUT p_hard_disk_partition_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_device_name> VARCHAR(256), IN <p_file_system_uuid> CHAR(36), OUT <p_hard_disk_partition_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 'l_hard_disk_partition_to_host' tables. Return the id field of the inserted row in the 'hard_disk_partition' table."
+
+BEGIN
+	DECLARE v_data_storage_device_id MEDIUMINT UNSIGNED;
+	DECLARE v_host_id                MEDIUMINT UNSIGNED;
+	DECLARE v_file_system_id         MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'hard_disk_partition' with the specified devide_name that is linked to p_hostname and to p_file_system_uuid. 
+	SELECT partition.id INTO p_hard_disk_partition_id
+		FROM l_hard_disk_partition_to_host AS link
+		INNER JOIN hard_disk_partition AS partition
+			ON link.hard_disk_partition_id = partition.id 
+		INNER JOIN host
+			ON link.host_id = host.id
+		INNER JOIN data_storage_device AS device
+			ON device.id = partition.data_storage_device_id
+		INNER JOIN l_file_system_to_data_storage_device AS link2
+			ON link2.data_storage_device_id = device.id
+		INNER JOIN file_system
+			ON link2.file_system_id = file_system.id
+		WHERE host.name = p_hostname
+		AND partition.device_name = p_device_name
+		AND file_system.uuid = p_file_system_uuid
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_hard_disk_partition_id IS NULL
+	THEN
+		INSERT INTO data_storage_device (id) VALUES ('');
+		SELECT LAST_INSERT_ID() INTO v_data_storage_device_id;
+
+		INSERT INTO hard_disk_partition (id, data_storage_device_id, device_name) VALUES (
+			'',
+			v_data_storage_device_id,
+			p_device_name
+		);
+		SELECT LAST_INSERT_ID() INTO p_hard_disk_partition_id;
+
+		CALL insert_and_get_host (p_hostname, v_host_id);
+		CALL link_hard_disk_partition_to_host (p_hard_disk_partition_id, v_host_id);
+
+		CALL insert_and_get_file_system (p_file_system_uuid, v_file_system_id);
+		CALL link_file_system_to_data_storage_device (v_file_system_id, v_data_storage_device_id);
+	END IF;
+
+END;
+
 CREATE PROCEDURE insert_and_get_host (
 		IN  p_name    VARCHAR(256),
 		OUT p_host_id MEDIUMINT UNSIGNED
@@ -245,60 +380,33 @@ BEGIN
 	END IF;
 END;
 
-CREATE PROCEDURE insert_and_get_host_location (
-		IN  p_hostname         VARCHAR(256),
+CREATE PROCEDURE insert_and_get_mount_point (
 		IN  p_pathname         VARCHAR(256),
-		OUT p_host_location_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256), OUT <p_host_location_id> MEDIUMINT
-                      Description: Insert an entry in the 'location' and 'host_location' tables. Return the id field of the inserted row in the 'host_location' table."
+		IN  p_file_system_uuid CHAR(36),
+		OUT p_mount_point_id   MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_pathname> VARCHAR(256), IN <p_file_system_uuid> MEDIUMINT UNSIGNED, OUT <p_mount_point_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables. Return the id field of the inserted row."
 
 BEGIN
-	DECLARE v_host_id     MEDIUMINT UNSIGNED;
-	DECLARE v_path_id     MEDIUMINT UNSIGNED;
-	DECLARE v_location_id MEDIUMINT UNSIGNED;
+	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'host_location' with the specified p_hostname and p_pathname. 
-	SELECT host_location.id INTO p_host_location_id
-		FROM host_location
-		INNER JOIN host ON host_location.host_id = host.id
-		INNER JOIN path ON host_location.path_id = path.id
-		WHERE host.name = p_hostname
-		AND path.name = p_pathname;
-
-	-- If it doesn't exist, create it.
-	IF p_host_location_id IS NULL
-	THEN
-		CALL insert_and_get_host (p_hostname, v_host_id);
-		CALL insert_and_get_path (p_pathname, v_path_id);
-
-		INSERT INTO location (id) VALUES ('');
-		SET v_location_id = LAST_INSERT_ID();
-
-		INSERT INTO host_location (id, location_id, host_id, path_id) VALUES (
-			'',
-			v_location_id,
-			v_host_id,
-			v_path_id
-		);
-		SET p_host_location_id = LAST_INSERT_ID();
-	END IF;
-END;
-
-CREATE PROCEDURE insert_and_get_path (
-		IN  p_name    VARCHAR(256),
-		OUT p_path_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_name> MEDIUMINT UNSIGNED, OUT <p_path_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'path' table. Return the id field of the inserted row."
-
-BEGIN
-	-- Check if an entry already exists in the table 'path' with the specified name. 
-	SELECT id INTO p_path_id FROM path WHERE name = p_name;
+	-- Check if an entry already exists in the table 'mount_point' with the specified file_id. 
+	SELECT id INTO p_mount_point_id
+		FROM mount_point
+		WHERE pathname = p_pathname
+	;
 	
 	-- If it doesn't exist, create it.
-	IF p_path_id IS NULL
+	IF p_mount_point_id IS NULL
 	THEN
-		INSERT INTO path (id, name) VALUES ( '', p_name);
-		SELECT LAST_INSERT_ID() INTO p_path_id;
+		INSERT INTO mount_point (id, pathname) VALUES (
+			'',
+			p_pathname
+		);
+		SELECT LAST_INSERT_ID() INTO p_mount_point_id;
+
+		CALL insert_and_get_file_system (p_file_system_uuid, v_file_system_id);
+		CALL link_file_system_to_mount_point (v_file_system_id, p_mount_point_id);
 	END IF;
 END;
 
@@ -333,7 +441,7 @@ END;
 
 CREATE PROCEDURE insert_archive_file (
 		IN p_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, OUT <p_archive_file_id> MEDIUMINT UNSIGNED.
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED.
                       Description: Insert an entry in the 'archive_file' table."
 
 BEGIN
@@ -343,8 +451,8 @@ END;
 
 CREATE PROCEDURE insert_archive_location (
 		IN  p_archive_file_id MEDIUMINT UNSIGNED,
-		IN  p_path_id         MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_archive_file_id> MEDIUMINT UNSIGNED, IN <p_path_id> VARCHAR(256), OUT <p_archive_location_id> MEDIUMINT
+		IN  p_pathname        VARCHAR(256)
+	) COMMENT "Parameters: IN <p_archive_file_id> MEDIUMINT UNSIGNED, IN <p_pathname> VARCHAR(256)
                       Description: Insert an entry in the 'location' and 'archive_location' tables."
 
 BEGIN
@@ -361,6 +469,27 @@ CREATE PROCEDURE insert_audio_file (
 BEGIN
 	DECLARE v_audio_file_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_audio_file (p_file_id, p_recording_gid, v_audio_file_id);
+END;
+
+CREATE PROCEDURE insert_file_system (
+		IN  p_uuid           CHAR(36)
+	) COMMENT "Parameters: IN p_uuid CHAR(36).
+                      Description: Insert an entry in the 'file_system'."
+
+BEGIN
+	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_file_system (p_uuid);
+END;
+
+CREATE PROCEDURE insert_file_system_location (
+		IN  p_uuid                    CHAR(36),
+		IN  p_pathname                VARCHAR(256)
+	) COMMENT "Parameters: IN p_uuid CHAR(36), IN p_pathname VARCHAR(256).
+                      Description: Insert an entry into the 'location' and 'file_system_location' tables."
+
+BEGIN
+	DECLARE v_file_system_location_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_file_system (p_uuid, p_pathname, v_file_system_location_id);
 END;
 
 CREATE PROCEDURE insert_flac_file (
@@ -454,15 +583,29 @@ BEGIN
 	);
 END;
 
-CREATE PROCEDURE insert_host_location (
-		IN  p_hostname VARCHAR(256),
-		IN  p_pathname VARCHAR(256)
-	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256)
-                      Description: Insert an entry in the 'location' and 'host_location' tables."
+CREATE PROCEDURE insert_hard_disk_partition (
+		IN  p_hostname               VARCHAR(256),
+		IN  p_device_name            VARCHAR(256),
+		IN  p_file_system_uuid       CHAR(36)
+	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_device_name> VARCHAR(256), IN <p_file_system_uuid> CHAR(36).
+                      Description: Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 'l_hard_disk_partition_to_host' tables."
 
 BEGIN
-	DECLARE v_host_location_id MEDIUMINT;
-	CALL insert_and_get_host_location (p_hostname, p_pathname, v_host_location_id);
+
+	DECLARE v_hard_disk_partition_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_hard_disk_partition (p_hostname, p_device_name, p_file_system_uuid, v_hard_disk_partition_id);
+END;
+
+CREATE PROCEDURE insert_mount_point (
+		IN  p_pathname         VARCHAR(256),
+		IN  p_file_system_uuid CHAR(36)
+	) COMMENT "Parameters: IN <p_pathname> VARCHAR(256), IN <p_file_system_uuid> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables."
+
+BEGIN
+
+	DECLARE v_mount_point_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_mount_point (p_pathname, p_file_system_uuid, v_mount_point_id);
 END;
 
 CREATE PROCEDURE link_audio_file_to_recording (
@@ -515,6 +658,64 @@ BEGIN
 	END IF;
 END;
 
+CREATE PROCEDURE link_file_system_to_data_storage_device (
+		IN p_file_system_id         MEDIUMINT UNSIGNED,
+		IN p_data_storage_device_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_system_id> MEDIUMINT UNSIGNED, IN <p_data_storage_device_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_file_system_to_data_storage_device' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_file_system_to_data_storage_device' with the specified p_file_system_id and p_data_storage_device_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_file_system_to_data_storage_device
+		WHERE file_system_id = p_file_system_id
+		AND data_storage_device_id = p_data_storage_device_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_file_system_to_data_storage_device (file_system_id, data_storage_device_id) VALUES ( 
+			p_file_system_id,
+			p_data_storage_device_id
+		);
+	END IF;
+END;
+
+CREATE PROCEDURE link_file_system_to_mount_point (
+		IN p_file_system_id MEDIUMINT UNSIGNED,
+		IN p_mount_point_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_system_id> MEDIUMINT UNSIGNED, IN <p_mount_point_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_file_system_to_mount_point' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_file_system_to_mount_point' with the specified p_file_system_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_file_system_to_mount_point
+		WHERE file_system_id = p_file_system_id
+	;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_file_system_to_mount_point (file_system_id, mount_point_id) VALUES ( 
+			p_file_system_id,
+			p_mount_point_id
+		);
+
+	-- If it does, update it.
+	ELSE
+		UPDATE l_file_system_to_mount_point
+			SET mount_point_id = p_mount_point_id
+			WHERE file_system_id = p_file_system_id
+		;
+		
+	END IF;
+END;
+
 CREATE PROCEDURE link_flac_file_to_metadata_block (
 		IN p_flac_file_id MEDIUMINT UNSIGNED,
 		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
@@ -553,6 +754,31 @@ BEGIN
 	);
 END;
 
+CREATE PROCEDURE link_hard_disk_partition_to_host (
+		IN p_hard_disk_partition_id MEDIUMINT UNSIGNED,
+		IN p_host_id                MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_hard_disk_partition_id> MEDIUMINT UNSIGNED, IN <p_host_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_hard_disk_partition_to_host' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_hard_disk_partition_to_host' with the specified p_hard_disk_partition_id and p_host_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_hard_disk_partition_to_host
+		WHERE hard_disk_partition_id = p_hard_disk_partition_id
+		AND host_id = p_host_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_hard_disk_partition_to_host (hard_disk_partition_id, host_id) VALUES ( 
+			p_hard_disk_partition_id,
+			p_host_id
+		);
+	END IF;
+END;
+
 CREATE PROCEDURE process_archived_file (
 		IN p_archive_sha1 CHAR(40),
 		IN p_file_sha1    CHAR(40),
@@ -565,10 +791,6 @@ BEGIN
 	DECLARE v_archive_location_id MEDIUMINT UNSIGNED;
 	DECLARE v_file_id             MEDIUMINT UNSIGNED;
 	DECLARE v_location_id         MEDIUMINT UNSIGNED;
-	DECLARE v_path_id             MEDIUMINT UNSIGNED;
-
-	-- Insert an entry in the 'path' table.
-	CALL insert_and_get_path (p_pathname, v_path_id);
 
 	-- Insert an entry in the 'archive_location' table.
 	SELECT archive_file.id INTO v_archive_file_id
@@ -577,7 +799,7 @@ BEGIN
 			ON archive_file.file_id = file.id
 		WHERE file.sha1 = p_archive_sha1
 	;
-	CALL insert_and_get_archive_location (v_archive_file_id, v_path_id, v_archive_location_id);
+	CALL insert_and_get_archive_location (v_archive_file_id, p_pathname, v_archive_location_id);
 
 	-- Insert and entry in the 'l_file_to_location' table.
 	SELECT id INTO v_file_id
@@ -592,26 +814,18 @@ BEGIN
 END;
 
 CREATE PROCEDURE process_file (
-		IN  p_hostname VARCHAR(256),
+		IN  p_fs_uuid  VARCHAR(256),
 		IN  p_pathname VARCHAR(256),
 		IN  p_mimetype VARCHAR(256),
 		IN  p_sha1     CHAR(40),
 		IN  p_fsize    BIGINT UNSIGNED,
 		IN  p_mtime    INT UNSIGNED
-	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED.
+	) COMMENT "Parameters: IN <p_fs_uuid> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED.
                       Description: Process file's metadata and do the pertinent insertions."
 
 BEGIN
-	DECLARE v_host_location_id MEDIUMINT UNSIGNED;
-	DECLARE v_file_id          MEDIUMINT UNSIGNED;
-	DECLARE v_location_id      MEDIUMINT UNSIGNED;
-
-	CALL insert_and_get_host_location (p_hostname, p_pathname, v_host_location_id);
-	SELECT location_id INTO v_location_id
-		FROM host_location
-		WHERE id = v_host_location_id;
-	CALL insert_and_get_file (p_hostname, p_pathname, p_mimetype, p_sha1, p_fsize, p_mtime, v_file_id);
-	CALL link_file_to_location (v_file_id, v_location_id);
+	DECLARE v_file_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_file (p_fs_uuid, p_pathname, p_mimetype, p_sha1, p_fsize, p_mtime, v_file_id);
 END;
 
 CREATE PROCEDURE select_ancestor (

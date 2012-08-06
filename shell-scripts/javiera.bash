@@ -60,7 +60,6 @@ error_exit () {
 #   PARAMETER: MESSAGE An optional description of the error.
 
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
-	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
@@ -69,12 +68,17 @@ error_exit () {
 #-----------------------------------------------------------------------
 
 declare progname               # The name of this script.
-
 declare user=$JAVIERA_USER     # A mysql user name.
-
 declare pass=$JAVIERA_PASSWORD # A mysql password.
-
 declare db=$JAVIERA_DBNAME     # A mysql database.
+declare -a file_systems        # An array with the uuid fingerprints
+                               # that correspond to file systems that
+			       # have been found during this javiera_app
+			       # session.
+declare -a mount_points        # An array with the mount points that
+                               # correspond to file systems that have
+			       # been found during this javiera_app
+			       # session.
 
 progname=$(basename $0)
 
@@ -171,6 +175,7 @@ unset -v file_inodes
 unset -v top_dirs
 
 # Update the database.
+process_fstab
 for file in ${files[@]}
 do
 	file=$(readlink -f $file)

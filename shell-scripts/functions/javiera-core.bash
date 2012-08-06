@@ -153,8 +153,37 @@ process_file () {
 	")
 	[[ $? -ne 0 ]] && return 1
 
-	local hostname=$1; hostname=\'$hostname\'
-	local pathname=$2; pathname=\'$pathname\'
+	# Get the uuid of the file system where the file beeing
+	# processed is located, and the pathname of the file relative to
+	# that file system.
+	local -a mpoints        # The matching mount points array.
+	local -a mpoints_length # The matching mount points' length
+	                        # array.
+	# Get the matching mount points.
+	for (( i=0; i<${#mount_points[@]}; i++ ))
+	do
+		if [[ $2 =~ ${mount_points[i]}.* ]]
+		then
+			mpoints+=( ${mount_points[i]} )
+			mpoints_length+=( ${#mount_points[i]} )
+		fi
+	done
+	unset -v i
+	# Get the longest matching mount point.
+	local -i longest
+	local -i max
+	for (( i=0; i<${#mpoints_length[@]}; i++ ))
+	do
+		if [[ ${mpoints_length[i]} -gt $max ]]
+		then
+			longest=$i; max=${mpoints_length[i]}
+		fi
+	done
+	# Get the wanted data.
+	local file_sys=${file_systems[longest]}; file_sys=\'$file_sys\'
+	local pathname=${2#${mpoints[longest]}}; pathname=\'$pathname\'
+
+	# Get rest of needed data about the file.
 	local mime_type=$(file -b --mime-type $2)
 	mime_type=\'$mime_type\'
 	local sha1=$(sha1sum $2 | cut -c1-40)
@@ -163,12 +192,14 @@ process_file () {
 	fsize=\'$fsize\'
 	local mtime=$(stat --format='%Y' $2)
 	mtime=\'$mtime\'
+
+	# Insert file's metadata in the database.
 	local lastid=$(mysql --skip-reconnect -u$user -p$pass \
 		--skip-column-names -e "
 
 		USE javiera;
 		CALL process_file (
-			$hostname,
+			$file_sys,
 			$pathname,
 			$mime_type,
 			$sha1,
@@ -201,8 +232,78 @@ process_file () {
 	case ${file_type[-1]} in
 		audio)   ! insert_audio_file $2 $lastid && return 1
 			 ;;
-		archive) ! insert_archive_file $2 $lastid && return 1
+		archive) ! insert_archive_file $lastid && return 1
 			 ;;
 	esac
 	return 0
+}
+
+process_fstab () {
+
+#       USAGE: process_fstab
+#
+# DESCRIPTION: Parse file systems data and insert it in the database.
+
+	local hostname=$(hostname); hostname=\'$hostname\'
+
+	while read line
+	do
+		local fields=( $line )
+		if [[ ${fields[0]} =~ UUID=.* ]]
+		then
+			local field0=${fields[0]}
+			local fs_uuid=${field0#UUID=}
+			file_systems+=( $fs_uuid )
+			local device_name=$(blkid -U $fs_uuid)
+			mount_points+=( ${fields[1]} )
+			device_name=\'$device_name\'
+			fs_uuid=\'$fs_uuid\'
+			mysql --skip-reconnect -u$user -p$pass \
+				--skip-column-names -e "
+
+				USE javiera;
+				CALL insert_hard_disk_partition (
+					$hostname,
+					$device_name,
+					$fs_uuid
+				);
+
+			"
+			[[ $? -ne 0 ]] && return 1
+		elif [[ ${fields[1]} =~ /.* ]] &&
+			[[ ! ${fields[1]} =~ \dev.* ]] &&
+			[[ ! ${fields[0]} =~ \#.* ]]
+		then
+			if [[ -f ${fields[1]}/etc/javiera/fsdata ]]
+			then
+				while read line
+				do
+				if [[ $line =~ UUID=.* ]]
+				then
+				file_systems+=( ${line#UUID=} )
+				mount_point+=( ${fields[1]} )
+				fi
+				done < ${fields[1]}/etc/javiera/fsdata
+			fi
+		fi
+	done < /etc/fstab
+
+	for (( i=0; i<${#file_systems[@]}; i++ ))
+	do
+		local file_system=${file_systems[i]}
+		file_system=\'$file_system\'
+		local mount_point=${mount_points[i]}
+		mount_point=\'$mount_point\'
+		mysql --skip-reconnect -u$user -p$pass \
+			--skip-column-names -e "
+
+			USE javiera;
+			CALL insert_mount_point (
+				$mount_point,
+				$file_system
+			);
+
+		"
+		[[ $? -ne 0 ]] && return 1
+	done
 }

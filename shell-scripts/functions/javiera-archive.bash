@@ -30,13 +30,11 @@ insert_archive_file () {
 #              PATHNAME and insert it in all the related tables in the
 #              database.
 #
-#  PARAMETERS: PATHNAME  A unix filesystem formatted string. 
-#              FILE_ID   The value of the 'id' column in the 'file'
-#                        table of the database.
+#  PARAMETERS: FILE_ID The value of the 'id' column in the 'file'
+#                      table of the database.
 
-	# Insert an entry in the 'archive_file' table and get the
-	# archive_file_id.
-	local file_id=$2; file_id=\"$file_id\"
+	# Insert an entry in the 'archive_file' table.
+	local file_id=$1; file_id=\"$file_id\"
 
 	mysql --skip-reconnect -u$user -p$pass \
 		--skip-column-names -e "

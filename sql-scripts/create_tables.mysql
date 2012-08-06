@@ -11,8 +11,7 @@ CREATE TABLE archive_location (
 	                 	REFERENCES location(id),
 	archive_file_id  MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES archive_file(id),
-	path_id          MEDIUMINT UNSIGNED 
-	                 	REFERENCES path(id),
+	pathname         VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -70,6 +69,11 @@ CREATE TABLE description (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE data_storage_device (
+	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE disk_image_file (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	archive_file_id  MEDIUMINT UNSIGNED NOT NULL
@@ -95,6 +99,22 @@ CREATE TABLE file (
 	sha1             CHAR(40) NOT NULL,
 	fsize            BIGINT UNSIGNED NOT NULL,
 	mtime            INT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE file_system (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	uuid             CHAR(36) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE file_system_location (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	location_id      MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES location(id),
+	file_system_id   MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file_system(id),
+	pathname         VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -134,21 +154,19 @@ CREATE TABLE flac_vorbiscomment_metadata_entry (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE host (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name             VARCHAR(256) NOT NULL,
+CREATE TABLE hard_disk_partition (
+	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	insertion_time         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	                       		ON UPDATE CURRENT_TIMESTAMP,
+	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES file_system(id),
+	device_name            VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE host_location 
-(
+CREATE TABLE host (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	location_id      MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES location(id),
-	host_id          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES host(id),
-	path_id          MEDIUMINT UNSIGNED 
-	                 	REFERENCES path(id),
+	name             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -180,6 +198,13 @@ CREATE TABLE l_file_to_software_session (
 	                    	REFERENCES software_session(id)
 );
 
+CREATE TABLE l_file_system_to_data_storage_device (
+	file_system_id         MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES file_system(id),
+	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
+	                 		REFERENCES data_storage_device(id)
+);
+
 CREATE TABLE l_flac_file_to_metadata_block (
 	flac_file_id           MEDIUMINT UNSIGNED NOT NULL
 		               		REFERENCES flac_file(id),
@@ -194,11 +219,25 @@ CREATE TABLE l_flac_metadata_entry_to_block (
 	                       		REFERENCES flac_metadata_block(id)
 );
 
+CREATE TABLE l_hard_disk_partition_to_host (
+	hard_disk_partition_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES hard_disk_partition(id),
+	host_id                MEDIUMINT UNSIGNED NOT NULL
+	                 		REFERENCES host(id)
+);
+
 CREATE TABLE l_mime_type_to_tree_node (
 	tree_node_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
 	mime_type_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES mime_type(id)
+);
+
+CREATE TABLE l_file_system_to_mount_point (
+	mount_point_id MEDIUMINT UNSIGNED NOT NULL
+	                	REFERENCES mount_point(id),
+	file_system_id MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file_system(id)
 );
 
 CREATE TABLE l_tree_node_to_description (
@@ -254,6 +293,12 @@ CREATE TABLE mkisofs_session (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE mount_point (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	pathname         VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE par2create_session (
 	id                  MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	`timestamp`         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -268,12 +313,6 @@ CREATE TABLE parity_file (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE path (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
