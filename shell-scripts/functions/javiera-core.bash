@@ -272,10 +272,9 @@ process_fstab () {
 			[[ $? -ne 0 ]] && return 1
 		elif [[ ${fields[1]} =~ /.* ]] &&
 			[[ ! ${fields[1]} =~ \dev.* ]] &&
-			[[ ! ${fields[0]} =~ \#.* ]]
+			[[ ! ${fields[0]} =~ \#.* ]] &&
+			[[ -f ${fields[1]}/.javiera/info.txt ]]
 		then
-			if [[ -f ${fields[1]}/etc/javiera/fsdata ]]
-			then
 				while read line
 				do
 				if [[ $line =~ UUID=.* ]]
@@ -283,8 +282,7 @@ process_fstab () {
 				file_systems+=( ${line#UUID=} )
 				mount_point+=( ${fields[1]} )
 				fi
-				done < ${fields[1]}/etc/javiera/fsdata
-			fi
+				done < ${fields[1]}/.javiera/info.txt
 		fi
 	done < /etc/fstab
 

@@ -26,6 +26,10 @@ GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_mount_point
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_recording
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_software
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_software_session
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_archive_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_archive_location
@@ -52,6 +56,8 @@ GRANT EXECUTE ON PROCEDURE javiera.link_audio_file_to_recording
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.link_file_to_location
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.link_file_to_software_session
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.link_file_system_to_data_storage_device
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.link_file_system_to_mount_point
@@ -65,6 +71,8 @@ GRANT EXECUTE ON PROCEDURE javiera.link_hard_disk_partition_to_host
 GRANT EXECUTE ON PROCEDURE javiera.process_archived_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.process_file
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.process_output_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.select_ancestor
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';

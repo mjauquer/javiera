@@ -239,7 +239,7 @@ declare -a suffixes  # A list of the pathnames of the archived files
 
 for pathname in ${pathnames[@]}
 do
-	prefix=${pathname%/*}/
+	prefix=${pathname%/*}
 	if [ -d $pathname ]
 	then
 		for file in $(find $pathname -type f)

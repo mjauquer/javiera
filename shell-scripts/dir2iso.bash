@@ -31,13 +31,12 @@ source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
 source ~/projects/javiera/upvars/upvars.bash
 source ~/code/bash/chpathn/chpathn.flib
 
-#===  FUNCTION =========================================================
-#
+usage () {
+	
 #       USAGE: usage
 #
 # DESCRIPTION: Print a help message to stdout.
-#
-usage () {
+
 	cat <<- EOF
 	Usage: dir2iso SOURCE OUTPUT
 
@@ -46,47 +45,17 @@ usage () {
 	EOF
 }
 
-#===  FUNCTION =========================================================
-#
+error_exit () {
+
 #       USAGE: error_exit [MESSAGE]
 #
 # DESCRIPTION: Function for exit due to fatal program error.
 #
 #   PARAMETER: MESSAGE An optional description of the error.
-#
-error_exit () {
+
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
 	[ -v handle ] && shsqlend $handle
 	exit 1
-}
-
-#===  FUNCTION =========================================================
-#
-#       USAGE: get_label HANDLE VARNAME 
-#
-# DESCRIPTION: Generate a label to be assigned to an image file. Store
-#              that label in the caller's variable VARNAME.
-#
-#  PARAMETERS: HANDLE  A connection to the database.
-#              VARNAME The name of a caller's variable.
-#
-get_label () {
-	local lastid
-	local label
-	lastid=$(shsql $1 $(printf '
-		SELECT MAX(id) FROM iso_metadata;
-		'))
-	lastid=${lastid//\"}
-	lastid=${lastid:-0}
-	label=$(shsql $1 $(printf '
-		SELECT auto_increment FROM 
-			information_schema.tables WHERE
-			table_name="iso_metadata" AND
-			table_schema="%b";
-		' $JAVIERA_DBNAME ))
-	label=${label//\"}
-	label=${label:-1}
-	local $2 && upvar $2 $label
 }
 
 #-----------------------------------------------------------------------
@@ -95,26 +64,23 @@ get_label () {
 
 # Variables declaration.
 declare progname   # The name of this script.
-
 declare dir_inode  # The inode of the source directory passed as
                    # argument.
-
 declare source_dir # The pathname of the source directory after calling
                    # javiera.
-
-declare handle     # Required by shsql. A connection to the database.
-
 declare label      # The label of the iso file that will be generated.
-
 declare ouput      # The pathname of the output image file.
-
 declare version    # The version of the mkisofs command.
-
 declare options    # The options to be passed to the mkisofs command.
-
 declare outputid   # The file_id number in the database for the created
                    # output image file.
+declare user       # A mysql user name.
+declare pass       # A mysql password.
+declare db         # A mysql database.
 
+user=$JAVIERA_USER
+pass=$JAVIERA_PASSWORD
+db=$JAVIERA_DBNAME
 progname=$(basename $0)
 
 # If no argument were passed, print usage message and exit.
@@ -149,7 +115,7 @@ dir_inode=$(stat -c %i "$1")
 declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
-log=($(chpathn -rp --verbose "$@"))
+log=($(javiera -r --verbose "$@"))
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling chpathn."
@@ -160,28 +126,24 @@ then
 fi
 unset -v log
 
-
 # Get the pathname of the source directory passed as argument after
 # calling javiera, because that script calls chpathn.
 source_dir=($(find ${top_dirs[@]} -depth -inum $dir_inode -type d))
 
-# Setup a connection to the database.
-handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
-	dbname=$JAVIERA_DBNAME) 
+# Generate a metadata file in $source_dir/.javiera
+if ! mkdir $source_dir/.javiera
+then
+	error_exit "$LINENO: Coudn't make the .javiera directory."
+fi
+echo "UUID=$(uuidgen)" >> $source_dir/.javiera/info.txt
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: error after calling shmysql."
+	error_exit "$LINENO: Error after a call to uuidgen."
 fi
 
 #-----------------------------------------------------------------------
-# Create an iso file.
+# Create an iso image file.
 #-----------------------------------------------------------------------
-
-# Generate the label of the iso file to be created
-if ! get_label $handle label
-then
-	error_exit "$LINENO: error after calling get_label()."
-fi
 
 # Get the version of the mkisofs command.
 version="$(mkisofs --version)"
@@ -191,11 +153,10 @@ then
 fi
 
 # Set the options to be passed to the mkisofs command.
-options="-V $label -iso-level 4 -allow-multidot -allow-lowercase \
-	-ldots -r" 
+options="-iso-level 4 -allow-multidot -allow-lowercase -ldots -r" 
 
 # Make the image file.
-mkisofs $options -o $output $source_dir
+mkisofs -V "BACKUPDVD" $options -o $output $source_dir
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: error after calling mkisofs."
@@ -205,42 +166,55 @@ fi
 # Update the backup database with data about the created iso file.
 #-----------------------------------------------------------------------
 
-# Insert the new created file into the database. Get its file_id number.
-if ! insert_file $handle $(hostname) $output
+# Insert the new created file into the database.
+if ! javiera $output
 then
 	error_exit "$LINENO: error after calling insert_file()."
 fi
-if ! get_id $handle outputid $(hostname) $output
-then
-	error_exit "$LINENO: error after calling get_id()."
-fi
 
 # Insert details of the software and options used to create the file.
-shsql $handle $(printf '
-	UPDATE iso_metadata
-	SET software="%b", used_options="%b"
-	WHERE file_id=%b;' "$version" "$options" \
-	$outputid)
+version=\'$version\'
+options=\'$options\'
+isosha1=$(sha1sum $output | cut -c1-40); isosha1=\"$isosha1\"
+mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
+
+	USE javiera;
+	CALL process_output_file (
+		'mkisofs',
+		$version,
+		$options,
+		$isosha1
+	);
+"
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: error after calling shsql."
+	error_exit "$LINENO: Error after calling mysql."
 fi
+unset -v options
+unset -v version
 
 # Insert archive relationships between the iso file and its content.
 for file in $(find $source_dir -type f)
 do
-	file="$(readlink -f $file)"
-	if ! get_id $handle fileid $(hostname) $file
+	filesha1=$(sha1sum $output | cut -c1-40)
+	filesha1=\"$filesha1\"
+	suffix=${file#$source_dir/}; suffix=\'$suffix\'
+
+	mysql --skip-reconnect -u$user -p$pass \
+		--skip-column-names -e "
+
+		USE javiera;
+		CALL process_archived_file (
+			$isosha1,
+			$filesha1,
+			$suffix
+		);
+	"
+	if [ $? -ne 0 ]
 	then
-		error_exit "$LINENO: error after calling get_id()."
+		error_exit "$LINENO: Error after calling mysql."
 	fi
-	[[ $fileid == $outputid ]] && continue
-	if ! insert_archive $handle $outputid $fileid
-	then
-		error_exit "$LINENO: error after calling insert_archive()."
-	fi
-	unset -v fileid
 done
 unset -v file
-
-shsqlend $handle
+unset -v filesha1
+unset -v suffix

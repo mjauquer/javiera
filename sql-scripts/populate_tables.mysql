@@ -5,6 +5,7 @@ INSERT INTO host (id, name)
 
 INSERT INTO description (id, text)
 	VALUES 
+		-- Node descriptions related to the 'file type hierarchy' tree.
 		('', 'regular'),
 			('', 'audio'),
 				('', 'uncompressed'),

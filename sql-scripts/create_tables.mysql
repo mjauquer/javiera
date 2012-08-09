@@ -74,13 +74,6 @@ CREATE TABLE data_storage_device (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE disk_image_file (
-	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	archive_file_id  MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES archive_file(id),
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE dvd (
 	id                  MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	burned_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -251,7 +244,7 @@ CREATE TABLE l_tree_node_to_tree (
 	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
 	tree_id             MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES description(id)
+	                 	REFERENCES tree(id)
 );
 
 CREATE TABLE location (
@@ -352,6 +345,7 @@ CREATE TABLE release_name (
 CREATE TABLE software (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(255) NOT NULL,
+	version          VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -361,6 +355,7 @@ CREATE TABLE software_session (
 	                 	ON UPDATE CURRENT_TIMESTAMP,
 	software_id      MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES software(id),
+	software_options VARCHAR(255) NOT NULL,
 	PRIMARY KEY (id)
 );
 

@@ -439,6 +439,46 @@ BEGIN
 	END IF;
 END;
 
+CREATE PROCEDURE insert_and_get_software (
+		IN  p_name             VARCHAR(256),
+		IN  p_software_version VARCHAR(256),
+		OUT p_software_id      MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_name> MEDIUMINT UNSIGNED, IN <p_software_version> MEDIUMINT UNSIGNED, OUT <p_software_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'software' table. Return the id field of the inserted row."
+
+BEGIN
+	-- Check if an entry already exists in the table 'software' with the specified <p_name> and <p_software_version> values. 
+	SELECT id INTO p_software_id
+		FROM software
+		WHERE name = p_name
+		AND   version = p_software_version
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_software_id IS NULL
+	THEN
+		INSERT INTO software (id, name, version) VALUES ( '', p_name, p_software_version);
+		SELECT LAST_INSERT_ID() INTO p_software_id;
+	END IF;
+END;
+
+CREATE PROCEDURE insert_and_get_software_session (
+		IN  p_software_id         MEDIUMINT UNSIGNED,
+		IN  p_software_options    VARCHAR(256),
+		OUT p_software_session_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_software_id> MEDIUMINT UNSIGNED, IN <p_software_options> VARCHAR(256), OUT <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'software_session' table. Return the id field of the inserted row."
+
+BEGIN
+
+	INSERT INTO software_session (id, software_id, software_options) VALUES (
+		'',
+		p_software_id,
+		p_software_options
+	);
+	SELECT LAST_INSERT_ID() INTO p_software_session_id;
+END;
+
 CREATE PROCEDURE insert_archive_file (
 		IN p_file_id MEDIUMINT UNSIGNED
 	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED.
@@ -826,6 +866,34 @@ CREATE PROCEDURE process_file (
 BEGIN
 	DECLARE v_file_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_file (p_fs_uuid, p_pathname, p_mimetype, p_sha1, p_fsize, p_mtime, v_file_id);
+END;
+
+CREATE PROCEDURE process_output_file (
+		IN  p_software_name      VARCHAR(256),
+		IN  p_software_version   VARCHAR(256),
+		IN  p_software_options   VARCHAR(256),
+		IN  p_sha1               CHAR(40)
+	) COMMENT "Parameters: IN <p_software_name> VARCHAR(256), IN <p_software_version> VARCHAR(256), IN <p_software_options> VARCHAR(256), IN p_sha1 CHAR(40).
+                      Description: Insert an entry in the 'l_file_to_software_session' table. Insertions might been done into 'software' and 'software session' as well."
+
+BEGIN
+	DECLARE v_file_id             MEDIUMINT UNSIGNED;
+	DECLARE v_software_id         MEDIUMINT UNSIGNED;
+	DECLARE v_software_session_id MEDIUMINT UNSIGNED;
+
+	SELECT id INTO v_file_id
+		FROM file
+		WHERE sha1 = p_sha1
+	;
+
+	CALL insert_and_get_software (p_software_name, p_software_version, v_software_id);
+
+	CALL insert_and_get_software_session (v_software_id, p_software_options, v_software_session_id);
+
+	INSERT INTO l_file_to_software_session (file_id, software_session_id) VALUES ( 
+		v_file_id,
+		v_software_session_id
+	);
 END;
 
 CREATE PROCEDURE select_ancestor (
