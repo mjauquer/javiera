@@ -29,13 +29,12 @@
 
 source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
 
-#===  FUNCTION =========================================================
-#
+usage () {
+
 #       USAGE: usage
 #
 # DESCRIPTION: Print a help message to stdout.
-#
-usage () {
+
 	cat <<- EOF
 	Usage: iso2dvd SOURCE "DVD_TYPE" "DVD_TRADEMARK"
 
@@ -44,15 +43,14 @@ usage () {
 	EOF
 }
 
-#===  FUNCTION =========================================================
-#
+error_exit () {
+
 #       USAGE: error_exit [MESSAGE]
 #
 # DESCRIPTION: Function for exit due to fatal program error.
 #
 #   PARAMETER: MESSAGE An optional description of the error.
-#
-error_exit () {
+
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
 	[ -v handle ] && shsqlend $handle
 	exit 1
@@ -62,7 +60,7 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# If no argument were passed, print usage message and exit.
+# If no argument was passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
 
 # Variables declaration.
@@ -102,7 +100,7 @@ if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after readlink command."
 fi
-if ! sudo cdrecord $options $(readlink -f $input)
+if ! sudo cdrecord $options $input
 then
 	error_exit "$LINENO: Error after calling cdrecord command."
 fi
@@ -111,8 +109,6 @@ fi
 # Update the backup database.
 #-----------------------------------------------------------------------
 
-handle=$(shmysql user=$JAVIERA_USER password=$JAVIERA_PASSWORD \
-	dbname=$JAVIERA_DBNAME) 
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling shmysql utility."
@@ -125,5 +121,3 @@ if ! insert_dvd $handle $imageid $2 $3
 then
 	error_exit "$LINENO: Error after calling insert_dvd()."
 fi
-
-shsqlend $handle

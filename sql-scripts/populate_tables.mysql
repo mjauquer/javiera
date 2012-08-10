@@ -455,7 +455,7 @@ INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
 	);
 SET @tree_node_id = NULL;
 
-INSERT INTO mime_type (id, type) VALUES
+INSERT INTO mime_type (id, type_descriptor) VALUES
 	('', 'audio/wav'),
 	('', 'audio/x-wav'),
 	('', 'audio/wave'),
@@ -483,109 +483,109 @@ INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id)
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='waveform audio format'), 
-		(SELECT id FROM mime_type WHERE type='audio/wav')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/wav')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='waveform audio format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-wav')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-wav')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='waveform audio format'), 
-		(SELECT id FROM mime_type WHERE type='audio/wave')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/wave')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='waveform audio format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-pn-wav')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-pn-wav')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='waveform audio format'), 
-		(SELECT id FROM mime_type WHERE type='audio/vnd-wave')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/vnd-wave')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/aiff')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/aiff')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-aiff')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-aiff')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='sound/aiff')
+		(SELECT id FROM mime_type WHERE type_descriptor='sound/aiff')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/rmf')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/rmf')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-rmf')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-rmf')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-pn-aiff')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-pn-aiff')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-gsm')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-gsm')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/mid')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/mid')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/x-midi')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-midi')
 	),
 	(
 		(SELECT tree_node_id 
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text='audio interchange file format'), 
-		(SELECT id FROM mime_type WHERE type='audio/vnd-qcelp')
+		(SELECT id FROM mime_type WHERE type_descriptor='audio/vnd-qcelp')
 	),
 	(
 		(SELECT tree_node_id
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text = 'free lossless audio codec'),
-		(SELECT id FROM mime_type WHERE type = 'audio/x-flac')
+		(SELECT id FROM mime_type WHERE type_descriptor = 'audio/x-flac')
 	),
 	(
 		(SELECT tree_node_id
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text = 'ISO image'),
-		(SELECT id FROM mime_type WHERE type = 'application/x-iso9660-image')
+		(SELECT id FROM mime_type WHERE type_descriptor = 'application/x-iso9660-image')
 	),
 	(
 		(SELECT tree_node_id
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
 			WHERE description.text = 'tape archive'),
-		(SELECT id FROM mime_type WHERE type = 'application/x-tar')
+		(SELECT id FROM mime_type WHERE type_descriptor = 'application/x-tar')
 	)
 ;
 

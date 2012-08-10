@@ -19,7 +19,7 @@ BEGIN
 				ON mime2tree.mime_type_id = mime_type.id
 			INNER JOIN tree_node AS node
 				ON mime2tree.tree_node_id = node.id
-			WHERE mime_type.type = p_descendant;
+			WHERE mime_type.type_descriptor = p_descendant;
 
 		IF v_descendant_left IS NULL
 		THEN
@@ -176,7 +176,7 @@ BEGIN
 	IF p_file_id IS NULL
 	THEN
 		INSERT INTO file (mime_type_id, sha1, fsize, mtime) VALUES (
-			(SELECT id FROM mime_type WHERE type = p_mimetype),
+			(SELECT id FROM mime_type WHERE type_descriptor = p_mimetype),
 			p_sha1,
 			p_fsize,
 			p_mtime

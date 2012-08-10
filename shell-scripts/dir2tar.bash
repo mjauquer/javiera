@@ -81,15 +81,21 @@ predict_pathname_inside_archive () {
 #-----------------------------------------------------------------------
 
 # Variables declaration.
-declare progname               # The name of this script.
+declare progname        # The name of this script.
+declare -a file_systems # An array with the uuid fingerprints that
+                        # correspond to file systems that have been 
+			# found during this shell script session.
+declare -a mount_points # An array with the mount points that correspond
+                        # to file systems that have been found during
+			# this shell script session.
+declare user            # A mysql user name.
+declare pass            # A mysql password.
+declare db              # A mysql database.
 
-declare user=$JAVIERA_USER     # A mysql user name.
-
-declare pass=$JAVIERA_PASSWORD # A mysql password.
-
-declare db=$JAVIERA_DBNAME     # A mysql database.
-
+db=$JAVIERA_DBNAME
+pass=$JAVIERA_PASSWORD
 progname=$(basename $0)
+user=$JAVIERA_USER
 
 # If no argument were passed, print usage message and exit.
 [[ $# -eq 0 ]] && usage && exit
@@ -269,6 +275,8 @@ fi
 
 # Create a tar file.
 declare tarfile  # The pathname of the tar file to be created.
+declare version  # The version of the tar utility.
+declare tarsha1  # The sha1 fingerprint of the newly created tar file.
 
 pathnames=( $(find $(ls)) )
 tar -cf $1 ${pathnames[@]}
@@ -279,19 +287,39 @@ fi
 tarfile=$(readlink -f $1)
 
 # Insert in the database metadata about the created tar file.
-javiera $tarfile
-if [ $? -ne 0 ]
+if ! javiera $tarfile
 then
 	error_exit "$LINENO: Error after calling javiera."
 fi
+
+# Insert in the database metadata about this tar utility session. 
+version="$(tar --version | head -n 1)"; version=\'$version\'
+tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
+mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
+
+	USE javiera;
+	CALL process_output_file (
+		'tar',
+		$version,
+		'cf',
+		$tarsha1
+	);
+"
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling mysql."
+fi
+unset -v tarsha1
+unset -v version
 
 #-----------------------------------------------------------------------
 # Update the backup database with the archive relationships.
 #-----------------------------------------------------------------------
 
-# Insert archive relationships between the tar file and its content.
+# Insert archive relationships between the tar file and the archived
+# files.
 declare archive_sha1  # The sha1 fingerprint of the created tar file.
-declare filesha1 # The sha1 fingerprint of an archived file.
+declare filesha1      # The sha1 fingerprint of an archived file.
 
 tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
 for (( ind=0; ind<${#sha1s[@]}; ind++ ))
@@ -323,7 +351,8 @@ unset -v tarfile
 unset -v tarsha1
 
 # Move tar to the final directory.
-declare tarbname # Tar file's basename.
+declare tarbname   # Archive file's basename.
+declare tarabsname # Archive file's absolute name.
 
 tarbname=$(basename $1)
 if ! mv $1 ..
@@ -335,12 +364,63 @@ if ! cd ..
 then
 	error_exit "$LINENO: Error after calling cd command."
 fi
+tarabsname=$(readlink -f $tarbname)
 
-# Insert in the database tar file's new pathname.
-if ! process_file $(hostname) $(readlink -f $tarbname)
+# Update the columns <file_system_id> and <pathname> into table 
+# 'file_system_location' the entry related to the new archive file.
+
+declare file_sys # The uuid fingerprint of the file system where
+	         # the file pointed by PATHNAME is located.             
+declare old_path # The pathname of the archive file before it was moved
+                 # (when it was under de temporary directory), relative
+		 # to the mount point of the file system where it was located.
+declare new_path # The final pathname of the archive file.
+
+process_fstab
+if ! get_file_system_location file_sys old_path ${tempdir}/${tarbname}
 then
-	error_exit "$LINENO: Error after calling process_file()."
+	error_exit "$LINENO: Error after calling get_matching_fs...()."
 fi
+
+file_sys=\'$file_sys\'
+old_path=\'$old_path\'
+
+if ! get_file_system_location file_sys new_path $tarabsname
+then
+	error_exit "$LINENO: Error after calling get_matching_fs...()."
+fi
+
+file_sys=\'$file_sys\'
+new_path=\'$new_path\'
+
+mysql --skip-reconnect -u$user -p$pass \
+	--skip-column-names -e "
+
+	USE javiera;
+	SELECT fs_location.id INTO @fs_loc_id
+		FROM file_system_location AS fs_location
+		INNER JOIN file_system AS fs
+		ON fs_location.file_system_id = fs.id
+		WHERE fs_location.pathname = $old_path;
+	UPDATE file_system_location SET
+		file_system_id = (SELECT id
+					FROM file_system
+					WHERE uuid = $file_sys),
+		pathname = $new_path
+	WHERE
+		file_system_location.id = @fs_loc_id
+	;
+	"
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling mysql."
+fi
+
+unset -v file_sys
+unset -v newpath
+unset -v pathname
+unset -v oldpath
+unset -v tarabsname
 unset -v tarbname
 
 # Remove the temporary directory.

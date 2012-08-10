@@ -74,19 +74,26 @@ CREATE TABLE data_storage_device (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE dvd (
-	id                  MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	burned_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                    	ON UPDATE CURRENT_TIMESTAMP,
-	disk_image_file_id  MEDIUMINT UNSIGNED NOT NULL
-	           	    	REFERENCES disk_image_file(id),
+CREATE TABLE digital_media (
+	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`timestamp`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	                       		ON UPDATE CURRENT_TIMESTAMP,
+	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES data_storage_device(id),
+	digital_media_type_id  MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES digital_media_type(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE digital_media_type (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	type_descriptor  VARCHAR(256) NOT NULL,
+	data_capacity    BIGINT UNSIGNED NOT NULL,
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE file (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	last_updated     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                 	ON UPDATE CURRENT_TIMESTAMP,
 	mime_type_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES mime_type(id),
 	sha1             CHAR(40) NOT NULL,
@@ -149,10 +156,10 @@ CREATE TABLE flac_vorbiscomment_metadata_entry (
 
 CREATE TABLE hard_disk_partition (
 	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	insertion_time         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	`timestamp`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	                       		ON UPDATE CURRENT_TIMESTAMP,
 	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
-	                       		REFERENCES file_system(id),
+	                       		REFERENCES data_storage_device(id),
 	device_name            VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
@@ -273,7 +280,7 @@ CREATE TABLE medium_format (
 
 CREATE TABLE mime_type (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	type             VARCHAR(75) NOT NULL,
+	type_descriptor  VARCHAR(75) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -351,7 +358,7 @@ CREATE TABLE software (
 
 CREATE TABLE software_session (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	time             TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	`timestamp`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	                 	ON UPDATE CURRENT_TIMESTAMP,
 	software_id      MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES software(id),

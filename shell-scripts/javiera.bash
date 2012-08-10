@@ -73,11 +73,11 @@ declare pass=$JAVIERA_PASSWORD # A mysql password.
 declare db=$JAVIERA_DBNAME     # A mysql database.
 declare -a file_systems        # An array with the uuid fingerprints
                                # that correspond to file systems that
-			       # have been found during this javiera_app
+			       # have been found during this shellscript
 			       # session.
 declare -a mount_points        # An array with the mount points that
                                # correspond to file systems that have
-			       # been found during this javiera_app
+			       # been found during this shellscript
 			       # session.
 
 progname=$(basename $0)

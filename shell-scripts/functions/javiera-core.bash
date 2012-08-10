@@ -63,6 +63,53 @@ escape_chars () {
 	local $1 && upvar $1 "$string"
 }
 
+get_file_system_location () {
+
+#       USAGE: get_file_system_location FS PATH PATHNAME
+#
+# DESCRIPTION: Use the 'file_systems' and 'mount_points' arrays in order
+#              to get the file system and relative pathname of the file
+#              pointed by PATHNAME. Store the resulting file system
+#              fingerprint in FS and the relative pathname in PATH.
+#
+#  PARAMETERS: FS       The name of a variable declared in the caller's
+#                       scope.
+#              PATH     The name of a variable declared in the caller's
+#                       scope.
+#              PATHNAME The pathname of the file it is being query
+#                       about.
+
+	local -a mpoints        # The matching mount points array.
+	local -a mpoints_length # The matching mount points' length
+	                        # array.
+	# Get the matching mount points.
+	for (( i=0; i<${#mount_points[@]}; i++ ))
+	do
+		if [[ $3 =~ ${mount_points[i]}.* ]]
+		then
+			mpoints+=( ${mount_points[i]} )
+			mpoints_length+=( ${#mount_points[i]} )
+		fi
+	done
+	unset -v i
+
+	# Get the longest matching mount point.
+	local -i longest
+	local -i max
+	for (( i=0; i<${#mpoints_length[@]}; i++ ))
+	do
+		if [[ ${mpoints_length[i]} -gt $max ]]
+		then
+			longest=$i; max=${mpoints_length[i]}
+		fi
+	done
+
+	# Get the wanted data.
+	local file_sys=${file_systems[longest]}
+	local pathname=${3#${mpoints[longest]}}
+	local $1 $2 && upvars -v $1 $file_sys -v $2 $pathname
+}
+
 get_id () {
 
 #       USAGE: get_id HANDLE VARNAME HOSTNAME PATHNAME
@@ -156,32 +203,18 @@ process_file () {
 	# Get the uuid of the file system where the file beeing
 	# processed is located, and the pathname of the file relative to
 	# that file system.
-	local -a mpoints        # The matching mount points array.
-	local -a mpoints_length # The matching mount points' length
-	                        # array.
-	# Get the matching mount points.
-	for (( i=0; i<${#mount_points[@]}; i++ ))
-	do
-		if [[ $2 =~ ${mount_points[i]}.* ]]
-		then
-			mpoints+=( ${mount_points[i]} )
-			mpoints_length+=( ${#mount_points[i]} )
-		fi
-	done
-	unset -v i
-	# Get the longest matching mount point.
-	local -i longest
-	local -i max
-	for (( i=0; i<${#mpoints_length[@]}; i++ ))
-	do
-		if [[ ${mpoints_length[i]} -gt $max ]]
-		then
-			longest=$i; max=${mpoints_length[i]}
-		fi
-	done
-	# Get the wanted data.
-	local file_sys=${file_systems[longest]}; file_sys=\'$file_sys\'
-	local pathname=${2#${mpoints[longest]}}; pathname=\'$pathname\'
+
+	local file_sys # The uuid fingerprint of the file system where
+	               # the file pointed by PATHNAME is located.             
+	local pathname # The pathname of the file pointed by PATHNAME
+	               # relative to the mount point of the file system
+		       # where it is located.
+
+	get_file_system_location file_sys pathname $2
+	[[ $? -ne 0 ]] && return 1
+
+	file_sys=\'$file_sys\'
+	pathname=\'$pathname\'
 
 	# Get rest of needed data about the file.
 	local mime_type=$(file -b --mime-type $2)
