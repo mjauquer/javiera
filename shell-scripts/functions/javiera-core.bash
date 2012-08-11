@@ -25,6 +25,7 @@
 source ~/projects/javiera/upvars/upvars.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash
+source ~/projects/javiera/shell-scripts/functions/javiera-binary.bash
 
 delete_orphans () {
 
@@ -249,6 +250,7 @@ process_file () {
 
 	# Look at the mime-type of the inserted file in order to
 	# determine in what tables, rows must been inserted.
+	local -a file_type
 	file_type=( $(mysql --skip-reconnect -u$user -p$pass \
 		--skip-column-names -e "
 
@@ -267,6 +269,8 @@ process_file () {
 			 ;;
 		archive) ! insert_archive_file $lastid && return 1
 			 ;;
+		binary)  ! insert_binary_file $2 $lastid && return 1
+ 
 	esac
 	return 0
 }

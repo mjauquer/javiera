@@ -57,6 +57,13 @@ CREATE TABLE audio_file (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE binary_file (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	file_id          MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES file(id),
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE country (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(256) NOT NULL,
@@ -184,13 +191,6 @@ CREATE TABLE l_file_to_location (
 	                 	REFERENCES location(id)
 );
 
-CREATE TABLE l_file_to_parity_file (
-	file_id          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file(id),
-	parity_file_id   MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES parity_file(id)
-);
-
 CREATE TABLE l_file_to_software_session (
 	file_id             MEDIUMINT UNSIGNED NOT NULL
 	                    	REFERENCES file(id),
@@ -284,35 +284,9 @@ CREATE TABLE mime_type (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE mkisofs_session (
-	id                  SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	`timestamp`         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	software_session_id MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES software_session(id),
-	options             VARCHAR(255) NOT NULL,
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE mount_point (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	pathname         VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE par2create_session (
-	id                  MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	`timestamp`         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	software_session_id MEDIUMINT UNSIGNED NOT NULL
-	                    	REFERENCES software_session(id),
-	blocksize           MEDIUMINT UNSIGNED NOT NULL,
-	blockcount          MEDIUMINT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE parity_file (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	file_id          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file(id),
 	PRIMARY KEY (id)
 );
 

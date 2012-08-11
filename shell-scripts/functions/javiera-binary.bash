@@ -22,28 +22,34 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-insert_archive_file () {
+insert_binary_file () {
 
-#       USAGE: insert_archive_file FILE_ID
+#       USAGE: insert_binary_file PATHNAME FILE_ID
 #
-# DESCRIPTION: Insert in the 'archive_file' table the file whose id in
-#              the 'file' table is FILE_ID.
+# DESCRIPTION: Collect metadata related to the binary file pointed by
+#              PATHNAME and insert it in the 'binary_file' table in the
+#              database.
 #
-#  PARAMETERS: FILE_ID The value of the 'id' column in the 'file'
-#                      table of the database.
+#  PARAMETERS: PATHNAME  A unix filesystem formatted string. 
+#              FILE_ID   The value of the 'id' column in the 'file'
+#                        table of the database.
 
-	# Insert an entry in the 'archive_file' table.
-	local file_id=$1; file_id=\"$file_id\"
+	local filetype="$(file -b $1)"
+	if [[ $filetype == 'Parity Archive Volume Set' ]]
+	then
+		# Insert an entry in the 'binary_file' table.
+		local file_id=$2; file_id=\"$file_id\"
 
-	mysql --skip-reconnect -u$user -p$pass \
-		--skip-column-names -e "
+		mysql --skip-reconnect -u$user -p$pass \
+			--skip-column-names -e "
 
-		USE javiera;
-		CALL insert_archive_file (
-			$file_id
-		);
-	"
-	[[ $? -ne 0 ]] && return 1
+			USE javiera;
+			CALL insert_binary_file (
+				$file_id
+			);
+		"
+		[[ $? -ne 0 ]] && return 1
+	fi
 
 	return 0
 }

@@ -28,7 +28,7 @@ INSERT INTO description (id, text)
 				('', 'disk image'),
 					('', 'iso image'),
 					('', 'iso'),
-			('', 'parity'),
+			('', 'binary'),
 			('', 'multimedia container')
 ;
 
@@ -430,7 +430,7 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='parity')
+		(SELECT id FROM description WHERE text = 'binary')
 	);
 SET @tree_node_id = NULL;
 
@@ -472,10 +472,10 @@ INSERT INTO mime_type (id, type_descriptor) VALUES
 	('', 'audio/x-midi'),
 	('', 'audio/vnd-qcelp'),
 	('', 'audio/x-flac'),
+	('', 'application/octet-stream'),
 	('', 'application/x-iso9660-image'),
 	('', 'application/x-tar'),
-	('', 'text/plain'),
-	('', 'application/octet-stream')
+	('', 'text/plain')
 ;
 
 INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id) 
@@ -575,10 +575,17 @@ INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id)
 			WHERE description.text = 'free lossless audio codec'),
 		(SELECT id FROM mime_type WHERE type_descriptor = 'audio/x-flac')
 	),
+(
+		(SELECT tree_node_id
+			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
+			WHERE description.text = 'binary'),
+		(SELECT id FROM mime_type WHERE type_descriptor = 'application/octet-stream')
+	),
+
 	(
 		(SELECT tree_node_id
 			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text = 'ISO image'),
+			WHERE description.text = 'iso image'),
 		(SELECT id FROM mime_type WHERE type_descriptor = 'application/x-iso9660-image')
 	),
 	(

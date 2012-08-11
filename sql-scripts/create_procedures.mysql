@@ -6,7 +6,7 @@ CREATE PROCEDURE get_ancestor (
 		IN  p_descendant VARCHAR(256),
 		OUT p_ancestor   VARCHAR(256)
 	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256), OUT <p_ancestor> MEDIUMINT
-                      Description: Find in the tree named <p_tree> a node which is an ancestor of that which is asociated to the description/mime-type <p_descendant> and its father is asociated to the description <p_father>. Store the resulting description in the variable named <p_ancestor>."
+                      Description: Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is. Store the description asociated to the found node in the variable named <p_ancestor>."
 
 BEGIN
 	DECLARE v_descendant_left MEDIUMINT;
@@ -48,8 +48,8 @@ BEGIN
 						ON node2desc.description_id = description.id
 					WHERE text = p_father)
 		AND tree.name = p_tree
-		AND left_extent < v_descendant_left
-		AND right_extent > v_descendant_left;
+		AND left_extent <= v_descendant_left
+		AND right_extent >= v_descendant_left;
 END;
 
 CREATE PROCEDURE insert_and_get_archive_file (
@@ -140,6 +140,29 @@ BEGIN
 		CALL link_audio_file_to_recording (p_audio_file_id, v_recording_id);
 	END IF;
 
+END;
+
+CREATE PROCEDURE insert_and_get_binary_file (
+		IN  p_file_id         MEDIUMINT UNSIGNED,
+		OUT p_binary_file_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, OUT <p_binary_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'binary_file' table. Return the id field of the inserted row."
+
+BEGIN
+	-- Check if an entry already exists in the table 'binary_file' with the specified file_id. 
+	SELECT id INTO p_binary_file_id
+		FROM binary_file
+		WHERE file_id = p_file_id;
+	
+	-- If it doesn't exist, create it.
+	IF p_binary_file_id IS NULL
+	THEN
+		INSERT INTO binary_file (id, file_id) VALUES (
+			'',
+			p_file_id
+		);
+		SELECT LAST_INSERT_ID() INTO p_binary_file_id;
+	END IF;
 END;
 
 CREATE PROCEDURE insert_and_get_file (
@@ -489,6 +512,16 @@ BEGIN
 	CALL insert_and_get_archive_file (p_file_id, v_archive_file_id);
 END;
 
+CREATE PROCEDURE insert_binary_file (
+		IN p_file_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'binary_file' table."
+
+BEGIN
+	DECLARE v_binary_file_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_binary_file (p_file_id, v_binary_file_id);
+END;
+
 CREATE PROCEDURE insert_archive_location (
 		IN  p_archive_file_id MEDIUMINT UNSIGNED,
 		IN  p_pathname        VARCHAR(256)
@@ -648,6 +681,28 @@ BEGIN
 	CALL insert_and_get_mount_point (p_pathname, p_file_system_uuid, v_mount_point_id);
 END;
 
+CREATE PROCEDURE insert_software (
+		IN  p_software_name    VARCHAR(256),
+		IN  p_software_version VARCHAR(256)
+	) COMMENT "Parameters: IN <p_name> MEDIUMINT UNSIGNED, IN <p_software_version> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'software' table."
+
+BEGIN
+	DECLARE v_software_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_software (p_software_name, p_software_version, v_software_id);
+END;
+
+CREATE PROCEDURE insert_software_session (
+		IN  p_software_id         MEDIUMINT UNSIGNED,
+		IN  p_software_options    VARCHAR(256)
+	) COMMENT "Parameters: IN <p_software_id> MEDIUMINT UNSIGNED, IN <p_software_options> VARCHAR(256), OUT <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'software_session' table."
+
+BEGIN
+	DECLARE v_software_session_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_software_session (v_software_id, p_software_options, v_software_session_id);
+END;
+
 CREATE PROCEDURE link_audio_file_to_recording (
 		IN p_audio_file_id MEDIUMINT UNSIGNED,
 		IN p_recording_id MEDIUMINT UNSIGNED
@@ -694,6 +749,31 @@ BEGIN
 		INSERT INTO l_file_to_location (file_id, location_id) VALUES ( 
 			p_file_id,
 			p_location_id
+		);
+	END IF;
+END;
+
+CREATE PROCEDURE link_file_to_software_session (
+		IN p_file_id             MEDIUMINT UNSIGNED,
+		IN p_software_session_id MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'l_file_to_software_session' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_audio_file_to_recording' with the specified p_audio_file_id and p_recording_id. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_file_to_software_session
+		WHERE file_id = p_file_id
+		AND software_session_id = p_software_session_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_file_to_software_session (file_id, software_session_id) VALUES ( 
+			p_file_id,
+			p_software_session_id
 		);
 	END IF;
 END;
@@ -900,8 +980,8 @@ CREATE PROCEDURE select_ancestor (
 		IN p_tree       VARCHAR(256),
 		IN p_father     VARCHAR(256),
 		IN p_descendant VARCHAR(256)
-	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256)
-                      Description: Select from the tree named <p_tree> a node which is an ancestor of that which is asociated to the description/mime-type <p_descendant> and its father is asociated to the description <p_father>."
+	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256), OUT <p_ancestor> MEDIUMINT
+                      Description: Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is."
 
 BEGIN
 	DECLARE v_ancestor VARCHAR(256);
