@@ -1,0 +1,6 @@
+[submodule "upvars"]
+	path = upvars
+	url = git://github.com/mjauquer/bash-upvars.git
+[submodule "getoptx"]
+	path = getoptx
+	url = git://github.com/goozbach/bash-getoptx.git
