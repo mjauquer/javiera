@@ -376,10 +376,14 @@ declare old_path # The pathname of the archive file before it was moved
 		 # to the mount point of the file system where it was located.
 declare new_path # The final pathname of the archive file.
 
-process_fstab
+if ! process_fstab
+then
+	error_exit "$LINENO: Error after calling process_fstab()."
+fi
+
 if ! get_file_system_location file_sys old_path ${tempdir}/${tarbname}
 then
-	error_exit "$LINENO: Error after calling get_matching_fs...()."
+	error_exit "$LINENO: Error after calling get_file_system_loc...()."
 fi
 
 file_sys=\'$file_sys\'
@@ -387,7 +391,7 @@ old_path=\'$old_path\'
 
 if ! get_file_system_location file_sys new_path $tarabsname
 then
-	error_exit "$LINENO: Error after calling get_matching_fs...()."
+	error_exit "$LINENO: Error after calling get_file_system_loc...()."
 fi
 
 file_sys=\'$file_sys\'

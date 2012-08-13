@@ -143,7 +143,7 @@ BEGIN
 END;
 
 CREATE PROCEDURE insert_and_get_binary_file (
-		IN  p_file_id         MEDIUMINT UNSIGNED,
+		IN  p_file_id        MEDIUMINT UNSIGNED,
 		OUT p_binary_file_id MEDIUMINT UNSIGNED
 	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, OUT <p_binary_file_id> MEDIUMINT UNSIGNED.
                       Description: Insert an entry in the 'binary_file' table. Return the id field of the inserted row."
@@ -163,6 +163,34 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_binary_file_id;
 	END IF;
+END;
+
+CREATE PROCEDURE insert_and_get_dvd (
+		IN  p_dvd_type_id MEDIUMINT UNSIGNED,
+		OUT p_dvd_id      MEDIUMINT UNSIGNED
+	) COMMENT "Parameters: IN <p_dvd_type_id> MEDIUMINT UNSIGNED, OUT <p_dvd_id> MEDIUMINT UNSIGNED.
+                      Description: Insert an entry in the 'dvd', 'digital media', 'data storage device'. Return the id field of the inserted row in the 'dvd' table."
+
+BEGIN
+	DECLARE v_data_storage_device_id MEDIUMINT UNSIGNED;
+	DECLARE v_digital_media_id       MEDIUMINT UNSIGNED;
+
+	INSERT INTO data_storage_device (id) VALUES ('');
+	SELECT LAST_INSERT_ID() INTO v_data_storage_device_id;
+
+	INSERT INTO digital_media (id, data_storage_device_id, digital_media_type_id) VALUES (
+		'',
+		v_data_storage_device_id,
+		p_dvd_type_id
+	);
+	SELECT LAST_INSERT_ID() INTO v_digital_media_id;
+
+	INSERT INTO dvd (id, digital_media_id) VALUES (
+		'',
+		v_digital_media_id
+	);
+	SELECT LAST_INSERT_ID() INTO p_dvd_id;
+	
 END;
 
 CREATE PROCEDURE insert_and_get_file (

@@ -93,13 +93,13 @@ find_opts[0]="-maxdepth 1"
 while getoptex "r recursive R verbose" "$@"
 do
 	case "$OPTOPT" in
-		r)            find_opts[0]="-depth"
-			      ;;
-		recursive)    find_opts[0]="-depth"
-		              ;;
-		R)            find_opts[0]="-depth"
-		              ;;
-		verbose)      verbose=true
+		r)         find_opts[0]="-depth"
+			   ;;
+		recursive) find_opts[0]="-depth"
+		           ;;
+		R)         find_opts[0]="-depth"
+		           ;;
+		verbose)   verbose=true
 	esac
 done
 shift $(($OPTIND-1))

@@ -27,26 +27,6 @@ source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash
 source ~/projects/javiera/shell-scripts/functions/javiera-binary.bash
 
-delete_orphans () {
-
-#       USAGE: delete_orphans HANDLE
-#
-# DESCRIPTION: Delete from table "file" all the records with
-#              pathname=NULL which do not exist as archived in table
-#              archive.
-#
-#  PARAMETERS: HANDLE  A connection to a database.
-
-	shsql $1 $(printf '
-		DELETE FROM file
-		WHERE file.path_id IS NULL
-		AND NOT EXISTS (SELECT archived FROM archive WHERE
-		file.id=archive.archived);
-		' $2)
-	[[ $? -ne 0 ]] && return 1
-	return 0
-}
-
 escape_chars () {
 
 #       USAGE: escape_chars VARNAME STRING
@@ -109,74 +89,6 @@ get_file_system_location () {
 	local file_sys=${file_systems[longest]}
 	local pathname=${3#${mpoints[longest]}}
 	local $1 $2 && upvars -v $1 $file_sys -v $2 $pathname
-}
-
-get_id () {
-
-#       USAGE: get_id HANDLE VARNAME HOSTNAME PATHNAME
-#
-# DESCRIPTION: Query the backup database for a file id number. Store the
-#              result in the caller's VARNAME variable.
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              VARNAME   The name of a caller's variable.
-#              HOSTNAME  The name of the host machine where the file it
-#                        is being query about is stored. 
-#              PATHNAME  The pathname of the file it is being query
-#                        about.
-
-	! is_backedup $1 backedup $3 $4 && return 1
-	if [ $backedup == true ]
-	then
-		local id
-		id=$(shsql $1 $(printf '
-			SELECT file.id
-			FROM l_file_to_host AS link
-			INNER JOIN file ON link.file_id = file.id
-			INNER JOIN path ON file.path_id = path.id
-			INNER JOIN host ON link.host_id = host.id
-			WHERE host.name="%b"
-			AND path.name="%b";
-			' $3 $4))
-		[[ $? -ne 0 ]] && return 1
-		local $2 && upvar $2 $id
-	fi
-}
-
-is_backedup () {
-
-#       USAGE: is_backedup HANDLE HOSTNAME PATHNAME
-#
-# DESCRIPTION: Do a query on the connected database to find out if data
-#              about the file pointed by PATHNAME already exists in the
-#              database. Store "true" in the caller's VARNAME variable
-#              if it is so. If ther is a record with a sha1 value
-#              corresponding to the file being query and no value for
-#              columns 'pathname' and 'hostname', store "recycle".
-#              Otherwise, store "false".
-#
-#  PARAMETERS: HANDLE    A connection to a database.
-#              VARNAME   The name of a caller's variable.
-#              HOSTNAME  The name of the host machine where the file it
-#                        is being query about is stored. 
-#              PATHNAME  The pathname of the file it is being query
-#                        about.
-
-	local shamatch
-	local answer
-	shamatch=$(shsql $1 $(printf '
-		SELECT COUNT(*)
-		FROM file
-		WHERE sha1="%b";
-		' $(sha1sum $4 | cut -c1-40)))
-	[[ $? -ne 0 ]] && return 1
-	if [ $shamatch == '"1"' ]
-	then
-		answer=true
-	else
-		answer=false
-	fi
-	local $2 && upvar $2 $answer
 }
 
 process_file () {
@@ -272,6 +184,7 @@ process_file () {
 		binary)  ! insert_binary_file $2 $lastid && return 1
  
 	esac
+
 	return 0
 }
 
@@ -341,4 +254,6 @@ process_fstab () {
 		"
 		[[ $? -ne 0 ]] && return 1
 	done
+
+	return 0
 }

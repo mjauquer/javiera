@@ -95,7 +95,13 @@ CREATE TABLE digital_media (
 CREATE TABLE digital_media_type (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	type_descriptor  VARCHAR(256) NOT NULL,
-	data_capacity    BIGINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE dvd (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	digital_media_id MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES digital_media(id),
 	PRIMARY KEY (id)
 );
 

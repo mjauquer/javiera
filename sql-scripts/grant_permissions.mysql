@@ -8,6 +8,8 @@ GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_audio_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_binary_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
+GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_dvd
+	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_file
 	TO 'javiera_app'@'%' IDENTIFIED BY '^C4Ro$';
 GRANT EXECUTE ON PROCEDURE javiera.insert_and_get_file_system

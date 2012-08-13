@@ -218,8 +218,10 @@ insert_flac_vorbiscomment () {
 	local flac_file_id=$2; flac_file_id=\"$flac_file_id\"
 	for (( ind=0; ind<${#col1[@]}; ind++)) 
 	do
-		local field1="${col1[ind]}"; field1=\"$field1\"
-		local field2="${col2[ind]}"; field2=\"$field2\"
+		local field1="${col1[ind]}";
+		escape_chars field1 $field1; field1=\"$field1\"
+		local field2="${col2[ind]}";
+		escape_chars field2 $field2; field2=\"$field2\"
 		mysql --skip-reconnect -u$user -p$pass \
 			--skip-column-names -e "
 

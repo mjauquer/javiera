@@ -169,13 +169,15 @@ fi
 # Insert the new created file into the database.
 if ! javiera $output
 then
-	error_exit "$LINENO: error after calling insert_file()."
+	error_exit "$LINENO: error after calling javiera."
 fi
 
 # Insert details of the software and options used to create the file.
+
 version=\'$version\'
 options=\'$options\'
 isosha1=$(sha1sum $output | cut -c1-40); isosha1=\"$isosha1\"
+
 mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
 
 	USE javiera;

@@ -3,6 +3,7 @@ DROP PROCEDURE insert_and_get_archive_file;
 DROP PROCEDURE insert_and_get_archive_location;
 DROP PROCEDURE insert_and_get_audio_file;
 DROP PROCEDURE insert_and_get_binary_file;
+DROP PROCEDURE insert_and_get_dvd;
 DROP PROCEDURE insert_and_get_file;
 DROP PROCEDURE insert_and_get_file_system;
 DROP PROCEDURE insert_and_get_file_system_location;
