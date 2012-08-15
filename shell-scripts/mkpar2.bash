@@ -175,9 +175,9 @@ fi
 version=\'$version\'
 options=\'$options\'
 
-session_id=( $(mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
+session_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
+	--skip-column-names -e "
 
-	USE javiera;
 	CALL insert_and_get_software ('par2', $version, @software_id);
 	CALL insert_and_get_software_session (
 		@software_id,
@@ -199,9 +199,9 @@ session_id=\'$session_id\'
 for file in $par2files ${files[@]}
 do
 	filesha1=$(sha1sum $file | cut -c1-40); filesha1=\"$filesha1\"
-	mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
+	mysql --skip-reconnect -u$user -p$pass -D$db \
+		--skip-column-names -e "
 
-		USE javiera;
 		SELECT id INTO @id FROM file WHERE sha1 = $filesha1;
 		CALL link_file_to_software_session (@id, $session_id);
 	"

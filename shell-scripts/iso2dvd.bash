@@ -93,10 +93,9 @@ declare -a dvd_types
 declare dvd_type_id
 
 # Get dvd types from the database.
-dvd_types=( $(mysql --skip-reconnect -u$user -p$pass \
+dvd_types=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
-	USE javiera;
 	SELECT id, type_descriptor
 		FROM digital_media_type
 		WHERE type_descriptor RLIKE 'dvd.*'
@@ -170,10 +169,9 @@ done < /mnt/cdrom/.javiera/info.txt
 dvd_type_id=\'$dvd_type_id\'
 fs_uuid=\'$fs_uuid\'
 
-dvd_id=( $(mysql --skip-reconnect -u$user -p$pass \
+dvd_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
-	USE javiera;
 	CALL insert_and_get_dvd ($dvd_type_id, @dvd_id);
 	SELECT device.id INTO @data_storage_device_id
 		FROM data_storage_device AS device

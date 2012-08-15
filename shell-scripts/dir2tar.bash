@@ -30,7 +30,7 @@
 source ~/.myconf/javiera.cnf || exit 1
 source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
 	exit 1
-source ~/projects/javiera/getoptx/getoptx.bash || exit 1
+source ~/projects/javiera/submodules/getoptx/getoptx.bash || exit 1
 source ~/code/bash/chpathn/chpathn.flib || exit 1
 
 
@@ -295,9 +295,8 @@ fi
 # Insert in the database metadata about this tar utility session. 
 version="$(tar --version | head -n 1)"; version=\'$version\'
 tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
-mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
+mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
-	USE javiera;
 	CALL process_output_file (
 		'tar',
 		$version,
@@ -327,10 +326,9 @@ do
 	filesha1=${sha1s[ind]}; filesha1=\"$filesha1\"
 	suffix=${suffixes[ind]};  suffix=\"$suffix\"
 	
-	mysql --skip-reconnect -u$user -p$pass \
+	mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
-		USE javiera;
 		CALL process_archived_file (
 			$tarsha1,
 			$filesha1,
@@ -397,10 +395,9 @@ fi
 file_sys=\'$file_sys\'
 new_path=\'$new_path\'
 
-mysql --skip-reconnect -u$user -p$pass \
+mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
-	USE javiera;
 	SELECT fs_location.id INTO @fs_loc_id
 		FROM file_system_location AS fs_location
 		INNER JOIN file_system AS fs

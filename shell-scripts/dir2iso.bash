@@ -30,7 +30,7 @@
 source ~/.myconf/javiera.cnf || exit 1
 source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
 	exit 1
-source ~/projects/javiera/upvars/upvars.bash || exit 1
+source ~/projects/javiera/submodules/upvars/upvars.bash || exit 1
 source ~/code/bash/chpathn/chpathn.flib || exit 1
 
 usage () {
@@ -177,9 +177,8 @@ version=\'$version\'
 options=\'$options\'
 isosha1=$(sha1sum $output | cut -c1-40); isosha1=\"$isosha1\"
 
-mysql --skip-reconnect -u$user -p$pass --skip-column-names -e "
+mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
-	USE javiera;
 	CALL process_output_file (
 		'mkisofs',
 		$version,
@@ -202,9 +201,8 @@ do
 	suffix=${file#$source_dir/}; suffix=\'$suffix\'
 
 	mysql --skip-reconnect -u$user -p$pass \
-		--skip-column-names -e "
+		-D$db --skip-column-names -e "
 
-		USE javiera;
 		CALL process_archived_file (
 			$isosha1,
 			$filesha1,

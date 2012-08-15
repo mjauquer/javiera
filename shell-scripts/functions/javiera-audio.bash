@@ -111,9 +111,8 @@ insert_audio_file () {
 		# Insert an entry in the 'audio_file' table and get the
 		# audio_file_id.
 		local audio_file_id=$(mysql --skip-reconnect -u$user -p$pass \
-			--skip-column-names -e "
+			-D$db --skip-column-names -e "
 
-			USE javiera;
 			CALL insert_audio_file (
 				$file_id,
 				$record_id
@@ -143,9 +142,8 @@ insert_flac_file () {
 	# flac_file_id.
 	local audio_file_id=$2; audio_file_id=\"$audio_file_id\"
 	local flac_file_id=$(mysql --skip-reconnect -u$user -p$pass \
-		--skip-column-names -e "
+		-D$db --skip-column-names -e "
 
-		USE javiera;
 		CALL insert_flac_file ($audio_file_id);
 		SELECT MAX(id) FROM flac_file;
 
@@ -183,10 +181,10 @@ insert_flac_streaminfo () {
 	do
 		local field1="${col1[ind]}"; field1=\"$field1\"
 		local field2="${col2[ind]}"; field2=\"$field2\"
-		mysql --skip-reconnect -u$user -p$pass \
-			--skip-column-names -e "
 
-			USE javiera;
+		mysql --skip-reconnect -u$user -p$pass \
+			-D$db --skip-column-names -e "
+
 			CALL insert_flac_streaminfo_metadata_entry (
 				$flac_file_id,
 				$field1,
@@ -223,9 +221,8 @@ insert_flac_vorbiscomment () {
 		local field2="${col2[ind]}";
 		escape_chars field2 $field2; field2=\"$field2\"
 		mysql --skip-reconnect -u$user -p$pass \
-			--skip-column-names -e "
+			-D$db --skip-column-names -e "
 
-			USE javiera;
 			CALL insert_flac_vorbiscomment_metadata_entry (
 				$flac_file_id,
 				$field1,

@@ -40,10 +40,9 @@ insert_binary_file () {
 		# Insert an entry in the 'binary_file' table.
 		local file_id=$2; file_id=\"$file_id\"
 
-		mysql --skip-reconnect -u$user -p$pass \
+		mysql --skip-reconnect -u$user -p$pass -D$db \
 			--skip-column-names -e "
 
-			USE javiera;
 			CALL insert_binary_file (
 				$file_id
 			);

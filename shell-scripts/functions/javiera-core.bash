@@ -105,9 +105,8 @@ process_file () {
 #                        about.
 
 	local lastid_bef=$(mysql --skip-reconnect -u$user -p$pass \
-		--skip-column-names -e "
+		-D$db --skip-column-names -e "
 
-		USE javiera;
 		SELECT MAX(id) FROM file;
 
 	")
@@ -140,10 +139,9 @@ process_file () {
 	mtime=\'$mtime\'
 
 	# Insert file's metadata in the database.
-	local lastid=$(mysql --skip-reconnect -u$user -p$pass \
+	local lastid=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
-		USE javiera;
 		CALL process_file (
 			$file_sys,
 			$pathname,
@@ -163,10 +161,9 @@ process_file () {
 	# Look at the mime-type of the inserted file in order to
 	# determine in what tables, rows must been inserted.
 	local -a file_type
-	file_type=( $(mysql --skip-reconnect -u$user -p$pass \
+	file_type=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
-		USE javiera;
 		CALL select_ancestor (
 			'file type hierarchy',
 			'regular',
@@ -208,10 +205,9 @@ process_fstab () {
 			mount_points+=( ${fields[1]} )
 			device_name=\'$device_name\'
 			fs_uuid=\'$fs_uuid\'
-			mysql --skip-reconnect -u$user -p$pass \
+			mysql --skip-reconnect -u$user -p$pass -D$db \
 				--skip-column-names -e "
 
-				USE javiera;
 				CALL insert_hard_disk_partition (
 					$hostname,
 					$device_name,
@@ -242,10 +238,9 @@ process_fstab () {
 		file_system=\'$file_system\'
 		local mount_point=${mount_points[i]}
 		mount_point=\'$mount_point\'
-		mysql --skip-reconnect -u$user -p$pass \
+		mysql --skip-reconnect -u$user -p$pass -D$db \
 			--skip-column-names -e "
 
-			USE javiera;
 			CALL insert_mount_point (
 				$mount_point,
 				$file_system
