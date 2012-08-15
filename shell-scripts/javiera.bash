@@ -25,10 +25,11 @@
 #               the dots).
 #
 
-source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
-source ~/projects/javiera/getoptx/getoptx.bash
-source ~/projects/javiera/pathname/pathname.flib
-source ~/code/bash/chpathn/chpathn.flib
+source ~/.myconf/javiera.cnf || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
+	exit 1
+source ~/projects/javiera/submodules/getoptx/getoptx.bash || exit 1
+source ~/code/bash/chpathn/chpathn.flib || exit 1
 
 usage () {
 
@@ -67,18 +68,18 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-declare progname               # The name of this script.
-declare user=$JAVIERA_USER     # A mysql user name.
-declare pass=$JAVIERA_PASSWORD # A mysql password.
-declare db=$JAVIERA_DBNAME     # A mysql database.
-declare -a file_systems        # An array with the uuid fingerprints
-                               # that correspond to file systems that
-			       # have been found during this shellscript
-			       # session.
-declare -a mount_points        # An array with the mount points that
-                               # correspond to file systems that have
-			       # been found during this shellscript
-			       # session.
+declare progname        # The name of this script.
+declare user            # A mysql user name.
+declare pass            # A mysql password.
+declare db              # A mysql database.
+declare -a file_systems # An array with the uuid fingerprints
+                        # that correspond to file systems that
+			# have been found during this shellscript
+			# session.
+declare -a mount_points # An array with the mount points that
+                        # correspond to file systems that have
+			# been found during this shellscript
+			# session.
 
 progname=$(basename $0)
 

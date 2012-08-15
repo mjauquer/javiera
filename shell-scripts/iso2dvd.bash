@@ -27,7 +27,9 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
+source ~/.myconf/javiera.cnf || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
+	exit 1
 
 usage () {
 
@@ -72,9 +74,6 @@ declare user     # A mysql user name.
 declare pass     # A mysql password.
 declare db       # A mysql database.
 
-db=$JAVIERA_DBNAME
-pass=$JAVIERA_PASSWORD
-user=$JAVIERA_USER
 progname=$(basename $0)
 
 # Checking for a well-formatted command line.
@@ -153,10 +152,7 @@ fi
 
 declare -a dvd_id
 
-if ! sudo mount /mnt/cdrom
-then
-	error_exit "$LINENO: Error after trying to mount dvd."
-fi
+sudo mount /mnt/cdrom
 
 if ! process_fstab
 then

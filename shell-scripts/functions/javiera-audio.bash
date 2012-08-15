@@ -21,11 +21,11 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/upvars/upvars.bash
+source ~/projects/javiera/submodules/upvars/upvars.bash
 
 get_flac_metadata() {
 
-#       USAGE: get_flac_metadata ARRAY1 ARRAY2 BLOCKNUM PATHNAME
+#       USAGE: get_flac_metadata ARRAY1 ARRAY2 BLKTYPE PATHNAME
 #
 # DESCRIPTION: Get the vorbis comments stored in the flac file pointed
 #              by PATHNAME. Store the left member of each comment in
@@ -35,8 +35,8 @@ get_flac_metadata() {
 #                       scope.
 #              ARRAY2   The name of an array variable in the caller's
 #                       scope.
-#              BLOCKNUM The number of the metadata block from which data
-#                       will be retrieved.
+#              BLKTYPE  The type of the metadata block from which data
+#                       will be retrieved (see man metaflac).
 #              PATHNAME A unix filesystem formatted string. 
 
 	local -a left
@@ -50,16 +50,16 @@ get_flac_metadata() {
 		echo "Coudn't create a temporal directory."
 		return 1
 	fi
-	if [ $3 == 0 ]
+	if [ $3 == STREAMINFO ]
 	then
 		char=":"
-	elif [ $3 == 2 ]
+	elif [ $3 == VORBIS_COMMENT ]
 	then
 		char="="
 	else
 		return 1
 	fi
-	metaflac --list --block-number=$3 $4 > $tempdir/tempfile.txt
+	metaflac --list --block-type=$3 $4 > $tempdir/tempfile.txt
 	while read line
 	do
 		if [[ "$line" =~ length:.* ]]
@@ -175,7 +175,7 @@ insert_flac_streaminfo () {
 #              FLAC_FILE_ID The value of the 'id' column in the
 #                           'audio_file' table of the database.
 
-	! get_flac_metadata col1 col2 0 $1 && return 1
+	! get_flac_metadata col1 col2 STREAMINFO $1 && return 1
 
 	# For each tag, insert an entry in the database.
 	local flac_file_id=$2; flac_file_id=\"$flac_file_id\"
@@ -212,7 +212,7 @@ insert_flac_vorbiscomment () {
 #              FLAC_FILE_ID The value of the 'id' column in the
 #                           'audio_file' table of the database.
 
-	! get_flac_metadata col1 col2 2 $1 && return 1
+	! get_flac_metadata col1 col2 VORBIS_COMMENT $1 && return 1
 
 	# For each tag, insert an entry in the database.
 	local flac_file_id=$2; flac_file_id=\"$flac_file_id\"

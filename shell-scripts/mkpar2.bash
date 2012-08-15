@@ -23,8 +23,10 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
-source ~/code/bash/chpathn/chpathn.flib
+source ~/.myconf/javiera.cnf || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
+	exit 1
+source ~/code/bash/chpathn/chpathn.flib || exit 1
 
 usage () {
 
@@ -84,10 +86,6 @@ declare session_id    # A number assigned by the database to the par2
 declare user          # A mysql user name.
 declare pass          # A mysql password.
 declare db            # A mysql database.
-
-user=$JAVIERA_USER
-pass=$JAVIERA_PASSWORD
-db=$JAVIERA_DBNAME
 
 progname=$(basename $0)
 

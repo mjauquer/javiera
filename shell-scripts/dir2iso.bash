@@ -27,9 +27,11 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/shell-scripts/functions/javiera-core.bash
-source ~/projects/javiera/upvars/upvars.bash
-source ~/code/bash/chpathn/chpathn.flib
+source ~/.myconf/javiera.cnf || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
+	exit 1
+source ~/projects/javiera/upvars/upvars.bash || exit 1
+source ~/code/bash/chpathn/chpathn.flib || exit 1
 
 usage () {
 	
@@ -78,9 +80,6 @@ declare user       # A mysql user name.
 declare pass       # A mysql password.
 declare db         # A mysql database.
 
-user=$JAVIERA_USER
-pass=$JAVIERA_PASSWORD
-db=$JAVIERA_DBNAME
 progname=$(basename $0)
 
 # If no argument were passed, print usage message and exit.
