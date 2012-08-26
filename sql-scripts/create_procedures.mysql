@@ -1,12 +1,34 @@
 delimiter //
 
-CREATE PROCEDURE get_ancestor (
+CREATE TEMPORARY TABLE procedures
+(
+	id      MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name	VARCHAR(256) NOT NULL,
+	level	VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+) //
+
+DROP PROCEDURE IF EXISTS get_ancestor //
+
+CREATE PROCEDURE get_ancestor
+
+	(
 		IN  p_tree       VARCHAR(256),
 		IN  p_father     VARCHAR(256),
 		IN  p_descendant VARCHAR(256),
 		OUT p_ancestor   VARCHAR(256)
-	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256), OUT <p_ancestor> MEDIUMINT
-                      Description: Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is. Store the description asociated to the found node in the variable named <p_ancestor>."
+	)
+
+COMMENT
+                     "Parameters: 
+                        IN  <p_tree>       VARCHAR(256),
+                        IN  <p_father>     VARCHAR(256),
+                        IN  <p_descendant> VARCHAR(256),
+                        OUT <p_ancestor>   MEDIUMINT.
+                      Description:
+                        Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it 
+                        is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is. Store the description 
+                        asociated to the found node in the variable named <p_ancestor>."
 
 BEGIN
 	DECLARE v_descendant_left MEDIUMINT;
@@ -50,13 +72,30 @@ BEGIN
 		AND tree.name = p_tree
 		AND left_extent <= v_descendant_left
 		AND right_extent >= v_descendant_left;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_archive_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'get_ancestor',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_archive_file //
+
+CREATE PROCEDURE insert_and_get_archive_file
+
+	(
 		IN  p_file_id         MEDIUMINT UNSIGNED,
 		OUT p_archive_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, OUT <p_archive_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'archive_file' table. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_file_id>         MEDIUMINT UNSIGNED,
+                        OUT <p_archive_file_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'archive_file' table. Return the id field of the inserted row."
 
 BEGIN
 	-- Check if an entry already exists in the table 'archive_file' with the specified file_id. 
@@ -73,14 +112,33 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_archive_file_id;
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_archive_location (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_archive_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_archive_location //
+
+CREATE PROCEDURE insert_and_get_archive_location
+
+	(
 		IN  p_archive_file_id     MEDIUMINT UNSIGNED,
 		IN  p_pathname            VARCHAR(256),
 		OUT p_archive_location_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_archive_file_id> MEDIUMINT UNSIGNED, IN <p_pathname> VARCHAR(256), OUT <p_archive_location_id> MEDIUMINT
-                      Description: Insert an entry in the 'location' and 'archive_location' tables. Return the id field of the inserted row in the 'archive_location' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_archive_file_id>     MEDIUMINT UNSIGNED,
+                        IN  <p_pathname>            VARCHAR(256),
+                        OUT <p_archive_location_id> MEDIUMINT.
+                      Description:
+                        Insert an entry in the 'location' and 'archive_location' tables. Return the id field of the inserted row in the 
+                        'archive_location' table."
 
 BEGIN
 	DECLARE v_location_id MEDIUMINT UNSIGNED;
@@ -105,14 +163,33 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_archive_location_id;
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_audio_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_archive_location',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_audio_file //
+
+CREATE PROCEDURE insert_and_get_audio_file
+
+	(
 		IN  p_file_id       MEDIUMINT UNSIGNED,
 		IN  p_recording_gid CHAR(36),
 		OUT p_audio_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_recording_gid> CHAR(36), OUT <p_audio_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted row in the 'file' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_file_id>       MEDIUMINT UNSIGNED,
+                        IN  <p_recording_gid> CHAR(36),
+                        OUT <p_audio_file_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted
+                        row in the 'file' table."
 
 BEGIN
 	DECLARE v_recording_id MEDIUMINT UNSIGNED;
@@ -139,14 +216,30 @@ BEGIN
 
 		CALL link_audio_file_to_recording (p_audio_file_id, v_recording_id);
 	END IF;
+END; //
 
-END;
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_audio_file',
+	'user'
+) //
 
-CREATE PROCEDURE insert_and_get_binary_file (
+DROP PROCEDURE IF EXISTS insert_and_get_binary_file //
+
+CREATE PROCEDURE insert_and_get_binary_file
+
+	(
 		IN  p_file_id        MEDIUMINT UNSIGNED,
 		OUT p_binary_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, OUT <p_binary_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'binary_file' table. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_file_id>        MEDIUMINT UNSIGNED,
+                        OUT <p_binary_file_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'binary_file' table. Return the id field of the inserted row."
 
 BEGIN
 	-- Check if an entry already exists in the table 'binary_file' with the specified file_id. 
@@ -163,13 +256,30 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_binary_file_id;
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_dvd (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_binary_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_dvd //
+
+CREATE PROCEDURE insert_and_get_dvd
+
+	(
 		IN  p_dvd_type_id MEDIUMINT UNSIGNED,
 		OUT p_dvd_id      MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_dvd_type_id> MEDIUMINT UNSIGNED, OUT <p_dvd_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'dvd', 'digital media', 'data storage device'. Return the id field of the inserted row in the 'dvd' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_dvd_type_id> MEDIUMINT UNSIGNED,
+                        OUT <p_dvd_id>      MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'dvd', 'digital media', 'data storage device'. Return the id field of the inserted row in the 'dvd' table."
 
 BEGIN
 	DECLARE v_data_storage_device_id MEDIUMINT UNSIGNED;
@@ -190,10 +300,20 @@ BEGIN
 		v_digital_media_id
 	);
 	SELECT LAST_INSERT_ID() INTO p_dvd_id;
-	
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_dvd',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_file //
+
+CREATE PROCEDURE insert_and_get_file 
+
+	(
 		IN  p_fs_uuid  VARCHAR(256),
 		IN  p_pathname VARCHAR(256),
 		IN  p_mimetype VARCHAR(256),
@@ -201,8 +321,20 @@ CREATE PROCEDURE insert_and_get_file (
 		IN  p_fsize    BIGINT UNSIGNED,
 		IN  p_mtime    INT UNSIGNED,
 		OUT p_file_id  MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_fs_uuid> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED, OUT <p_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'file', 'location', 'file_system_location' and 'l_file_to_location' tables. Return the id field of the inserted row in the 'file' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_fs_uuid>  VARCHAR(256),
+                        IN  <p_pathname> VARCHAR(256),
+                        IN  <p_mimetype> VARCHAR(256),
+                        IN  <p_sha1>     CHAR(40),
+                        IN  <p_fsize>    BIGINT UNSIGNED,
+                        IN  <p_mtime>    INT UNSIGNED,
+                        OUT <p_file_id>  MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'file', 'location', 'file_system_location' and 'l_file_to_location' tables. Return the id field of the 
+                        inserted row in the 'file' table."
 
 BEGIN
 	DECLARE v_count                   MEDIUMINT UNSIGNED;
@@ -249,14 +381,30 @@ BEGIN
 	THEN
 		CALL link_file_to_location (p_file_id, v_location_id);
 	END IF;
+END; //
 
-END;
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_file',
+	'user'
+) //
 
-CREATE PROCEDURE insert_and_get_file_system (
+DROP PROCEDURE IF EXISTS insert_and_get_file_system //
+
+CREATE PROCEDURE insert_and_get_file_system
+
+	(
 		IN  p_uuid           CHAR(36),
 		OUT p_file_system_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN p_uuid CHAR(36), OUT <p_file_system_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry into the 'file_system' table. Return the id field of the inserted row in the 'file_system' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_uuid>           CHAR(36),
+                        OUT <p_file_system_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry into the 'file_system' table. Return the id field of the inserted row in the 'file_system' table."
 
 BEGIN
 
@@ -271,15 +419,33 @@ BEGIN
 		INSERT INTO file_system (uuid) VALUES (p_uuid);
 		SELECT LAST_INSERT_ID() INTO p_file_system_id;
 	END IF;
+END; //
 
-END;
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_file_system',
+	'user'
+) //
 
-CREATE PROCEDURE insert_and_get_file_system_location (
+DROP PROCEDURE IF EXISTS insert_and_get_file_system_location //
+
+CREATE PROCEDURE insert_and_get_file_system_location
+
+	(
 		IN  p_uuid                    CHAR(36),
 		IN  p_pathname                VARCHAR(256),
 		OUT p_file_system_location_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN p_uuid CHAR(36), IN p_pathname VARCHAR(256), OUT <p_file_system_location_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry into the 'file_system_location' and 'location' tables. Return the id field of the inserted row in the 'file_system_location' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_uuid>                    CHAR(36),
+                        IN  <p_pathname>                VARCHAR(256),
+                        OUT <p_file_system_location_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry into the 'file_system_location' and 'location' tables. Return the id field of the inserted row in the 
+                        'file_system_location' table."
 
 BEGIN
 	DECLARE v_location_id    MEDIUMINT UNSIGNED;
@@ -307,14 +473,30 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_file_system_location_id;
 	END IF;
+END; //
 
-END;
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_file_system_location',
+	'user'
+) //
 
-CREATE PROCEDURE insert_and_get_flac_file (
+DROP PROCEDURE IF EXISTS insert_and_get_flac_file //
+
+CREATE PROCEDURE insert_and_get_flac_file
+
+	(
 		IN  p_audio_file_id MEDIUMINT UNSIGNED,
 		OUT p_flac_file_id  MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_audio_file_id> MEDIUMINT UNSIGNED, OUT <p_flac_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'flac_file' table. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_audio_file_id> MEDIUMINT UNSIGNED,
+                        OUT <p_flac_file_id>  MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'flac_file' table. Return the id field of the inserted row."
 
 BEGIN
 	-- Check if an entry already exists in the table 'flac_file' with the specified audio_file_id. 
@@ -331,42 +513,96 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_flac_file_id;
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_flac_metadata_block (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_flac_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_flac_metadata_block //
+
+CREATE PROCEDURE insert_and_get_flac_metadata_block
+
+	(
 		IN  p_flac_file_id           MEDIUMINT UNSIGNED,
 		IN  p_label                  VARCHAR(256),
 		OUT p_flac_metadata_block_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, OUT <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'flac_metadata_block' table. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters: 
+                        IN  <p_flac_file_id>           MEDIUMINT UNSIGNED,
+                        OUT <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'flac_metadata_block' table. Return the id field of the inserted row."
 
 BEGIN
 	INSERT INTO flac_metadata_block (id, label) VALUES ('', p_label);
 	SELECT LAST_INSERT_ID() INTO p_flac_metadata_block_id;
 
 	CALL link_flac_file_to_metadata_block (p_flac_file_id, p_flac_metadata_block_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_flac_metadata_entry (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_flac_metadata_block',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_flac_metadata_entry //
+
+CREATE PROCEDURE insert_and_get_flac_metadata_entry
+
+	(
 		IN  p_flac_metadata_block_id MEDIUMINT UNSIGNED,
 		OUT p_flac_metadata_entry_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED, OUT <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'flac_metadata_entry' table. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_flac_metadata_block_id> MEDIUMINT UNSIGNED,
+                        OUT <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'flac_metadata_entry' table. Return the id field of the inserted row."
 
 BEGIN
 	INSERT INTO flac_metadata_entry (id) VALUES ('');
 	SELECT LAST_INSERT_ID() INTO p_flac_metadata_entry_id;
 
 	CALL link_flac_metadata_entry_to_block (p_flac_metadata_entry_id, p_flac_metadata_block_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_hard_disk_partition (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_flac_metadata_entry',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_hard_disk_partition //
+
+CREATE PROCEDURE insert_and_get_hard_disk_partition
+
+	(
 		IN  p_hostname               VARCHAR(256),
 		IN  p_device_name            VARCHAR(256),
 		IN  p_file_system_uuid       CHAR(36),
 		OUT p_hard_disk_partition_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_device_name> VARCHAR(256), IN <p_file_system_uuid> CHAR(36), OUT <p_hard_disk_partition_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 'l_hard_disk_partition_to_host' tables. Return the id field of the inserted row in the 'hard_disk_partition' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_hostname>               VARCHAR(256),
+                        IN  <p_device_name>            VARCHAR(256),
+                        IN  <p_file_system_uuid>       CHAR(36),
+                        OUT <p_hard_disk_partition_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 
+                        'l_hard_disk_partition_to_host' tables. Return the id field of the inserted row in the 'hard_disk_partition' table."
 
 BEGIN
 	DECLARE v_data_storage_device_id MEDIUMINT UNSIGNED;
@@ -410,14 +646,30 @@ BEGIN
 		CALL insert_and_get_file_system (p_file_system_uuid, v_file_system_id);
 		CALL link_file_system_to_data_storage_device (v_file_system_id, v_data_storage_device_id);
 	END IF;
+END; //
 
-END;
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_hard_disk_partition',
+	'user'
+) //
 
-CREATE PROCEDURE insert_and_get_host (
+DROP PROCEDURE IF EXISTS insert_and_get_host //
+
+CREATE PROCEDURE insert_and_get_host
+
+	(
 		IN  p_name    VARCHAR(256),
 		OUT p_host_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_name> MEDIUMINT UNSIGNED, OUT <p_host_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'host' table. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_name>    MEDIUMINT UNSIGNED,
+                        OUT <p_host_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'host' table. Return the id field of the inserted row."
 
 BEGIN
 	-- Check if an entry already exists in the table 'host' with the specified name. 
@@ -431,12 +683,30 @@ BEGIN
 	END IF;
 END;
 
-CREATE PROCEDURE insert_and_get_mount_point (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_host',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_mount_point //
+
+CREATE PROCEDURE insert_and_get_mount_point
+
+	(
 		IN  p_pathname         VARCHAR(256),
 		IN  p_file_system_uuid CHAR(36),
 		OUT p_mount_point_id   MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_pathname> VARCHAR(256), IN <p_file_system_uuid> MEDIUMINT UNSIGNED, OUT <p_mount_point_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables. Return the id field of the inserted row."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_pathname>         VARCHAR(256),
+                        IN  <p_file_system_uuid> MEDIUMINT UNSIGNED,
+                        OUT <p_mount_point_id>   MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables. Return the id field of the inserted row."
 
 BEGIN
 	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
@@ -459,15 +729,34 @@ BEGIN
 		CALL insert_and_get_file_system (p_file_system_uuid, v_file_system_id);
 		CALL link_file_system_to_mount_point (v_file_system_id, p_mount_point_id);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_recording (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_mount_point',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_recording //
+
+CREATE PROCEDURE insert_and_get_recording
+
+	(
 		IN  p_gid              CHAR(36),
 		IN  p_track_name_id    MEDIUMINT UNSIGNED,
 		IN  p_artist_credit_id MEDIUMINT UNSIGNED,
 		OUT p_recording_id     MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_gid> CHAR(36), IN <p_track_name_id> MEDIUMINT, IN <p_artist_credit_id> MEDIUMINT, OUT <p_recording_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'recording' table. Return the id field of the inserted row."
+	)
+
+COMMENT 
+                     "Parameters:
+                        IN  <p_gid>              CHAR(36),
+                        IN  <p_track_name_id>    MEDIUMINT,
+                        IN  <p_artist_credit_id> MEDIUMINT,
+                        OUT <p_recording_id>     MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'recording' table. Return the id field of the inserted row."
 
 BEGIN
 
@@ -488,14 +777,32 @@ BEGIN
 		);
 		SELECT LAST_INSERT_ID() INTO p_recording_id;
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_software (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_recording',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_software //
+
+CREATE PROCEDURE insert_and_get_software
+
+	(
 		IN  p_name             VARCHAR(256),
 		IN  p_software_version VARCHAR(256),
 		OUT p_software_id      MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_name> MEDIUMINT UNSIGNED, IN <p_software_version> MEDIUMINT UNSIGNED, OUT <p_software_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'software' table. Return the id field of the inserted row."
+	)
+
+COMMENT 
+                     "Parameters:
+                        IN  <p_name>             MEDIUMINT UNSIGNED,
+                        IN  <p_software_version> MEDIUMINT UNSIGNED,
+                        OUT <p_software_id>      MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'software' table. Return the id field of the inserted row."
 
 BEGIN
 	-- Check if an entry already exists in the table 'software' with the specified <p_name> and <p_software_version> values. 
@@ -511,14 +818,32 @@ BEGIN
 		INSERT INTO software (id, name, version) VALUES ( '', p_name, p_software_version);
 		SELECT LAST_INSERT_ID() INTO p_software_id;
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE insert_and_get_software_session (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_software',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_software_session //
+
+CREATE PROCEDURE insert_and_get_software_session
+
+	(
 		IN  p_software_id         MEDIUMINT UNSIGNED,
 		IN  p_software_options    VARCHAR(256),
 		OUT p_software_session_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_software_id> MEDIUMINT UNSIGNED, IN <p_software_options> VARCHAR(256), OUT <p_software_session_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'software_session' table. Return the id field of the inserted row."
+	)
+
+COMMENT 
+                     "Parameters:
+                        IN  <p_software_id>         MEDIUMINT UNSIGNED,
+                        IN  <p_software_options>    VARCHAR(256),
+                        OUT <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'software_session' table. Return the id field of the inserted row."
 
 BEGIN
 
@@ -528,98 +853,284 @@ BEGIN
 		p_software_options
 	);
 	SELECT LAST_INSERT_ID() INTO p_software_session_id;
-END;
+END; //
 
-CREATE PROCEDURE insert_archive_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_software_session',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_archive_file //
+
+CREATE PROCEDURE insert_archive_file
+
+	(
 		IN p_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'archive_file' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'archive_file' table."
 
 BEGIN
 	DECLARE v_archive_file_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_archive_file (p_file_id, v_archive_file_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_binary_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_archive_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_binary_file //
+
+CREATE PROCEDURE insert_binary_file
+
+	(
 		IN p_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'binary_file' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'binary_file' table."
 
 BEGIN
 	DECLARE v_binary_file_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_binary_file (p_file_id, v_binary_file_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_archive_location (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_binary_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_archive_location //
+
+CREATE PROCEDURE insert_archive_location
+
+	(
 		IN  p_archive_file_id MEDIUMINT UNSIGNED,
 		IN  p_pathname        VARCHAR(256)
-	) COMMENT "Parameters: IN <p_archive_file_id> MEDIUMINT UNSIGNED, IN <p_pathname> VARCHAR(256)
-                      Description: Insert an entry in the 'location' and 'archive_location' tables."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_archive_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_pathname>        VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'location' and 'archive_location' tables."
 
 BEGIN
 	DECLARE v_archive_location_id MEDIUMINT;
 	CALL insert_and_get_archive_location (p_hostname, p_pathname, v_host_location_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_audio_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_archive_location',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_audio_file //
+
+CREATE PROCEDURE insert_audio_file
+
+	(
 		IN  p_file_id       MEDIUMINT UNSIGNED,
 		IN  p_recording_gid CHAR(36)
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_recording_gid> CHAR(36).
-                      Description: Insert an entry in the 'audio_file', 'recording' and 'l_audio_file_to_recording' tables."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_id>       MEDIUMINT UNSIGNED,
+                        IN <p_recording_gid> CHAR(36).
+                      Description:
+                        Insert an entry in the 'audio_file', 'recording' and 'l_audio_file_to_recording' tables."
 
 BEGIN
 	DECLARE v_audio_file_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_audio_file (p_file_id, p_recording_gid, v_audio_file_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_file_system (
-		IN  p_uuid           CHAR(36)
-	) COMMENT "Parameters: IN p_uuid CHAR(36).
-                      Description: Insert an entry in the 'file_system'."
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_audio_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_file //
+
+CREATE PROCEDURE insert_file
+
+	(
+		IN  p_fs_uuid  VARCHAR(256),
+		IN  p_pathname VARCHAR(256),
+		IN  p_mimetype VARCHAR(256),
+		IN  p_sha1     CHAR(40),
+		IN  p_fsize    BIGINT UNSIGNED,
+		IN  p_mtime    INT UNSIGNED
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_fs_uuid>  VARCHAR(256),
+                        IN <p_pathname> VARCHAR(256),
+                        IN <p_mimetype> VARCHAR(256),
+                        IN <p_sha1>     CHAR(40),
+                        IN <p_fsize>    BIGINT UNSIGNED,
+                        IN <p_mtime>    INT UNSIGNED.
+                      Description:
+                        Process file's metadata and do the pertinent insertions."
+
+BEGIN
+	DECLARE v_file_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_file (p_fs_uuid, p_pathname, p_mimetype, p_sha1, p_fsize, p_mtime, v_file_id);
+END; //
+
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_file_system //
+
+CREATE PROCEDURE insert_file_system
+
+	(
+		IN  p_uuid CHAR(36)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN p_uuid CHAR(36).
+                      Description:
+                        Insert an entry in the 'file_system'."
 
 BEGIN
 	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_file_system (p_uuid);
-END;
+END; //
 
-CREATE PROCEDURE insert_file_system_location (
-		IN  p_uuid                    CHAR(36),
-		IN  p_pathname                VARCHAR(256)
-	) COMMENT "Parameters: IN p_uuid CHAR(36), IN p_pathname VARCHAR(256).
-                      Description: Insert an entry into the 'location' and 'file_system_location' tables."
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_file_system',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_file_system_location //
+
+CREATE PROCEDURE insert_file_system_location
+
+	(
+		IN  p_uuid      CHAR(36),
+		IN  p_pathname  VARCHAR(256)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN p_uuid     CHAR(36),
+                        IN p_pathname VARCHAR(256).
+                      Description:
+                        Insert an entry into the 'location' and 'file_system_location' tables."
 
 BEGIN
 	DECLARE v_file_system_location_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_file_system (p_uuid, p_pathname, v_file_system_location_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_flac_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_file_system_location',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_flac_file //
+
+CREATE PROCEDURE insert_flac_file
+
+	(
 		IN p_audio_file_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_audio_file_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'flac_file' table."
+	)
+
+COMMENT
+                     "Parameters: 
+                        IN <p_audio_file_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'flac_file' table."
 
 BEGIN
 	DECLARE v_flac_file_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_flac_file (p_audio_file_id, v_flac_file_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_flac_metadata_block (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_flac_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_flac_metadata_block //
+
+CREATE PROCEDURE insert_flac_metadata_block
+
+	(
 		IN p_flac_file_id MEDIUMINT UNSIGNED,
-		IN p_label VARCHAR(256)
-	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_label> VARCHAR(256).
-                      Description: Insert an entry in the 'recording' table."
+		IN p_label        VARCHAR(256)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_label>        VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'recording' table."
 
 BEGIN
 	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_flac_metadata_block (p_flac_file_id, p_label, v_flac_metadata_block_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_flac_streaminfo_metadata_entry (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_flac_metadata_block',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_flac_streaminfo_metadata_entry //
+
+CREATE PROCEDURE insert_flac_streaminfo_metadata_entry
+
+	(
 		IN p_flac_file_id MEDIUMINT UNSIGNED,
 		IN p_column1      VARCHAR(256),
 		IN p_column2      VARCHAR(256)
-	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_column1> VARCHAR(256), IN <p_column2> VARCHAR(256).
-                      Description: Insert an entry in the 'flac_streaminfo_metadata_entry' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_column1>      VARCHAR(256),
+                        IN <p_column2>      VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'flac_streaminfo_metadata_entry' table."
 
 BEGIN
 	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
@@ -641,20 +1152,38 @@ BEGIN
 	-- Create an entry in the 'flac_metadata_entry' table.
 	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
 
-	-- Finally, create an entry in the 'flac_streaminfo_metadata_entry' table.
+	-- Create an entry in the 'flac_streaminfo_metadata_entry' table.
 	INSERT INTO flac_streaminfo_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
 		v_flac_metadata_entry_id,
 		p_column1,
 		p_column2
 	);
-END;
+END; //
 
-CREATE PROCEDURE insert_flac_vorbiscomment_metadata_entry (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_flac_streaminfo_metadata_entry',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_flac_vorbiscomment_metadata_entry //
+
+CREATE PROCEDURE insert_flac_vorbiscomment_metadata_entry
+
+	(
 		IN p_flac_file_id MEDIUMINT UNSIGNED,
 		IN p_column1      VARCHAR(256),
 		IN p_column2      VARCHAR(256)
-	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_column1> VARCHAR(256), IN <p_column2> VARCHAR(256).
-                      Description: Insert an entry in the 'flac_vorbiscomment_metadata_entry' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_column1>      VARCHAR(256),
+                        IN <p_column2>      VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'flac_vorbiscomment_metadata_entry' table."
 
 BEGIN
 	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
@@ -676,66 +1205,152 @@ BEGIN
 	-- Create an entry in the 'flac_metadata_entry' table.
 	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
 
-	-- Finally, create an entry in the 'flac_vorbiscomment_metadata_entry' table.
+	-- Create an entry in the 'flac_vorbiscomment_metadata_entry' table.
 	INSERT INTO flac_vorbiscomment_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
 		v_flac_metadata_entry_id,
 		p_column1,
 		p_column2
 	);
-END;
+END; //
 
-CREATE PROCEDURE insert_hard_disk_partition (
-		IN  p_hostname               VARCHAR(256),
-		IN  p_device_name            VARCHAR(256),
-		IN  p_file_system_uuid       CHAR(36)
-	) COMMENT "Parameters: IN <p_hostname> VARCHAR(256), IN <p_device_name> VARCHAR(256), IN <p_file_system_uuid> CHAR(36).
-                      Description: Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 'l_hard_disk_partition_to_host' tables."
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_flac_vorbiscomment_metadata_entry',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_hard_disk_partition //
+
+CREATE PROCEDURE insert_hard_disk_partition
+
+	(
+		IN p_hostname         VARCHAR(256),
+		IN p_device_name      VARCHAR(256),
+		IN p_file_system_uuid CHAR(36)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_hostname>         VARCHAR(256),
+                        IN <p_device_name>      VARCHAR(256),
+                        IN <p_file_system_uuid> CHAR(36).
+                      Description:
+                        Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 
+                        'l_hard_disk_partition_to_host' tables."
 
 BEGIN
-
 	DECLARE v_hard_disk_partition_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_hard_disk_partition (p_hostname, p_device_name, p_file_system_uuid, v_hard_disk_partition_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_mount_point (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_hard_disk_partition',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_mount_point //
+
+CREATE PROCEDURE insert_mount_point
+
+	(
 		IN  p_pathname         VARCHAR(256),
 		IN  p_file_system_uuid CHAR(36)
-	) COMMENT "Parameters: IN <p_pathname> VARCHAR(256), IN <p_file_system_uuid> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_pathname>         VARCHAR(256),
+                        IN <p_file_system_uuid> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables."
 
 BEGIN
-
 	DECLARE v_mount_point_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_mount_point (p_pathname, p_file_system_uuid, v_mount_point_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_software (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_mount_point',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_software //
+
+CREATE PROCEDURE insert_software
+
+	(
 		IN  p_software_name    VARCHAR(256),
 		IN  p_software_version VARCHAR(256)
-	) COMMENT "Parameters: IN <p_name> MEDIUMINT UNSIGNED, IN <p_software_version> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'software' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_name> MEDIUMINT UNSIGNED,
+                        IN <p_software_version> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'software' table."
 
 BEGIN
 	DECLARE v_software_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_software (p_software_name, p_software_version, v_software_id);
-END;
+END; //
 
-CREATE PROCEDURE insert_software_session (
-		IN  p_software_id         MEDIUMINT UNSIGNED,
-		IN  p_software_options    VARCHAR(256)
-	) COMMENT "Parameters: IN <p_software_id> MEDIUMINT UNSIGNED, IN <p_software_options> VARCHAR(256), OUT <p_software_session_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'software_session' table."
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_software',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_software_session //
+
+CREATE PROCEDURE insert_software_session
+
+	(
+		IN  p_software_id      MEDIUMINT UNSIGNED,
+		IN  p_software_options VARCHAR(256)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_software_id>         MEDIUMINT UNSIGNED,
+                        IN  <p_software_options>    VARCHAR(256),
+                        OUT <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'software_session' table."
 
 BEGIN
 	DECLARE v_software_session_id MEDIUMINT UNSIGNED;
 	CALL insert_and_get_software_session (v_software_id, p_software_options, v_software_session_id);
-END;
+END; //
 
-CREATE PROCEDURE link_audio_file_to_recording (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_software_session',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_audio_file_to_recording //
+
+CREATE PROCEDURE link_audio_file_to_recording
+
+	(
 		IN p_audio_file_id MEDIUMINT UNSIGNED,
-		IN p_recording_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_audio_file_id> MEDIUMINT UNSIGNED, IN <p_recording_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_audio_file_to_recording' table."
+		IN p_recording_id  MEDIUMINT UNSIGNED
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_audio_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_recording_id>  MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_audio_file_to_recording' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -754,13 +1369,30 @@ BEGIN
 			p_recording_id
 		);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE link_file_to_location (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_audio_file_to_recording',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_file_to_location //
+
+CREATE PROCEDURE link_file_to_location
+
+	(
 		IN p_file_id     MEDIUMINT UNSIGNED,
 		IN p_location_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_location_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_file_to_location' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_id>     MEDIUMINT UNSIGNED,
+                        IN <p_location_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_file_to_location' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -779,13 +1411,30 @@ BEGIN
 			p_location_id
 		);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE link_file_to_software_session (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_file_to_location',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_file_to_software_session //
+
+CREATE PROCEDURE link_file_to_software_session
+
+	(
 		IN p_file_id             MEDIUMINT UNSIGNED,
 		IN p_software_session_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_id> MEDIUMINT UNSIGNED, IN <p_software_session_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_file_to_software_session' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_id>             MEDIUMINT UNSIGNED,
+                        IN <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_file_to_software_session' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -804,13 +1453,30 @@ BEGIN
 			p_software_session_id
 		);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE link_file_system_to_data_storage_device (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_file_to_software_session',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_file_system_to_data_storage_device //
+
+CREATE PROCEDURE link_file_system_to_data_storage_device
+
+	(
 		IN p_file_system_id         MEDIUMINT UNSIGNED,
 		IN p_data_storage_device_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_system_id> MEDIUMINT UNSIGNED, IN <p_data_storage_device_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_file_system_to_data_storage_device' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_system_id>         MEDIUMINT UNSIGNED,
+                        IN <p_data_storage_device_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_file_system_to_data_storage_device' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -829,13 +1495,30 @@ BEGIN
 			p_data_storage_device_id
 		);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE link_file_system_to_mount_point (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_file_system_to_data_storage_device',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_file_system_to_mount_point //
+
+CREATE PROCEDURE link_file_system_to_mount_point
+
+	(
 		IN p_file_system_id MEDIUMINT UNSIGNED,
 		IN p_mount_point_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_file_system_id> MEDIUMINT UNSIGNED, IN <p_mount_point_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_file_system_to_mount_point' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_file_system_id> MEDIUMINT UNSIGNED,
+                        IN <p_mount_point_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_file_system_to_mount_point' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -862,13 +1545,30 @@ BEGIN
 		;
 		
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE link_flac_file_to_metadata_block (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_file_system_to_mount_point',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_flac_file_to_metadata_block //
+
+CREATE PROCEDURE link_flac_file_to_metadata_block
+
+	(
 		IN p_flac_file_id MEDIUMINT UNSIGNED,
 		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_flac_file_id> MEDIUMINT UNSIGNED, IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_audio_file_to_recording' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_flac_file_id>           MEDIUMINT UNSIGNED,
+                        IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_audio_file_to_recording' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -887,26 +1587,60 @@ BEGIN
 			p_flac_metadata_block_id
 		);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE link_flac_metadata_entry_to_block (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_flac_file_to_metadata_block',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_flac_metadata_entry_to_block //
+
+CREATE PROCEDURE link_flac_metadata_entry_to_block
+
+	(
 		IN p_flac_metadata_entry_id MEDIUMINT UNSIGNED,
 		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED, IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_flac_metadata_entry_to_block' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED,
+                        IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_flac_metadata_entry_to_block' table."
 
 BEGIN
 	INSERT INTO l_flac_metadata_entry_to_block (flac_metadata_entry_id, flac_metadata_block_id) VALUES ( 
 		p_flac_metadata_entry_id,
 		p_flac_metadata_block_id
 	);
-END;
+END; //
 
-CREATE PROCEDURE link_hard_disk_partition_to_host (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_flac_metadata_entry_to_block',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS link_hard_disk_partition_to_host //
+
+CREATE PROCEDURE link_hard_disk_partition_to_host
+
+	(
 		IN p_hard_disk_partition_id MEDIUMINT UNSIGNED,
 		IN p_host_id                MEDIUMINT UNSIGNED
-	) COMMENT "Parameters: IN <p_hard_disk_partition_id> MEDIUMINT UNSIGNED, IN <p_host_id> MEDIUMINT UNSIGNED.
-                      Description: Insert an entry in the 'l_hard_disk_partition_to_host' table."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_hard_disk_partition_id> MEDIUMINT UNSIGNED,
+                        IN <p_host_id>                MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_hard_disk_partition_to_host' table."
 
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
@@ -925,14 +1659,32 @@ BEGIN
 			p_host_id
 		);
 	END IF;
-END;
+END; //
 
-CREATE PROCEDURE process_archived_file (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_hard_disk_partition_to_host',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS process_archived_file //
+
+CREATE PROCEDURE process_archived_file
+
+	(
 		IN p_archive_sha1 CHAR(40),
 		IN p_file_sha1    CHAR(40),
 		IN p_pathname     VARCHAR(256)
-	) COMMENT "Parameters: IN <p_archive_sha1> CHAR(40), IN <p_file_sha1> CHAR(40), IN <p_pathname> VARCHAR(256).
-                      Description: Process a file that it is being archived inside another file, and do the pertinent insertions."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_archive_sha1> CHAR(40),
+                        IN <p_file_sha1> CHAR(40),
+                        IN <p_pathname> VARCHAR(256).
+                      Description:
+                        Process a file that it is being archived inside another file, and do the pertinent insertions."
 
 BEGIN
 	DECLARE v_archive_file_id     MEDIUMINT UNSIGNED;
@@ -959,30 +1711,35 @@ BEGIN
 		WHERE id = v_archive_location_id
 	;
 	CALL link_file_to_location (v_file_id, v_location_id);
-END;
+END; //
 
-CREATE PROCEDURE process_file (
-		IN  p_fs_uuid  VARCHAR(256),
-		IN  p_pathname VARCHAR(256),
-		IN  p_mimetype VARCHAR(256),
-		IN  p_sha1     CHAR(40),
-		IN  p_fsize    BIGINT UNSIGNED,
-		IN  p_mtime    INT UNSIGNED
-	) COMMENT "Parameters: IN <p_fs_uuid> VARCHAR(256), IN <p_pathname> VARCHAR(256), IN p_mimetype VARCHAR(256), IN p_sha1 CHAR(40), IN p_fsize BIGINT UNSIGNED, IN p_mtime INT UNSIGNED.
-                      Description: Process file's metadata and do the pertinent insertions."
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'process_archived_file',
+	'user'
+) //
 
-BEGIN
-	DECLARE v_file_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_file (p_fs_uuid, p_pathname, p_mimetype, p_sha1, p_fsize, p_mtime, v_file_id);
-END;
+DROP PROCEDURE IF EXISTS process_output_file //
 
-CREATE PROCEDURE process_output_file (
-		IN  p_software_name      VARCHAR(256),
-		IN  p_software_version   VARCHAR(256),
-		IN  p_software_options   VARCHAR(256),
-		IN  p_sha1               CHAR(40)
-	) COMMENT "Parameters: IN <p_software_name> VARCHAR(256), IN <p_software_version> VARCHAR(256), IN <p_software_options> VARCHAR(256), IN p_sha1 CHAR(40).
-                      Description: Insert an entry in the 'l_file_to_software_session' table. Insertions might been done into 'software' and 'software session' as well."
+CREATE PROCEDURE process_output_file
+
+	(
+		IN p_software_name    VARCHAR(256),
+		IN p_software_version VARCHAR(256),
+		IN p_software_options VARCHAR(256),
+		IN p_sha1             CHAR(40)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_software_name>    VARCHAR(256),
+                        IN <p_software_version> VARCHAR(256),
+                        IN <p_software_options> VARCHAR(256),
+                        IN <p_sha1>             CHAR(40).
+                      Description:
+                        Insert an entry in the 'l_file_to_software_session' table. Insertions might been done into 'software' and 'software session' as
+                        well."
 
 BEGIN
 	DECLARE v_file_id             MEDIUMINT UNSIGNED;
@@ -1002,21 +1759,45 @@ BEGIN
 		v_file_id,
 		v_software_session_id
 	);
-END;
+END; //
 
-CREATE PROCEDURE select_ancestor (
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'process_output_file',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS select_ancestor //
+
+CREATE PROCEDURE select_ancestor
+
+	(
 		IN p_tree       VARCHAR(256),
 		IN p_father     VARCHAR(256),
 		IN p_descendant VARCHAR(256)
-	) COMMENT "Parameters: IN <p_tree> VARCHAR(256), IN <p_father> VARCHAR(256), IN <p_descendant> VARCHAR(256), OUT <p_ancestor> MEDIUMINT
-                      Description: Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is."
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_tree>       VARCHAR(256),
+                        IN <p_father>     VARCHAR(256),
+                        IN <p_descendant> VARCHAR(256),
+                      Description:
+                        Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it
+                        is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is."
 
 BEGIN
 	DECLARE v_ancestor VARCHAR(256);
 	CALL get_ancestor (p_tree, p_father, p_descendant, v_ancestor);
 	SELECT v_ancestor;
-END;
+END; //
 
-//
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'select_ancestor',
+	'user'
+) //
 
 delimiter ;

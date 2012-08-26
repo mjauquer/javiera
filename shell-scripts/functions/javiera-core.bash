@@ -142,7 +142,7 @@ process_file () {
 	local lastid=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
-		CALL process_file (
+		CALL insert_file (
 			$file_sys,
 			$pathname,
 			$mime_type,
