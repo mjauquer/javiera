@@ -22,10 +22,10 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/submodules/upvars/upvars.bash
-source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash
-source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash
-source ~/projects/javiera/shell-scripts/functions/javiera-binary.bash
+source ~/projects/javiera/submodules/upvars/upvars.bash || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash || exit 1
+source ~/projects/javiera/shell-scripts/functions/javiera-binary.bash || exit 1
 
 escape_chars () {
 

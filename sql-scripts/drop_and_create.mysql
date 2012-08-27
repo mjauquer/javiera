@@ -1,5 +1,0 @@
-source ~/projects/javiera/sql-scripts/drop_procedures.mysql;
-source ~/projects/javiera/sql-scripts/drop_tables.mysql;
-source ~/projects/javiera/sql-scripts/create_procedures.mysql;
-source ~/projects/javiera/sql-scripts/create_tables.mysql;
-source ~/projects/javiera/sql-scripts/populate_tables.mysql;
