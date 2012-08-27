@@ -16,76 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# REQUIREMENTS: upvars.bash
+# REQUIREMENTS: --
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
-
-source ~/projects/javiera/submodules/upvars/upvars.bash
-
-get_flac_metadata() {
-
-#       USAGE: get_flac_metadata ARRAY1 ARRAY2 BLKTYPE PATHNAME
-#
-# DESCRIPTION: Get the vorbis comments stored in the flac file pointed
-#              by PATHNAME. Store the left member of each comment in
-#              ARRAY1 and the right ones in ARRAY2.
-#
-#  PARAMETERS: ARRAY1   The name of an array variable in the caller's
-#                       scope.
-#              ARRAY2   The name of an array variable in the caller's
-#                       scope.
-#              BLKTYPE  The type of the metadata block from which data
-#                       will be retrieved (see man metaflac).
-#              PATHNAME A unix filesystem formatted string. 
-
-	local -a left
-	local -a right
-	local skip=true
-	local char
-	local line
-	local tempdir=$(readlink -f $(mktemp -d tmp.XXX))
-	if [ ! -d $tempdir ]
-	then
-		echo "Coudn't create a temporal directory."
-		return 1
-	fi
-	if [ $3 == STREAMINFO ]
-	then
-		char=":"
-	elif [ $3 == VORBIS_COMMENT ]
-	then
-		char="="
-	else
-		return 1
-	fi
-	metaflac --list --block-type=$3 $4 > $tempdir/tempfile.txt
-	while read line
-	do
-		if [[ "$line" =~ length:.* ]]
-		then
-			skip=false
-			continue
-		fi
-		if [ $skip == false ]
-		then
-			line="${line##*comment\[*\]: }"
-			[[ "$line" =~ comments:.* ]] && continue
-			if [[ "$line" =~ "vendor string:"* ]]
-			then
-				left+=( "vendor string" )
-				right+=( "${line##*string: }" )
-				continue
-			fi
-			left+=( "${line%%${char}*}" )
-			right+=( "${line##*${char}}" )
-		fi
-	done < $tempdir/tempfile.txt
-	rm -r $tempdir
-	[[ $? -ne 0 ]] && return 1
-	local $1 && upvars -a${#left[@]} $1 "${left[@]}"
-	local $2 && upvars -a${#right[@]} $2 "${right[@]}"
-}
 
 insert_audio_file () {
 
@@ -152,40 +86,88 @@ insert_flac_file () {
 
 	# Insert metadata entries related to the streaminfo metadata
 	# block table.
-	! insert_flac_streaminfo $1 $flac_file_id && return 1
+	! insert_flac_metadata STREAMINFO $1 $flac_file_id && return 1
 
 	# Insert metadata entries related to the vorbis_comment metadata
 	# block table.
-	! insert_flac_vorbiscomment $1 $flac_file_id && return 1
+	! insert_flac_metadata VORBIS_COMMENT $1 $flac_file_id && return 1
 
 	return 0
 }
 
-insert_flac_streaminfo () {
+insert_flac_metadata() {
 
-#       USAGE: insert_flac_streaminfo PATHNAME FLAC_FILE_ID
+#       USAGE: insert_flac_metadata BLKTYPE PATHNAME FLAC_ID
 #
-# DESCRIPTION: Collect the streaminfo metadata related to the flac file
-#              pointed by PATHNAME and insert it in all the related
-#              tables in the database.
+# DESCRIPTION: Get metadata from the flac file pointed by PATHNAME. 
+#              Insert it in all the related tables in the database.
 #
-#  PARAMETERS: PATHNAME     A unix filesystem formatted string. 
-#              FLAC_FILE_ID The value of the 'id' column in the
-#                           'audio_file' table of the database.
+#  PARAMETERS: BLKTYPE  The type of the metadata block from which data
+#                       will be retrieved (see man metaflac).
+#              PATHNAME A unix filesystem formatted string. 
+#              FLAC_ID  The value of the 'id' column in the 'audio_file'
+#                       table of the database.
 
-	! get_flac_metadata col1 col2 STREAMINFO $1 && return 1
+	local -a col1
+	local -a col2
+	local skip=true
+	local char
+	local line
+	local procedure
+	local tempdir=$(readlink -f $(mktemp -d tmp.XXX))
+	if [ ! -d $tempdir ]
+	then
+		echo "Coudn't create a temporal directory."
+		return 1
+	fi
+	if [ $1 == STREAMINFO ]
+	then
+		char=":"
+		procedure="insert_flac_streaminfo_metadata_entry"
+	elif [ $1 == VORBIS_COMMENT ]
+	then
+		char="="
+		procedure="insert_flac_vorbiscomment_metadata_entry"
+	else
+		return 1
+	fi
+	metaflac --list --block-type=$1 $2 > $tempdir/tempfile.txt
+	while read line
+	do
+		if [[ "$line" =~ length:.* ]]
+		then
+			skip=false
+			continue
+		fi
+		if [ $skip == false ]
+		then
+			line="${line##*comment\[*\]: }"
+			[[ "$line" =~ comments:.* ]] && continue
+			if [[ "$line" =~ "vendor string:".* ]]
+			then
+				col1+=( "vendor string" )
+				col2+=( "${line##*string: }" )
+				continue
+			fi
+			col1+=( "${line%%${char}*}" )
+			col2+=( "${line##*${char}}" )
+		fi
+	done < $tempdir/tempfile.txt
+	rm -r $tempdir
+	[[ $? -ne 0 ]] && return 1
 
 	# For each tag, insert an entry in the database.
-	local flac_file_id=$2; flac_file_id=\"$flac_file_id\"
+	local flac_file_id=$3; flac_file_id=\"$flac_file_id\"
 	for (( ind=0; ind<${#col1[@]}; ind++)) 
 	do
-		local field1="${col1[ind]}"; field1=\"$field1\"
-		local field2="${col2[ind]}"; field2=\"$field2\"
-
+		local field1="${col1[ind]}"
+		escape_chars field1 "$field1"; field1="\"$field1\""
+		local field2="${col2[ind]}"
+		escape_chars field2 "$field2"; field2="\"$field2\""
 		mysql --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
-			CALL insert_flac_streaminfo_metadata_entry (
+			CALL $procedure (
 				$flac_file_id,
 				$field1,
 				$field2
@@ -194,44 +176,5 @@ insert_flac_streaminfo () {
 		"
 		[[ $? -ne 0 ]] && return 1
 	done
-
-	return 0
-}
-
-insert_flac_vorbiscomment () {
-
-#       USAGE: insert_flac_vorbiscomment PATHNAME FLAC_FILE_ID
-#
-# DESCRIPTION: Collect the vorbiscomment metadata related to the flac file
-#              pointed by PATHNAME and insert it in all the related
-#              tables in the database.
-#
-#  PARAMETERS: PATHNAME     A unix filesystem formatted string. 
-#              FLAC_FILE_ID The value of the 'id' column in the
-#                           'audio_file' table of the database.
-
-	! get_flac_metadata col1 col2 VORBIS_COMMENT $1 && return 1
-
-	# For each tag, insert an entry in the database.
-	local flac_file_id=$2; flac_file_id=\"$flac_file_id\"
-	for (( ind=0; ind<${#col1[@]}; ind++)) 
-	do
-		local field1="${col1[ind]}";
-		escape_chars field1 $field1; field1=\"$field1\"
-		local field2="${col2[ind]}";
-		escape_chars field2 $field2; field2=\"$field2\"
-		mysql --skip-reconnect -u$user -p$pass \
-			-D$db --skip-column-names -e "
-
-			CALL insert_flac_vorbiscomment_metadata_entry (
-				$flac_file_id,
-				$field1,
-				$field2
-			);
-
-		"
-		[[ $? -ne 0 ]] && return 1
-	done
-
 	return 0
 }
