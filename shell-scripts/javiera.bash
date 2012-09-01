@@ -84,9 +84,11 @@ declare -a mount_points # An array with the mount points that
 progname=$(basename $0)
 
 # If no argument was passed, print usage message and exit.
+
 [[ $# -eq 0 ]] && usage && exit
 
 # Parse command line options.
+
 declare -a find_opts  # A list of options to be passed to the find
                       # command.
 
@@ -107,10 +109,12 @@ shift $(($OPTIND-1))
 
 # Save the corresponding inode of the pathnames passed as arguments to
 # this script.
+
 declare -a dir_inodes  # A list of inodes corresponding to every
                        # directory passed as argument.
 declare -a file_inodes # A list of inodes corresponding to every file
                        # passed as argument.
+
 for arg
 do
 	if [ -d "$arg" ]
@@ -127,9 +131,11 @@ unset -v arg
 
 # Look at the pathnames passed as arguments and change those that can be
 # problematic ones.
+
 declare -a log   # The output of the command chpathn --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
+
 log=($(chpathn -rp --verbose "$@"))
 if [ $? -ne 0 ]
 then
@@ -143,9 +149,10 @@ unset -v log
 
 # If the --verbose option was given, print the content of the 'top_dirs'
 # array.
+
 if [[ $verbose == true ]]
 then
-	printf ' -----------\n Javiera log:\n -----------\n'
+	printf ' -----------\n javiera log:\n -----------\n'
         printf ' * Top directories:\n'
 	for dir in ${top_dirs[@]}
 	do
@@ -156,8 +163,9 @@ fi
 
 # Get the pathnames of the files passed as arguments after calling to
 # chpathn.
-declare -a files       # The list of pathnames to be processed by this
-                       # script.
+
+declare -a files # The list of pathnames to be processed by this script.
+
 for inode in ${dir_inodes[@]}
 do
 	[[ ${#dir_inodes[@]} -eq 0 ]] && break
@@ -166,6 +174,7 @@ do
 done
 unset -v dir
 unset -v dir_inodes
+
 for inode in ${file_inodes[@]}
 do
 	[[ ${#file_inodes[@]} -eq 0 ]] && break
@@ -176,6 +185,7 @@ unset -v file_inodes
 unset -v top_dirs
 
 # Update the database.
+
 process_fstab
 for file in ${files[@]}
 do
@@ -186,3 +196,4 @@ do
 	fi
 done
 unset -v file
+unset -v files

@@ -1100,7 +1100,7 @@ COMMENT
                         IN <p_flac_file_id> MEDIUMINT UNSIGNED,
                         IN <p_label>        VARCHAR(256).
                       Description:
-                        Insert an entry in the 'recording' table."
+                        Insert an entry in the 'flac_metadata_block' table."
 
 BEGIN
 	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
@@ -1111,6 +1111,59 @@ END; //
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_flac_metadata_block',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_flac_picture_metadata_entry //
+
+CREATE PROCEDURE insert_flac_picture_metadata_entry
+
+	(
+		IN p_flac_file_id MEDIUMINT UNSIGNED,
+		IN p_column1      VARCHAR(256),
+		IN p_column2      VARCHAR(256)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_column1>      VARCHAR(256),
+                        IN <p_column2>      VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'flac_picture_metadata_entry' table."
+
+BEGIN
+	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
+	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id. 
+	SELECT flac_metadata_block_id INTO v_flac_metadata_block_id
+		FROM l_flac_file_to_metadata_block AS file2block
+		INNER JOIN flac_metadata_block AS block
+			ON file2block.flac_metadata_block_id = block.id
+		WHERE block.label = 'picture';
+	
+	-- If it doesn't exist, create it.
+	IF v_flac_metadata_block_id IS NULL
+	THEN
+		CALL insert_and_get_flac_metadata_block (p_flac_file_id, 'picture', v_flac_metadata_block_id);
+	END IF;
+	
+	-- Create an entry in the 'flac_metadata_entry' table.
+	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
+
+	-- Create an entry in the 'flac_picture_metadata_entry' table.
+	INSERT INTO flac_picture_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
+		v_flac_metadata_entry_id,
+		p_column1,
+		p_column2
+	);
+END; //
+
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_flac_picture_metadata_entry',
 	'user'
 ) //
 

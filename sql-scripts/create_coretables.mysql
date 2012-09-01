@@ -108,6 +108,15 @@ CREATE TABLE flac_metadata_entry (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE flac_picture_metadata_entry (
+	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
+	                       		REFERENCES flac_metadata_entry(id),
+	column1                VARCHAR(256) NOT NULL,
+	column2                VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE flac_streaminfo_metadata_entry (
 	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
@@ -233,16 +242,6 @@ CREATE TABLE mime_type (
 CREATE TABLE mount_point (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	pathname         VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE recording (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	gid              CHAR(36) NOT NULL,
-	track_name_id    MEDIUMINT UNSIGNED
-	                 	REFERENCES track_name(id),
-	artist_credit_id MEDIUMINT UNSIGNED
-	                 	REFERENCES artist_credit(id),
 	PRIMARY KEY (id)
 );
 

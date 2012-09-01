@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# javiera.flacflib <Flac files functions of the javiera.bash script.>
+# javiera-audio.bash <Audio files functions of the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -84,12 +84,16 @@ insert_flac_file () {
 	")
 	[[ $? -ne 0 ]] && return 1
 
+	# Insert metadata entries related to the picture metadata
+	# block.
+	! insert_flac_metadata PICTURE $1 $flac_file_id && return 1
+
 	# Insert metadata entries related to the streaminfo metadata
-	# block table.
+	# block.
 	! insert_flac_metadata STREAMINFO $1 $flac_file_id && return 1
 
 	# Insert metadata entries related to the vorbis_comment metadata
-	# block table.
+	# block.
 	! insert_flac_metadata VORBIS_COMMENT $1 $flac_file_id && return 1
 
 	return 0
@@ -128,6 +132,10 @@ insert_flac_metadata() {
 	then
 		char="="
 		procedure="insert_flac_vorbiscomment_metadata_entry"
+	elif [ $1 == PICTURE ]
+	then
+		char=":"
+		procedure="insert_flac_picture_metadata_entry"
 	else
 		return 1
 	fi
@@ -138,6 +146,9 @@ insert_flac_metadata() {
 		then
 			skip=false
 			continue
+		elif [[ "$line" =~ data:.* ]]
+		then
+			break
 		fi
 		if [ $skip == false ]
 		then

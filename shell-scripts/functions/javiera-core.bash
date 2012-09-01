@@ -128,7 +128,7 @@ process_file () {
 	file_sys=\'$file_sys\'
 	pathname=\'$pathname\'
 
-	# Get rest of needed data about the file.
+	# Get the other needed data about the file.
 	local mime_type=$(file -b --mime-type $2)
 	mime_type=\'$mime_type\'
 	local sha1=$(sha1sum $2 | cut -c1-40)
