@@ -262,13 +262,6 @@ CREATE TABLE software_session (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE tag (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name             VARCHAR(256) NOT NULL,
-	text             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE tree (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(256) NOT NULL,
