@@ -151,13 +151,6 @@ CREATE TABLE host (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE l_audio_file_to_recording (
-	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES audio_file(id),
-	recording_id     MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES recording(id)
-);
-
 CREATE TABLE l_file_to_location (
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),

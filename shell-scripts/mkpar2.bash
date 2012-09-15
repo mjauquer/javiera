@@ -60,9 +60,11 @@ error_exit () {
 #-----------------------------------------------------------------------
 
 # If no argument were passed, print usage message and exit.
+
 [[ $# -eq 0 ]] && usage && exit
 
 # Variables declaration.
+
 declare progname      # The name of this script.
 declare -a notfiles   # A list of pathnames that do not correspond to
                       # regular files.
@@ -91,6 +93,7 @@ progname=$(basename $0)
 
 # Check if all of the arguments are pathnames corresponding to regular
 # files.
+
 for arg
 do
 	if [ ! -f "$(readlink -f "$arg")" ]
@@ -102,6 +105,7 @@ unset -v arg
 
 # If any of the pathnames passed is not a regular file, exit with
 # message.
+
 if [ ${#notfiles[@]} -ne 0 ]
 then
 	error_exit "$LINENO: Only regular files can be passed as arguments.
@@ -110,6 +114,7 @@ $(for notfile in ${notfiles[@]}; do echo "$notfile"; done)"
 fi
 
 # Check if there are par2 files in the current working directory.
+
 found_par2="$(find . -regex '.*par2')"
 if [ "$found_par2" ]
 then
@@ -117,6 +122,7 @@ then
 fi
 
 # Store the inodes of the files passed as arguments.
+
 for arg
 do
 	inodes+=( $(stat -c %i "$arg") )
@@ -142,14 +148,16 @@ unset -v log
 
 # Get the pathnames of the files passed as arguments, after calling to
 # javiera.
+
 for (( i=0; i<${#inodes[@]}; i++ )) 
 do
 	files+=($(find ${top_dirs[@]} -depth -inum ${inodes[i]} -type f))
 done
 
 # Create parity files.
+
 blocksize=262144
-blockcount=8 #1587
+blockcount=1470
 outputinfo=par2info.txt
 options="create -s${blocksize} -c${blockcount} par2file"
 
@@ -165,6 +173,7 @@ version="$(head -n 1 < $outputinfo)"
 #----------------------------------------------------------------------
 
 # Insert metadata about the created parity files into the database.
+
 par2files="$(ls *.par2)"
 if ! javiera $par2files
 then
@@ -172,6 +181,7 @@ then
 fi
 
 # Insert details of the software and options used to create the file.
+
 version=\'$version\'
 options=\'$options\'
 

@@ -84,6 +84,7 @@ predict_pathname_inside_archive () {
 #-----------------------------------------------------------------------
 
 # Variables declaration.
+
 declare progname        # The name of this script.
 declare -a file_systems # An array with the uuid fingerprints that
                         # correspond to file systems that have been 
@@ -101,6 +102,7 @@ progname=$(basename $0)
 [[ $# -eq 0 ]] && usage && exit
 
 # Parse command line options.
+
 declare txtfile        # The pathname of the file passed as argument to
                        # the --listed-in option.
 
@@ -115,6 +117,7 @@ done
 # If this script was called with the  "listed-in" option, add to the
 # list of pathnames to be processed those which are listed in the text
 # file specified.
+
 declare -a pathnames # A list of the pathnames of the files and
                      # directories that have been passed to this script.
 
@@ -140,6 +143,7 @@ shift $(($OPTIND-1))
 pathnames+=( ${@:2} )
 
 # Check the existence of the files passed as arguments.
+
 declare -a notfound    # A list of pathnames passed as arguments to this
                        # script and that do not point to existing files or
 		       # directories in the filesystem.
@@ -161,6 +165,7 @@ fi
 unset -v notfound
 
 # Check if the pathname of the output tar file is a valid one.
+
 if [[ $1 =~ .*/$ ]]
 then
 	error_exit "$LINENO: First arg must be a regular filename."
@@ -168,6 +173,7 @@ fi
 
 # Check if the specified output tar file already exists in the working
 # directory.
+
 if [ -f $1 ]
 then
 	error_exit "$LINENO: $1 already exists in $(pwd)."
@@ -175,6 +181,7 @@ fi
 
 # Save the corresponding inode of the pathnames passed as arguments to
 # this script.
+
 declare -a dir_inodes  # A list of inodes corresponding to every
                        # directory passed as argument.
 declare -a file_inodes # A list of inodes corresponding to every file
@@ -195,6 +202,7 @@ done
 unset -v pathname
 
 # Update the database with data about the files passed as arguments.
+
 declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # files and directories passed as arguments.
@@ -212,20 +220,42 @@ unset -v log
 
 # After last command, pathnames might been changed. Use the saved inodes
 # to get the corresponding pathnames.
+
+unset -v pathnames
+declare -a pathnames
+
 for inode in ${dir_inodes[@]}
 do
-	pathnames=($(find ${top_dirs[@]} -depth -inum $inode -type d))
+	pathnames+=($(find ${top_dirs[@]} -depth -inum $inode -type d))
 done
 unset -v inode
 unset -v dir_inodes
+
+# Include in the pathnames array files that are not under the
+# directories that had already been included in the last step.
+
 for inode in ${file_inodes[@]}
 do
-	pathnames+=($(find ${top_dirs[@]} -depth -inum $inode -type f))
+	for file in $(find ${top_dirs[@]} -depth -inum $inode -type f)
+	do
+		file=$(readlink -f $file)
+		for dir in ${pathnames[@]}
+		do
+			dir=$(readlink -f $dir)
+			if [[ ! $file =~ $dir/.* ]]
+			then
+				pathnames+=( $file )
+			fi
+		done
+	done
 done
+unset -v dir
+unset -v file
 unset -v inode
 unset -v file_inodes
 
 # Create a temporal directory.
+
 declare tempdir        # The pathname of a temporal directory where the
                        # files and directories will be processed.
 tempdir=$(readlink -f $(mktemp -d tmp.XXX))
@@ -237,6 +267,7 @@ fi
 
 # Copy the files and directories to be processed to the temporal
 # directory.
+
 declare -a sha1s     # See comments in predict_pathname_inside_archive
                      # function.
 declare prefix
@@ -257,7 +288,8 @@ do
 		predict_pathname_inside_archive $pathname
 	fi
 	dest=$tempdir/$(basename $pathname)
-	if ! cp -r $pathname $dest
+	# if ! cp -r $pathname $dest
+	if ! mv $pathname $dest
 	then
 		error_exit "$LINENO: Error after calling mv command."
 	fi
@@ -267,6 +299,7 @@ unset -v pathname
 unset -v prefix
 
 # Set the temporal directory as the working directory.
+
 cd $tempdir
 if [ $? -ne 0 ]
 then
@@ -274,6 +307,7 @@ then
 fi
 
 # Create a tar file.
+
 declare tarfile  # The pathname of the tar file to be created.
 declare version  # The version of the tar utility.
 declare tarsha1  # The sha1 fingerprint of the newly created tar file.
@@ -287,12 +321,14 @@ fi
 tarfile=$(readlink -f $1)
 
 # Insert in the database metadata about the created tar file.
+
 if ! javiera $tarfile
 then
 	error_exit "$LINENO: Error after calling javiera."
 fi
 
 # Insert in the database metadata about this tar utility session. 
+
 version="$(tar --version | head -n 1)"; version=\'$version\'
 tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
 mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
@@ -317,6 +353,7 @@ unset -v version
 
 # Insert archive relationships between the tar file and the archived
 # files.
+
 declare archive_sha1  # The sha1 fingerprint of the created tar file.
 declare filesha1      # The sha1 fingerprint of an archived file.
 
@@ -349,6 +386,7 @@ unset -v tarfile
 unset -v tarsha1
 
 # Move tar to the final directory.
+
 declare tarbname   # Archive file's basename.
 declare tarabsname # Archive file's absolute name.
 
@@ -425,6 +463,7 @@ unset -v tarabsname
 unset -v tarbname
 
 # Remove the temporary directory.
+
 rm -r $tempdir
 if [ $? -ne 0 ]
 then

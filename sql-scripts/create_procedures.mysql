@@ -314,20 +314,20 @@ DROP PROCEDURE IF EXISTS insert_and_get_file //
 CREATE PROCEDURE insert_and_get_file 
 
 	(
-		IN  p_fs_uuid  VARCHAR(256),
-		IN  p_pathname VARCHAR(256),
-		IN  p_mimetype VARCHAR(256),
-		IN  p_sha1     CHAR(40),
-		IN  p_fsize    BIGINT UNSIGNED,
-		IN  p_mtime    INT UNSIGNED,
-		OUT p_file_id  MEDIUMINT UNSIGNED
+		IN  p_fs_uuid   VARCHAR(256),
+		IN  p_pathname  VARCHAR(256),
+		IN  p_mime_type VARCHAR(256),
+		IN  p_sha1      CHAR(40),
+		IN  p_fsize     BIGINT UNSIGNED,
+		IN  p_mtime     INT UNSIGNED,
+		OUT p_file_id   MEDIUMINT UNSIGNED
 	)
 
 COMMENT
                      "Parameters:
                         IN  <p_fs_uuid>  VARCHAR(256),
                         IN  <p_pathname> VARCHAR(256),
-                        IN  <p_mimetype> VARCHAR(256),
+                        IN  <p_mime_type> VARCHAR(256),
                         IN  <p_sha1>     CHAR(40),
                         IN  <p_fsize>    BIGINT UNSIGNED,
                         IN  <p_mtime>    INT UNSIGNED,
@@ -340,6 +340,7 @@ BEGIN
 	DECLARE v_count                   MEDIUMINT UNSIGNED;
 	DECLARE v_file_system_location_id MEDIUMINT UNSIGNED;
 	DECLARE v_location_id             MEDIUMINT UNSIGNED;
+	DECLARE v_mime_type_id            MEDIUMINT UNSIGNED;
 
 	CALL insert_and_get_file_system_location (p_fs_uuid, p_pathname, v_file_system_location_id);
 
@@ -358,8 +359,9 @@ BEGIN
 	-- If it doesn't exist, create it.
 	IF p_file_id IS NULL
 	THEN
+		CALL insert_and_get_mime_type (p_mime_type, v_mime_type_id);
 		INSERT INTO file (mime_type_id, sha1, fsize, mtime) VALUES (
-			(SELECT id FROM mime_type WHERE type_descriptor = p_mimetype),
+			v_mime_type_id,
 			p_sha1,
 			p_fsize,
 			p_mtime
@@ -687,6 +689,44 @@ END;
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_and_get_host',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_and_get_mime_type //
+
+CREATE PROCEDURE insert_and_get_mime_type
+
+	(
+		IN  p_type_descriptor VARCHAR(75),
+		OUT p_mime_type_id    MEDIUMINT UNSIGNED
+	)
+
+COMMENT
+                     "Parameters:
+                        IN  <p_type_descriptor> VARCHAR(75),
+                        OUT <p_mime_type_id>    MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry into the 'mime_type' table. Return the id field of the inserted row in the 'mime_type' table."
+
+BEGIN
+
+	-- Check if an entry already exists in the table 'mime_type' with the specified p_type_descriptor. 
+	SELECT id INTO p_mime_type_id
+		FROM mime_type
+		WHERE type_descriptor = p_type_descriptor;
+	
+	-- If it doesn't exist, create it.
+	IF p_mime_type_id IS NULL
+	THEN
+		INSERT INTO mime_type (type_descriptor) VALUES (p_type_descriptor);
+		SELECT LAST_INSERT_ID() INTO p_mime_type_id;
+	END IF;
+END; //
+
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_mime_type',
 	'user'
 ) //
 
@@ -1301,6 +1341,32 @@ END; //
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_hard_disk_partition',
+	'user'
+) //
+
+DROP PROCEDURE IF EXISTS insert_mime_type //
+
+CREATE PROCEDURE insert_mime_type
+
+	(
+		IN  p_type_descriptor VARCHAR(75)
+	)
+
+COMMENT
+                     "Parameters:
+                        IN p_type_descriptor VARCHAR(75).
+                      Description:
+                        Insert an entry in the 'mime_type'."
+
+BEGIN
+	DECLARE v_mime_type_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_mime_type (p_type_descriptor);
+END; //
+
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_mime_type',
 	'user'
 ) //
 
