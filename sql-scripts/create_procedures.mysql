@@ -288,16 +288,16 @@ BEGIN
 	INSERT INTO data_storage_device (id) VALUES ('');
 	SELECT LAST_INSERT_ID() INTO v_data_storage_device_id;
 
-	INSERT INTO digital_media (id, data_storage_device_id, digital_media_type_id) VALUES (
+	INSERT INTO digital_media (id, data_storage_device_id) VALUES (
 		'',
-		v_data_storage_device_id,
-		p_dvd_type_id
+		v_data_storage_device_id
 	);
 	SELECT LAST_INSERT_ID() INTO v_digital_media_id;
 
-	INSERT INTO dvd (id, digital_media_id) VALUES (
+	INSERT INTO dvd (id, digital_media_id, dvd_type_id) VALUES (
 		'',
-		v_digital_media_id
+		v_digital_media_id,
+		p_dvd_type_id
 	);
 	SELECT LAST_INSERT_ID() INTO p_dvd_id;
 END; //
@@ -1497,6 +1497,48 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) //
 
+DROP PROCEDURE IF EXISTS link_dvd_to_software_session //
+
+CREATE PROCEDURE link_dvd_to_software_session
+
+	(
+		IN p_dvd_id             MEDIUMINT UNSIGNED,
+		IN p_software_session_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT
+                     "Parameters:
+                        IN <p_dvd_id>             MEDIUMINT UNSIGNED,
+                        IN <p_software_session_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_dvd_to_software_session' table."
+
+BEGIN
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Check if an entry already exists in the table 'l_dvd_to_software_session' with the specified <p_dvd_id> and <p_software_session_id>. 
+	SELECT COUNT(*) INTO v_count
+		FROM l_dvd_to_software_session
+		WHERE dvd_id = p_dvd_id
+		AND software_session_id = p_software_session_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_dvd_to_software_session (dvd_id, software_session_id) VALUES ( 
+			p_dvd_id,
+			p_software_session_id
+		);
+	END IF;
+END; //
+
+-- Insert an entry into the temporal 'procedures' table.
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_dvd_to_software_session',
+	'user'
+) //
+
 DROP PROCEDURE IF EXISTS link_file_to_location //
 
 CREATE PROCEDURE link_file_to_location
@@ -1558,7 +1600,7 @@ COMMENT
 BEGIN
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_audio_file_to_recording' with the specified p_audio_file_id and p_recording_id. 
+	-- Check if an entry already exists in the table 'l_file_to_software_session' with the specified <p_file_id> and <p_software_session_id>. 
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_to_software_session
 		WHERE file_id = p_file_id

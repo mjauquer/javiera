@@ -65,6 +65,7 @@ error_exit () {
 #-----------------------------------------------------------------------
 
 # Variables declaration.
+
 declare progname   # The name of this script.
 declare dir_inode  # The inode of the source directory passed as
                    # argument.
@@ -83,10 +84,12 @@ declare db         # A mysql database.
 progname=$(basename $0)
 
 # If no argument were passed, print usage message and exit.
+
 [[ $# -eq 0 ]] && usage && exit
 
 # Check if there already is in the current directory a file whose
 # pathname is the specified by OUTPUT.
+
 if [ -a "$2" ]
 then
 	error_exit "$LINENO: the specified output file already exists."
@@ -95,6 +98,7 @@ else
 fi
 
 # Checking for a well-formatted command line.
+
 if [ $# -ne 2 ]
 then
 	error_exit "$LINENO: two arguments must be passed."
@@ -107,10 +111,12 @@ then
 fi
 
 # Store the inode of the source directory passed as argument.
+
 dir_inode=$(stat -c %i "$1")
 
 # Update the backup database with the metadata of the files under the
 # source directory.
+
 declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
@@ -127,9 +133,11 @@ unset -v log
 
 # Get the pathname of the source directory passed as argument after
 # calling javiera, because that script calls chpathn.
+
 source_dir=($(find ${top_dirs[@]} -depth -inum $dir_inode -type d))
 
 # Generate a metadata file in $source_dir/.javiera
+
 if ! mkdir $source_dir/.javiera
 then
 	error_exit "$LINENO: Coudn't make the .javiera directory."
@@ -145,6 +153,7 @@ fi
 #-----------------------------------------------------------------------
 
 # Get the version of the mkisofs command.
+
 version="$(mkisofs --version)"
 if [ $? -ne 0 ]
 then
@@ -152,9 +161,11 @@ then
 fi
 
 # Set the options to be passed to the mkisofs command.
+
 options="-iso-level 4 -allow-multidot -allow-lowercase -ldots -r" 
 
 # Make the image file.
+
 mkisofs -V "BACKUPDVD" $options -o $output $source_dir
 if [ $? -ne 0 ]
 then
@@ -166,6 +177,7 @@ fi
 #-----------------------------------------------------------------------
 
 # Insert the new created file into the database.
+
 if ! javiera $output
 then
 	error_exit "$LINENO: error after calling javiera."
@@ -194,6 +206,7 @@ unset -v options
 unset -v version
 
 # Insert archive relationships between the iso file and its content.
+
 for file in $(find $source_dir -type f)
 do
 	filesha1=$(sha1sum $output | cut -c1-40)

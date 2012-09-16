@@ -97,7 +97,7 @@ dvd_types=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
 	SELECT id, type_descriptor
-		FROM digital_media_type
+		FROM dvd_type
 		WHERE type_descriptor RLIKE 'dvd.*'
 	;
 ") )
@@ -111,7 +111,7 @@ done
 unset -v i
 
 # Ask the user for the dvd type being used.
-echo "Select the DVD type being used:"
+echo "Select the DVD type that is being used:"
 echo "$menu"
 
 while [[ ! $dvd_type_id ]] ||
@@ -126,7 +126,7 @@ unset -v dvd_types
 # Burn the DVD.
 #-----------------------------------------------------------------------
 
-options="-dummy -v speed=4 dev=ATAPI:0,0,0" 
+options="-v speed=4 dev=ATAPI:0,0,0" 
 
 version="$(cdrecord -version)"
 if [ $? -ne 0 ]
@@ -149,9 +149,7 @@ fi
 # Update the backup database.
 #-----------------------------------------------------------------------
 
-declare -a dvd_id
-
-sudo mount /mnt/cdrom
+sudo mount -t iso9660 /dev/sr0 /mnt/cdrom
 
 if ! process_fstab
 then
@@ -169,7 +167,8 @@ done < /mnt/cdrom/.javiera/info.txt
 dvd_type_id=\'$dvd_type_id\'
 fs_uuid=\'$fs_uuid\'
 
-dvd_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
+declare dvd_id
+dvd_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
 	CALL insert_and_get_dvd ($dvd_type_id, @dvd_id);
@@ -188,14 +187,56 @@ dvd_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 	CALL link_file_system_to_data_storage_device (
 		@file_system_id,
 		@data_storage_device_id
-	)
+	);
 	SELECT @dvd_id;
-") )
+")
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
+unset -v dvd_type_id
+unset -v fs_uuid
 
-echo "Burned dvd number ${dvd_id[-1]}."
+# Insert details of the software and options used to create the dvd.
+
+version=\'$version\'
+options=\'$options\'
+
+session_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
+	--skip-column-names -e "
+
+	CALL insert_and_get_software ('cdrecord', $version, @software_id);
+	CALL insert_and_get_software_session (
+		@software_id,
+		$options,
+		@software_session_id
+	);
+	SELECT @software_session_id;
+
+")
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling mysql."
+fi
+unset -v options
+unset -v version
+
+session_id=$session_id
+session_id=\'$session_id\'
+mysql --skip-reconnect -u$user -p$pass -D$db \
+	--skip-column-names -e "
+
+	CALL link_dvd_to_software_session ($dvd_id, $session_id);
+"
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling mysql."
+fi
+unset -v session_id
+
+# Print id number of the recently burned dvd.
+
+echo "Burned dvd number $dvd_id."
+unset -v dvd_id
 
 sudo umount /mnt/cdrom

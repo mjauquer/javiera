@@ -66,7 +66,7 @@ done
 mysql --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 	
-source ~/projects/javiera/sql-scripts/create_coretables.mysql
-source ~/projects/javiera/sql-scripts/populate_tables.mysql
+	source ~/projects/javiera/sql-scripts/create_coretables.mysql
+	source ~/projects/javiera/sql-scripts/populate_tables.mysql
 
 "

@@ -1,4 +1,4 @@
-INSERT INTO digital_media_type (id, type_descriptor) VALUES
+INSERT INTO dvd_type (id, type_descriptor) VALUES
 	('', 'DVD-R'),
 	('', 'DVD-RW'),
 	('', 'DVD-RAM'),

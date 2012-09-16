@@ -1,0 +1,132 @@
+CREATE TABLE IF NOT EXISTS artist (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	gid              CHAR(36) NOT NULL,
+	name             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_name(id),
+	sort_name        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_name(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS artist_credit (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_name(id),
+	artist_count     TINYINT UNSIGNED NOT NULL,
+	ref_count        SMALLINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS artist_credit_name (
+	artist_credit    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_credit(id), # PK
+	position         TINYINT UNSIGNED NOT NULL,           # PK
+	artist           MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist(id),
+	name             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_name(id)
+);
+
+CREATE TABLE IF NOT EXISTS artist_name (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS country (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS l_audio_file_to_recording (
+	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES audio_file(id),
+	recording_id     MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES recording(id)
+);
+
+CREATE TABLE IF NOT EXISTS medium (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	tracklist        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tracklist(id),
+	`release`          MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES `release`(id),
+	position         SMALLINT UNSIGNED NOT NULL,
+	format           MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES medium_format(id),
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS medium_format (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(32) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS recording (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	gid              CHAR(36) NOT NULL,
+	track_name_id    MEDIUMINT UNSIGNED
+	                 	REFERENCES track_name(id),
+	artist_credit_id MEDIUMINT UNSIGNED
+	                 	REFERENCES artist_credit(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS `release` (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	gid              CHAR(36) NOT NULL,
+	name             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES release_name(id),
+	artist_credit    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_credit(id),
+	release_group    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES release_group(id),
+	country          SMALLINT UNSIGNED NOT NULL
+	                 	REFERENCES country(id),
+	date_year        SMALLINT UNSIGNED NOT NULL,
+	date_month       TINYINT UNSIGNED NOT NULL,
+	date_day         TINYINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS release_name (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS tag (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
+	text             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS track (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	recording        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES recording(id),
+	tracklist        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tracklist(id),
+	position         SMALLINT UNSIGNED NOT NULL,
+	name             MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES track_name(id),
+	artist_credit    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES artist_credit(id),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS track_name (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(256) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS tracklist (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	track_count      MEDIUMINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
