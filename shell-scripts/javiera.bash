@@ -68,10 +68,17 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
+# Enable extended regular expresion handling.
+
+shopt -s extglob 
+
 declare progname        # The name of this script.
 declare user            # A mysql user name.
 declare pass            # A mysql password.
 declare db              # A mysql database.
+declare -a files        # The list of pathnames to be processed by this
+                        # script.
+
 declare -a file_systems # An array with the uuid fingerprints
                         # that correspond to file systems that
 			# have been found during this shellscript
@@ -107,15 +114,49 @@ do
 done
 shift $(($OPTIND-1))
 
-# Save the corresponding inode of the pathnames passed as arguments to
-# this script.
+# Select from the list of pathname arguments, those that do not need to
+# be changed. Store them in the <files> array.
+
+declare oldifs         # Stores the content of the IFS variable as it 
+                       # was when this script was called.
+declare regex          # A regular expresion.
+
+oldifs="$IFS"
+IFS="$(printf '\n\t')"
+regex="./[[:alnum:]._+]{1}[-[:alnum:]._+]*$"
+
+declare -i i=0
+for arg
+do
+	i=i+1
+	if [[ "$arg" =~ $regex ]]
+	then
+		IFS="$oldifs"
+		if [ -d "$arg" ] 
+		then
+			files+=($(find $arg ${find_opts[@]} -type f))
+		elif [ -f "$arg" ]
+		then
+			files+=( "$arg" )
+		fi
+		set -- "${@:1:$((i-1))}" "${@:$((i+1)):$#}"
+		i=i-1
+		IFS="$(printf '\n\t')"
+	fi
+done
+
+IFS="$oldifs"
+unset regex
+unset oldifs
+
+# Save the corresponding inode of the pathnames passed as arguments that
+# need to be changed.
 
 declare -a dir_inodes  # A list of inodes corresponding to every
                        # directory passed as argument.
 declare -a file_inodes # A list of inodes corresponding to every file
                        # passed as argument.
 
-echo "$@"
 for arg
 do
 	if [ -d "$arg" ]
@@ -130,21 +171,23 @@ do
 done
 unset -v arg
 
-# Look at the pathnames passed as arguments and change those that can be
-# problematic ones.
+# Call chpathn on pathnames that need to be changed.
 
 declare -a log   # The output of the command chpathn --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
 
-log=($(chpathn -rp --verbose "$@"))
-if [ $? -ne 0 ]
+if [[ $# > 0 ]]
 then
-	error_exit "$LINENO: Error after calling chpathn."
-fi
-if ! read_topdirs top_dirs ${log[@]}
-then
-	error_exit "$LINENO: Error after a call to read_topdirs()."
+	log=($(chpathn -rp --verbose "$@"))
+	if [ $? -ne 0 ]
+	then
+		error_exit "$LINENO: Error after calling chpathn."
+	fi
+	if ! read_topdirs top_dirs ${log[@]}
+	then
+		error_exit "$LINENO: Error after a call to read_topdirs()."
+	fi
 fi
 unset -v log
 
@@ -164,8 +207,6 @@ fi
 
 # Get the pathnames of the files passed as arguments after calling to
 # chpathn.
-
-declare -a files # The list of pathnames to be processed by this script.
 
 for inode in ${dir_inodes[@]}
 do
