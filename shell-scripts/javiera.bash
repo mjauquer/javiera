@@ -115,6 +115,7 @@ declare -a dir_inodes  # A list of inodes corresponding to every
 declare -a file_inodes # A list of inodes corresponding to every file
                        # passed as argument.
 
+echo "$@"
 for arg
 do
 	if [ -d "$arg" ]

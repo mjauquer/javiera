@@ -176,14 +176,15 @@ fi
 # Update the backup database with data about the created iso file.
 #-----------------------------------------------------------------------
 
-# Insert the new created file into the database.
+# Insert the new created files into the database.
 
-if ! javiera $output
+if ! javiera $source_dir/.javiera/info.txt $output
 then
 	error_exit "$LINENO: error after calling javiera."
 fi
 
-# Insert details of the software and options used to create the file.
+# Insert details about the software and options used to create the iso
+# image.
 
 version=\'$version\'
 options=\'$options\'
@@ -209,9 +210,9 @@ unset -v version
 
 for file in $(find $source_dir -type f)
 do
-	filesha1=$(sha1sum $output | cut -c1-40)
+	filesha1=$(sha1sum $file | cut -c1-40)
 	filesha1=\"$filesha1\"
-	suffix=${file#$source_dir/}; suffix=\'$suffix\'
+	suffix=${file#$source_dir}; suffix=\'$suffix\'
 
 	mysql --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
