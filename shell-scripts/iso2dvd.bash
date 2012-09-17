@@ -149,7 +149,10 @@ fi
 # Update the backup database.
 #-----------------------------------------------------------------------
 
-sudo mount -t iso9660 /dev/sr0 /mnt/cdrom
+if ! sudo mount -t iso9660 /dev/sr0 /mnt/cdrom
+then
+	error_exit "$LINENO: Error after trying to mount media."
+fi
 
 if ! process_fstab
 then
