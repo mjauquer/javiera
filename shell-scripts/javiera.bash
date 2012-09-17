@@ -144,41 +144,43 @@ do
 		IFS="$(printf '\n\t')"
 	fi
 done
+unset -v i
 
 IFS="$oldifs"
 unset regex
 unset oldifs
 
-# Save the corresponding inode of the pathnames passed as arguments that
-# need to be changed.
-
-declare -a dir_inodes  # A list of inodes corresponding to every
-                       # directory passed as argument.
-declare -a file_inodes # A list of inodes corresponding to every file
-                       # passed as argument.
-
-for arg
-do
-	if [ -d "$arg" ]
-	then
-		dir_inodes+=($(stat -c %i "$arg"))
-		[ $? -ne 0 ] && error_exit
-	elif [ -f "$arg" ]
-	then
-		file_inodes+=($(stat -c %i "$arg"))
-		[ $? -ne 0 ] && error_exit
-	fi
-done
-unset -v arg
-
-# Call chpathn on pathnames that need to be changed.
-
-declare -a log   # The output of the command chpathn --verbose.
-declare top_dirs # A list of directories where to find by inode the
-                 # the files and directories passed as arguments.
+# Call chpathn on the remaining pathnames that need to be changed.
 
 if [[ $# > 0 ]]
 then
+
+	declare -a log   # The output of the command chpathn --verbose.
+	declare top_dirs # A list of directories where to find by inode the
+			 # the files and directories passed as arguments.
+
+	# Save the corresponding inode of the pathnames passed as arguments that
+	# need to be changed.
+
+	declare -a dir_inodes  # A list of inodes corresponding to every
+			       # directory passed as argument.
+	declare -a file_inodes # A list of inodes corresponding to every file
+			       # passed as argument.
+
+	for arg
+	do
+		if [ -d "$arg" ]
+		then
+			dir_inodes+=($(stat -c %i "$arg"))
+			[ $? -ne 0 ] && error_exit
+		elif [ -f "$arg" ]
+		then
+			file_inodes+=($(stat -c %i "$arg"))
+			[ $? -ne 0 ] && error_exit
+		fi
+	done
+	unset -v arg
+
 	log=($(chpathn -rp --verbose "$@"))
 	if [ $? -ne 0 ]
 	then
@@ -188,43 +190,46 @@ then
 	then
 		error_exit "$LINENO: Error after a call to read_topdirs()."
 	fi
-fi
-unset -v log
 
-# If the --verbose option was given, print the content of the 'top_dirs'
-# array.
+	# If the --verbose option was given, print the content of the 'top_dirs'
+	# array.
+	if [[ $verbose == true ]]
+	then
+		printf ' -----------\n javiera log:\n -----------\n'
+		printf ' * Top directories:\n'
+		for dir in ${top_dirs[@]}
+		do
+			echo "   $dir"
+		done
+		unset -v dir
+	fi
 
-if [[ $verbose == true ]]
-then
-	printf ' -----------\n javiera log:\n -----------\n'
-        printf ' * Top directories:\n'
-	for dir in ${top_dirs[@]}
-	do
-		echo "   $dir"
-	done
+	# Get the pathnames of the files passed as arguments after calling to
+	# chpathn.
+
+	if [[ ${#dir_inodes[@]} -ne 0 ]]
+	then
+		for inode in ${dir_inodes[@]}
+		do
+			dir=$(find ${top_dirs[@]} -depth -inum $inode -type d)
+			files+=($(find $dir ${find_opts[@]} -type f))
+		done
+	fi
 	unset -v dir
+	unset -v dir_inodes
+
+	if [[ ${#file_inodes[@]} -ne 0 ]]
+	then
+		for inode in ${file_inodes[@]}
+		do
+			files+=($(find ${top_dirs[@]} -depth -inum $inode -type f))
+		done
+	fi
+	unset -v log
+	unset -v inode
+	unset -v file_inodes
+	unset -v top_dirs
 fi
-
-# Get the pathnames of the files passed as arguments after calling to
-# chpathn.
-
-for inode in ${dir_inodes[@]}
-do
-	[[ ${#dir_inodes[@]} -eq 0 ]] && break
-	dir=$(find ${top_dirs[@]} -depth -inum $inode -type d)
-	files+=($(find $dir ${find_opts[@]} -type f))
-done
-unset -v dir
-unset -v dir_inodes
-
-for inode in ${file_inodes[@]}
-do
-	[[ ${#file_inodes[@]} -eq 0 ]] && break
-	files+=($(find ${top_dirs[@]} -depth -inum $inode -type f))
-done
-unset -v inode
-unset -v file_inodes
-unset -v top_dirs
 
 # Update the database.
 
