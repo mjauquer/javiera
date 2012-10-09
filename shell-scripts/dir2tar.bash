@@ -21,8 +21,7 @@
 #  DESCRIPTION: Create a tar archive named NAME and include in it the
 #               files founded in pathname...
 #
-# REQUIREMENTS: javiera-core.bash
-#               getoptx.bash
+# REQUIREMENTS: getoptx.bash, mktemp, readlink, sha1sum, tar
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
@@ -58,7 +57,6 @@ error_exit () {
 #   PARAMETER: MESSAGE An optional description of the error.
 
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
-	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
@@ -74,6 +72,7 @@ predict_pathname_inside_archive () {
 #  PARAMETERS: PATHNAME The unix pathname of the file being processed.
 
 	local suffix
+
 	sha1s+=( $(sha1sum $1 | cut -c1-40) )
 	suffix=${1#$prefix}
 	suffixes+=( $suffix )
@@ -83,18 +82,7 @@ predict_pathname_inside_archive () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# Variables declaration.
-
 declare progname        # The name of this script.
-declare -a file_systems # An array with the uuid fingerprints that
-                        # correspond to file systems that have been 
-			# found during this shell script session.
-declare -a mount_points # An array with the mount points that correspond
-                        # to file systems that have been found during
-			# this shell script session.
-declare user            # A mysql user name.
-declare pass            # A mysql password.
-declare db              # A mysql database.
 
 progname=$(basename $0)
 
@@ -155,7 +143,9 @@ do
 		notfound+=("$pathname")
 	fi
 done
+
 unset -v pathname
+
 if [ ${#notfound[@]} -ne 0 ]
 then
 	error_exit "$LINENO: The following arguments do not exist as
@@ -329,21 +319,28 @@ fi
 
 # Insert in the database metadata about this tar utility session. 
 
+declare user            # A mysql user name.
+declare pass            # A mysql password.
+declare db              # A mysql database.
+
 version="$(tar --version | head -n 1)"; version=\'$version\'
 tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
 mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
+	START TRANSACTION;
 	CALL process_output_file (
 		'tar',
 		$version,
 		'cf',
 		$tarsha1
 	);
+	COMMIT;
 "
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
+
 unset -v tarsha1
 unset -v version
 
@@ -366,17 +363,20 @@ do
 	mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
+		START TRANSACTION;
 		CALL process_archived_file (
 			$tarsha1,
 			$filesha1,
 			$suffix
 		);
+		COMMIT;
 	"
 	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling mysql."
 	fi
 done
+
 unset -v filesha1
 unset -v ind
 unset -v sha1s
@@ -436,6 +436,7 @@ new_path=\'$new_path\'
 mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
+	START TRANSACTION;
 	SELECT fs_location.id INTO @fs_loc_id
 		FROM file_system_location AS fs_location
 		INNER JOIN file_system AS fs
@@ -446,21 +447,24 @@ mysql --skip-reconnect -u$user -p$pass -D$db \
 					FROM file_system
 					WHERE uuid = $file_sys),
 		pathname = $new_path
-	WHERE
-		file_system_location.id = @fs_loc_id
-	;
-	"
+	WHERE file_system_location.id = @fs_loc_id;
+	COMMIT;
+
+"
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
 
+unset -v db
 unset -v file_sys
 unset -v newpath
-unset -v pathname
 unset -v oldpath
+unset -v pass
+unset -v pathname
 unset -v tarabsname
 unset -v tarbname
+unset -v user
 
 # Remove the temporary directory.
 

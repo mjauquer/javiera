@@ -41,8 +41,10 @@ progname=$(basename $0)
 procedures=( $(mysql --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 
+	START TRANSACTION;
 	source ~/projects/javiera/sql-scripts/create_procedures.mysql
 	SELECT name FROM procedures WHERE level = 'user';
+	COMMIT;
 
 ") )
 [[ $? -ne 0 ]] && return 1

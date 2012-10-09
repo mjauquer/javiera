@@ -21,8 +21,7 @@
 #  DESCRIPTION: Build an iso image file named OUTPUT with files that are
 #               under SOURCE directory.
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               javiera.flib
+# REQUIREMENTS: mkisofs, readlink, sha1sum, uuidgen
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
@@ -56,7 +55,6 @@ error_exit () {
 #   PARAMETER: MESSAGE An optional description of the error.
 
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
-	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
@@ -64,22 +62,7 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# Variables declaration.
-
-declare progname   # The name of this script.
-declare dir_inode  # The inode of the source directory passed as
-                   # argument.
-declare source_dir # The pathname of the source directory after calling
-                   # javiera.
-declare label      # The label of the iso file that will be generated.
-declare ouput      # The pathname of the output image file.
-declare version    # The version of the mkisofs command.
-declare options    # The options to be passed to the mkisofs command.
-declare outputid   # The file_id number in the database for the created
-                   # output image file.
-declare user       # A mysql user name.
-declare pass       # A mysql password.
-declare db         # A mysql database.
+declare progname # The name of this script.
 
 progname=$(basename $0)
 
@@ -89,6 +72,8 @@ progname=$(basename $0)
 
 # Check if there already is in the current directory a file whose
 # pathname is the specified by OUTPUT.
+
+declare ouput # The pathname of the output image file.
 
 if [ -a "$2" ]
 then
@@ -112,6 +97,9 @@ fi
 
 # Store the inode of the source directory passed as argument.
 
+declare dir_inode # The inode of the source directory passed as
+                  # argument.
+
 dir_inode=$(stat -c %i "$1")
 
 # Update the backup database with the metadata of the files under the
@@ -120,7 +108,8 @@ dir_inode=$(stat -c %i "$1")
 declare -a log   # The output of the command javiera --verbose.
 declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
-log=($(javiera -r --verbose "$@"))
+
+log=( $(javiera -r --verbose "$@") )
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling chpathn."
@@ -129,12 +118,18 @@ if ! read_topdirs top_dirs ${log[@]}
 then
 	error_exit "$LINENO: Error after a call to read_topdirs()."
 fi
+
 unset -v log
 
 # Get the pathname of the source directory passed as argument after
 # calling javiera, because that script calls chpathn.
 
-source_dir=($(find ${top_dirs[@]} -depth -inum $dir_inode -type d))
+declare source_dir # The pathname of the source directory after calling
+                   # javiera.
+
+source_dir=$(find ${top_dirs[@]} -depth -inum $dir_inode -type d)
+
+unset -v dir_inode
 
 # Generate a metadata file in $source_dir/.javiera
 
@@ -153,6 +148,9 @@ fi
 #-----------------------------------------------------------------------
 
 # Get the version of the mkisofs command.
+
+declare version # The version of the mkisofs command.
+declare options # The options to be passed to the mkisofs command.
 
 version="$(mkisofs --version)"
 if [ $? -ne 0 ]
@@ -186,23 +184,31 @@ fi
 # Insert details about the software and options used to create the iso
 # image.
 
+declare user # A mysql user name.
+declare pass # A mysql password.
+declare db   # A mysql database.
+
 version=\'$version\'
 options=\'$options\'
 isosha1=$(sha1sum $output | cut -c1-40); isosha1=\"$isosha1\"
 
 mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
+	START TRANSACTION;
 	CALL process_output_file (
 		'mkisofs',
 		$version,
 		$options,
 		$isosha1
 	);
+	COMMIT;
 "
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
+
+unset -v output
 unset -v options
 unset -v version
 
@@ -217,17 +223,24 @@ do
 	mysql --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
+		START TRANSACTION;
 		CALL process_archived_file (
 			$isosha1,
 			$filesha1,
 			$suffix
 		);
+		COMMIT;
 	"
 	if [ $? -ne 0 ]
 	then
 		error_exit "$LINENO: Error after calling mysql."
 	fi
 done
+
+unset -v db
 unset -v file
 unset -v filesha1
+unset -v pass
+unset -v source_dir
 unset -v suffix
+unset -v user

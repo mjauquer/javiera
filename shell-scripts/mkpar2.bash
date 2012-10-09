@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# REQUIREMENTS: par2cmdline
+# REQUIREMENTS: par2cmdline, readlink
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
@@ -49,7 +49,6 @@ error_exit () {
 #   PARAMETER: MESSAGE An optional description of the error.
 
 	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
-	[ -v handle ] && shsqlend $handle
 	exit 1
 }
 
@@ -203,6 +202,7 @@ options=\'$options\'
 session_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
+	START TRANSACTION;
 	CALL insert_and_get_software ('par2', $version, @software_id);
 	CALL insert_and_get_software_session (
 		@software_id,
@@ -210,7 +210,7 @@ session_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 		@software_session_id
 	);
 	SELECT @software_session_id;
-
+	COMMIT;
 ") )
 if [ $? -ne 0 ]
 then
@@ -229,8 +229,10 @@ do
 	mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
+		START TRANSACTION;
 		SELECT id INTO @id FROM file WHERE sha1 = $filesha1;
 		CALL link_file_to_software_session (@id, $session_id);
+		COMMIT;
 	"
 	if [ $? -ne 0 ]
 	then

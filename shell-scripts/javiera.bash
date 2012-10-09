@@ -68,27 +68,15 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
+declare progname # The name of this script.
+
+progname=$(basename $0)
+
 # Enable extended regular expresion handling.
 
 shopt -s extglob 
 
-declare progname        # The name of this script.
-declare user            # A mysql user name.
-declare pass            # A mysql password.
-declare db              # A mysql database.
-declare -a files        # The list of pathnames to be processed by this
-                        # script.
-
-declare -a file_systems # An array with the uuid fingerprints
-                        # that correspond to file systems that
-			# have been found during this shellscript
-			# session.
-declare -a mount_points # An array with the mount points that
-                        # correspond to file systems that have
-			# been found during this shellscript
-			# session.
-
-progname=$(basename $0)
+declare -a files # The list of pathnames to be processed by this
 
 # If no argument was passed, print usage message and exit.
 
@@ -96,8 +84,8 @@ progname=$(basename $0)
 
 # Parse command line options.
 
-declare -a find_opts  # A list of options to be passed to the find
-                      # command.
+declare -a find_opts # A list of options to be passed to the find
+                     # command.
 
 find_opts[0]="-maxdepth 1"
 while getoptex "r recursive R verbose" "$@"
@@ -117,9 +105,9 @@ shift $(($OPTIND-1))
 # Select from the list of pathname arguments, those that do not need to
 # be changed. Store them in the <files> array.
 
-declare oldifs         # Stores the content of the IFS variable as it 
-                       # was when this script was called.
-declare regex          # A regular expresion.
+declare oldifs # Stores the content of the IFS variable as it 
+               # was when this script was called.
+declare regex  # A regular expresion.
 
 oldifs="$IFS"
 IFS="$(printf '\n\t')"
@@ -144,28 +132,28 @@ do
 		IFS="$(printf '\n\t')"
 	fi
 done
-unset -v i
 
-IFS="$oldifs"
+unset -v i
 unset regex
 unset oldifs
 
+IFS="$oldifs"
+
 # Call chpathn on the remaining pathnames that need to be changed.
+
+declare -a log         # The output of the command chpathn --verbose.
+declare top_dirs       # A list of directories where to find by inode the
+		       # the files and directories passed as arguments.
+declare -a dir_inodes  # A list of inodes corresponding to every
+		       # directory passed as argument.
+declare -a file_inodes # A list of inodes corresponding to every file
+		       # passed as argument.
 
 if [[ $# > 0 ]]
 then
 
-	declare -a log   # The output of the command chpathn --verbose.
-	declare top_dirs # A list of directories where to find by inode the
-			 # the files and directories passed as arguments.
-
 	# Save the corresponding inode of the pathnames passed as arguments that
 	# need to be changed.
-
-	declare -a dir_inodes  # A list of inodes corresponding to every
-			       # directory passed as argument.
-	declare -a file_inodes # A list of inodes corresponding to every file
-			       # passed as argument.
 
 	for arg
 	do
@@ -193,6 +181,7 @@ then
 
 	# If the --verbose option was given, print the content of the 'top_dirs'
 	# array.
+
 	if [[ $verbose == true ]]
 	then
 		printf ' -----------\n javiera log:\n -----------\n'
@@ -215,6 +204,7 @@ then
 			files+=($(find $dir ${find_opts[@]} -type f))
 		done
 	fi
+
 	unset -v dir
 	unset -v dir_inodes
 
@@ -225,6 +215,7 @@ then
 			files+=($(find ${top_dirs[@]} -depth -inum $inode -type f))
 		done
 	fi
+
 	unset -v log
 	unset -v inode
 	unset -v file_inodes
@@ -242,5 +233,6 @@ do
 		error_exit "$LINENO: Error after calling process_file()."
 	fi
 done
+
 unset -v file
 unset -v files

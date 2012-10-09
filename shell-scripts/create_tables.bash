@@ -39,6 +39,7 @@ progname=$(basename $0)
 #-----------------------------------------------------------------------
 
 # Get a list of all the tables in the database.
+
 tables=( $(mysql --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 
@@ -50,23 +51,27 @@ user=\'$user\'
 pass=\'$pass\'
 
 # Remove every table in the database.
+
 for table in ${tables[@]}
 do
 	table=\`$table\`
 	mysql --skip-reconnect -u$admin_user -p$admin_pass \
 		-D$db --skip-column-names -e "
 		
-	DROP TABLE $table;
+		DROP TABLE $table;
 
 	"
 	[[ $? -ne 0 ]] && exit 1
 done
 
 # Create the tables.
+
 mysql --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 	
+	START TRANSACTION;
 	source ~/projects/javiera/sql-scripts/create_coretables.mysql
 	source ~/projects/javiera/sql-scripts/populate_tables.mysql
+	COMMIT;
 
 "

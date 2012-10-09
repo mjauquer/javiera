@@ -21,8 +21,7 @@
 #  DESCRIPTION: Burn a dvd from the SOURCE image file. Update the backup
 #               database with the pertinent data.
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               javiera.flib
+# REQUIREMENTS: cdrecord
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
@@ -61,20 +60,12 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# If no argument was passed, print usage message and exit.
-[[ $# -eq 0 ]] && usage && exit
-
-# Variables declaration.
-
 declare progname # This script's name.
-declare input    # The pathname of the image file to be burned.
-declare version  # The version of the cdrecord command.
-declare options  # The options to be passed to the cdrecord command.
-declare user     # A mysql user name.
-declare pass     # A mysql password.
-declare db       # A mysql database.
 
 progname=$(basename $0)
+
+# If no argument was passed, print usage message and exit.
+[[ $# -eq 0 ]] && usage && exit
 
 # Checking for a well-formatted command line.
 if [ $# -ne 1 ]
@@ -89,8 +80,11 @@ fi
 # Ask to the user for the dvd's type.
 #-----------------------------------------------------------------------
 
+declare db           # A mysql database.
 declare -a dvd_types
 declare dvd_type_id
+declare user         # A mysql user name.
+declare pass         # A mysql password.
 
 # Get dvd types from the database.
 dvd_types=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
@@ -127,13 +121,19 @@ unset -v dvd_types
 # Burn the DVD.
 #-----------------------------------------------------------------------
 
+declare options  # The options to be passed to the cdrecord command.
+declare version  # The version of the cdrecord command.
+
 options="-v speed=4 dev=ATAPI:0,0,0" 
+
 
 version="$(cdrecord -version)"
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling cdrecord."
 fi
+
+declare input # The pathname of the image file to be burned.
 
 input=$(readlink -f $1)
 if [ $? -ne 0 ]
@@ -145,6 +145,8 @@ fi
 #then
 #	error_exit "$LINENO: Error after calling cdrecord."
 #fi
+
+unset -v input
 
 #-----------------------------------------------------------------------
 # Update the backup database.
@@ -172,12 +174,14 @@ do
 	fi
 done < $volume/.javiera/info.txt
 
-dvd_type_id=\'$dvd_type_id\'
-fs_uuid=\'$fs_uuid\'
-
 # Update the database.
 
 declare dvd_id
+
+dvd_type_id=\'$dvd_type_id\'
+fs_uuid=\'$fs_uuid\'
+options=\'$options\'
+version=\'$version\'
 
 dvd_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
@@ -200,6 +204,16 @@ dvd_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 		@file_system_id,
 		@data_storage_device_id
 	);
+
+	CALL insert_and_get_software ('cdrecord', $version, @software_id);
+	CALL insert_and_get_software_session (
+		@software_id,
+		$options,
+		@software_session_id
+	);
+
+	CALL link_dvd_to_software_session (@dvd_id, @software_session_id);
+
 	SELECT @dvd_id;
 	COMMIT;
 ")
@@ -210,46 +224,11 @@ fi
 
 unset -v dvd_type_id
 unset -v fs_uuid
-
-# Insert in the database details of the software and options used to
-# create the dvd.
-
-version=\'$version\'
-options=\'$options\'
-
-session_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
-	--skip-column-names -e "
-
-	CALL insert_and_get_software ('cdrecord', $version, @software_id);
-	CALL insert_and_get_software_session (
-		@software_id,
-		$options,
-		@software_session_id
-	);
-	SELECT @software_session_id;
-
-")
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error after calling mysql."
-fi
-
 unset -v options
 unset -v version
-
-session_id=$session_id
-session_id=\'$session_id\'
-mysql --skip-reconnect -u$user -p$pass -D$db \
-	--skip-column-names -e "
-
-	CALL link_dvd_to_software_session ($dvd_id, $session_id);
-"
-if [ $? -ne 0 ]
-then
-	error_exit "$LINENO: Error after calling mysql."
-fi
-
-unset -v session_id
+unset -v db
+unset -v pass
+unset -v user
 
 # Print id number of the recently burned dvd.
 

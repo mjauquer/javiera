@@ -27,6 +27,13 @@ source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash || exit 1
 source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash || exit 1
 source ~/projects/javiera/shell-scripts/functions/javiera-binary.bash || exit 1
 
+declare -a file_systems # An array with the uuid fingerprints that
+                        # correspond to file systems that have been 
+			# found during the shell script session.
+declare -a mount_points # An array with the mount points that correspond
+                        # to file systems that have been found during
+			# the shell script session.
+
 escape_chars () {
 
 #       USAGE: escape_chars VARNAME STRING
