@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS digital_media (
 );
 
 CREATE TABLE IF NOT EXISTS dvd (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	id               MEDIUMINT UNSIGNED NOT NULL,
 	digital_media_id MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES digital_media(id),
 	dvd_type_id      MEDIUMINT UNSIGNED NOT NULL 

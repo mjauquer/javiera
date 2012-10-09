@@ -129,6 +129,7 @@ process_file () {
 	pathname=\'$pathname\'
 
 	# Get the other needed data about the file.
+
 	local mime_type=$(file -b --mime-type $2)
 	mime_type=\'$mime_type\'
 	local sha1=$(sha1sum $2 | cut -c1-40)
@@ -139,9 +140,11 @@ process_file () {
 	mtime=\'$mtime\'
 
 	# Insert file's metadata in the database.
+
 	local lastid=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
+		START TRANSACTION;
 		CALL insert_file (
 			$file_sys,
 			$pathname,
@@ -151,24 +154,30 @@ process_file () {
 			$mtime
 		);
 		SELECT MAX(id) FROM file;
+		COMMIT;
 
 	")
 	[[ $? -ne 0 ]] && return 1
 
 	# If there was not an insertion, return 0
+
 	[[ $lastid_bef == $lastid ]] && return 0
 
 	# Look at the mime-type of the inserted file in order to
 	# determine in what tables, rows must been inserted.
+
 	local -a file_type
+
 	file_type=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
+		START TRANSACTION;
 		CALL select_ancestor (
 			'file type hierarchy',
 			'regular',
 			$mime_type
 		);
+		COMMIT;
 
 	") )
 	[[ $? -ne 0 ]] && return 1
@@ -240,11 +249,13 @@ process_fstab () {
 			mysql --skip-reconnect -u$user -p$pass -D$db \
 				--skip-column-names -e "
 
+				START TRANSACTION;
 				CALL insert_hard_disk_partition (
 					$hostname,
 					$device_name,
 					$fs_uuid
 				);
+				COMMIT;
 
 			"
 			[[ $? -ne 0 ]] && return 1
@@ -260,10 +271,12 @@ process_fstab () {
 		mysql --skip-reconnect -u$user -p$pass -D$db \
 			--skip-column-names -e "
 
+			START TRANSACTION;
 			CALL insert_mount_point (
 				$mount_point,
 				$file_system
 			);
+			COMMIT;
 
 		"
 		[[ $? -ne 0 ]] && return 1

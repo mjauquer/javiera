@@ -47,11 +47,13 @@ insert_audio_file () {
 		local audio_file_id=$(mysql --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
+			START TRANSACTION;
 			CALL insert_audio_file (
 				$file_id,
 				$record_id
 			);
 			SELECT MAX(id) FROM audio_file;
+			COMMIT;
 
 		")
 		[[ $? -ne 0 ]] && return 1
@@ -78,8 +80,10 @@ insert_flac_file () {
 	local flac_file_id=$(mysql --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
+		START TRANSACTION;
 		CALL insert_flac_file ($audio_file_id);
 		SELECT MAX(id) FROM flac_file;
+		COMMIT;
 
 	")
 	[[ $? -ne 0 ]] && return 1
@@ -178,11 +182,13 @@ insert_flac_metadata() {
 		mysql --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
+			START TRANSACTION;
 			CALL $procedure (
 				$flac_file_id,
 				$field1,
 				$field2
 			);
+			COMMIT;
 
 		"
 		[[ $? -ne 0 ]] && return 1

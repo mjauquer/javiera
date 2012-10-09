@@ -38,9 +38,11 @@ insert_archive_file () {
 	mysql --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
+		START TRANSACTION;
 		CALL insert_archive_file (
 			$file_id
 		);
+		COMMIT;
 	"
 	[[ $? -ne 0 ]] && return 1
 

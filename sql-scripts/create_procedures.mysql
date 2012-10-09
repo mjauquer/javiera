@@ -295,7 +295,7 @@ BEGIN
 	SELECT LAST_INSERT_ID() INTO v_digital_media_id;
 
 	INSERT INTO dvd (id, digital_media_id, dvd_type_id) VALUES (
-		'',
+		(SELECT max(id)+1 FROM dvd),
 		v_digital_media_id,
 		p_dvd_type_id
 	);
