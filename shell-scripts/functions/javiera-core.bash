@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# javiera.flib <Core functions of the javiera.bash script.>
+# javiera-core.bash <Core functions of the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -60,35 +60,28 @@ get_file_system_location () {
 #              PATHNAME The pathname of the file it is being query
 #                       about.
 
-	local -a mpoints        # The matching mount points array.
-	local -a mpoints_length # The matching mount points' length
-	                        # array.
-	# Get the matching mount points.
+	local fs_uuid
+	local pname
+	local mpoint
+	local -i max_length
+
 	for (( i=0; i<${#mount_points[@]}; i++ ))
 	do
-		if [[ $3 =~ ${mount_points[i]}.* ]]
+		if [[ $3 =~ ${mount_points[i]}.* ]] && 
+			[[ ${#mount_points[i]} -gt $max_length ]]
 		then
-			mpoints+=( ${mount_points[i]} )
-			mpoints_length+=( ${#mount_points[i]} )
+			mpoint=${mount_points[i]}
+			max_length=${#mount_points[i]}
+			fs_uuid=${file_systems[i]}
 		fi
 	done
-	unset -v i
-
-	# Get the longest matching mount point.
-	local -i longest
-	local -i max
-	for (( i=0; i<${#mpoints_length[@]}; i++ ))
-	do
-		if [[ ${mpoints_length[i]} -gt $max ]]
-		then
-			longest=$i; max=${mpoints_length[i]}
-		fi
-	done
-
-	# Get the wanted data.
-	local file_sys=${file_systems[longest]}
-	local pathname=${3#${mpoints[longest]}}
-	local $1 $2 && upvars -v $1 $file_sys -v $2 $pathname
+	if [[ $mpoint == / ]]
+	then
+		pname=$3
+	else
+		pname=${3#${mpoint}}
+	fi
+	local $1 $2 && upvars -v $1 "$fs_uuid" -v $2 "$pname"
 }
 
 process_file () {
@@ -191,7 +184,39 @@ process_fstab () {
 #
 # DESCRIPTION: Parse file systems data and insert it in the database.
 
-	local hostname=$(hostname); hostname=\'$hostname\'
+	local hostname
+
+	# Mount the digital media and get uuid data from it.
+
+	local -a media # The mount points where digital media devices
+	               # are expected to be mounted.
+	local mounted  # "true" is the dvd device is mounted.
+
+	media=( "/mnt/dvd" )
+	for dev in ${media[@]}
+	do
+		( mount | grep "on $dev type" > /dev/null ) && mounted=true
+		if [[ $mounted != true ]] && ! sudo mount $dev
+		then
+			error_exit "$LINENO: Error after trying to mount media on $dev."
+		fi
+		if [[ -f $dev/.javiera/info.txt ]]
+		then
+			while read line
+			do
+				if [[ $line =~ UUID=.* ]]
+				then
+					file_systems+=( ${line#UUID=} )
+					mount_points+=( $dev )
+				fi
+			done < $dev/.javiera/info.txt
+		fi
+		mounted=false
+	done
+
+	# Get uuids related to hard disk partitions from /etc/fstab.
+
+	hostname=$(hostname); hostname=\'$hostname\'
 
 	while read line
 	do
@@ -216,19 +241,6 @@ process_fstab () {
 
 			"
 			[[ $? -ne 0 ]] && return 1
-		elif [[ ${fields[1]} =~ /.* ]] &&
-			[[ ! ${fields[1]} =~ \dev.* ]] &&
-			[[ ! ${fields[0]} =~ \#.* ]] &&
-			[[ -f ${fields[1]}/.javiera/info.txt ]]
-		then
-				while read line
-				do
-				if [[ $line =~ UUID=.* ]]
-				then
-				file_systems+=( ${line#UUID=} )
-				mount_point+=( ${fields[1]} )
-				fi
-				done < ${fields[1]}/.javiera/info.txt
 		fi
 	done < /etc/fstab
 

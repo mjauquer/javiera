@@ -111,14 +111,15 @@ done
 unset -v i
 
 # Ask the user for the dvd type being used.
-echo "Select the DVD type that is being used:"
 echo "$menu"
 
 while [[ ! $dvd_type_id ]] ||
 	[[ $dvd_type_id -gt ${#dvd_types[@]} ]] ||
 	[[ ! $dvd_type_id =~ ^[0-9]+$ ]]
 do
+	printf "Select the DVD type that is being used: "
 	read -r dvd_type_id
+	echo ""
 done
 unset -v dvd_types
 
@@ -140,19 +141,23 @@ then
 	error_exit "$LINENO: Error after calling readlink."
 fi
 
-if ! sudo cdrecord $options $input
-then
-	error_exit "$LINENO: Error after calling cdrecord."
-fi
+#if ! sudo cdrecord $options $input
+#then
+#	error_exit "$LINENO: Error after calling cdrecord."
+#fi
 
 #-----------------------------------------------------------------------
 # Update the backup database.
 #-----------------------------------------------------------------------
 
-if ! sudo mount -t iso9660 /dev/sr0 /mnt/cdrom
-then
-	error_exit "$LINENO: Error after trying to mount media."
-fi
+# Mount the dvd device.
+
+declare volume  # The mount point corresponding to the dvd device.
+declare mounted # "true" is the dvd device is mounted.
+
+volume="/mnt/dvd"
+
+# Get the uuid related to the implanted file system.
 
 if ! process_fstab
 then
@@ -165,15 +170,19 @@ do
 	then
 		fs_uuid=${line#UUID=}
 	fi
-done < /mnt/cdrom/.javiera/info.txt
+done < $volume/.javiera/info.txt
 
 dvd_type_id=\'$dvd_type_id\'
 fs_uuid=\'$fs_uuid\'
 
+# Update the database.
+
 declare dvd_id
+
 dvd_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
+	START TRANSACTION;
 	CALL insert_and_get_dvd ($dvd_type_id, @dvd_id);
 	SELECT device.id INTO @data_storage_device_id
 		FROM data_storage_device AS device
@@ -192,15 +201,18 @@ dvd_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
 		@data_storage_device_id
 	);
 	SELECT @dvd_id;
+	COMMIT;
 ")
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
+
 unset -v dvd_type_id
 unset -v fs_uuid
 
-# Insert details of the software and options used to create the dvd.
+# Insert in the database details of the software and options used to
+# create the dvd.
 
 version=\'$version\'
 options=\'$options\'
@@ -221,6 +233,7 @@ if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
+
 unset -v options
 unset -v version
 
@@ -235,11 +248,20 @@ if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling mysql."
 fi
+
 unset -v session_id
 
 # Print id number of the recently burned dvd.
 
 echo "Burned dvd number $dvd_id."
+
 unset -v dvd_id
 
-sudo umount /mnt/cdrom
+# Unmount the dvd device.
+
+if ! sudo umount $volume
+then
+	error_exit "$LINENO: Error after trying to unmount media."
+fi
+
+unset -v volume

@@ -176,7 +176,7 @@ fi
 # Update the backup database with data about the created iso file.
 #-----------------------------------------------------------------------
 
-# Insert the new created files into the database.
+# Insert the new created file into the database.
 
 if ! javiera $source_dir/.javiera/info.txt $output
 then
