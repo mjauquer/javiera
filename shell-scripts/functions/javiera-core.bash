@@ -211,11 +211,25 @@ process_fstab () {
 	media=( "/mnt/dvd" )
 	for dev in ${media[@]}
 	do
+
+		# XXX Skip mounting /mnt/dvd if there is no dvd in the
+		# drive.
+
+		[[ $dev == /mnt/dvd ]] &&
+			cdrecord -V -inq dev=/dev/cdrom 2>&1 | grep -q "medium not present" &&
+			[[ $? == 0 ]] &&
+			continue
+
+		# Mount media if is not already mounted.
+
 		( mount | grep "on $dev type" > /dev/null ) && mounted=true
 		if [[ $mounted != true ]] && ! sudo mount $dev
 		then
 			error_exit "$LINENO: Error after trying to mount media on $dev."
 		fi
+
+		# Get data.
+
 		if [[ -f $dev/.javiera/info.txt ]]
 		then
 			while read line
