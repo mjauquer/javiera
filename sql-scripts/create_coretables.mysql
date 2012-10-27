@@ -97,41 +97,11 @@ CREATE TABLE IF NOT EXISTS flac_file (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS flac_metadata_block (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	label            VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE IF NOT EXISTS flac_metadata_entry (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS flac_picture_metadata_entry (
-	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
-	                       		REFERENCES flac_metadata_entry(id),
-	column1                VARCHAR(256) NOT NULL,
-	column2                VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS flac_streaminfo_metadata_entry (
-	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
-	                       		REFERENCES flac_metadata_entry(id),
-	column1                VARCHAR(256) NOT NULL,
-	column2                VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS flac_vorbiscomment_metadata_entry (
-	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
-	                       		REFERENCES flac_metadata_entry(id),
-	column1                VARCHAR(256) NOT NULL,
-	column2                VARCHAR(256) NOT NULL,
+	type             VARCHAR(256) NOT NULL,
+	column1          VARCHAR(256) NOT NULL,
+	column2          VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -179,18 +149,11 @@ CREATE TABLE IF NOT EXISTS l_file_system_to_data_storage_device (
 	                 		REFERENCES data_storage_device(id)
 );
 
-CREATE TABLE IF NOT EXISTS l_flac_file_to_metadata_block (
+CREATE TABLE IF NOT EXISTS l_flac_file_to_metadata_entry (
 	flac_file_id           MEDIUMINT UNSIGNED NOT NULL
 		               		REFERENCES flac_file(id),
-	flac_metadata_block_id MEDIUMINT UNSIGNED NOT NULL
-			               	REFERENCES metadata_block(id)
-);
-
-CREATE TABLE IF NOT EXISTS l_flac_metadata_entry_to_block (
 	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
-	                       		REFERENCES flac_metadata_entry(id),
-	flac_metadata_block_id MEDIUMINT UNSIGNED NOT NULL
-	                       		REFERENCES flac_metadata_block(id)
+			               	REFERENCES flac_metadata_entry(id)
 );
 
 CREATE TABLE IF NOT EXISTS l_hard_disk_partition_to_host (

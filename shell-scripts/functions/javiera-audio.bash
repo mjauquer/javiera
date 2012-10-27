@@ -131,15 +131,12 @@ insert_flac_metadata() {
 	if [ $1 == STREAMINFO ]
 	then
 		char=":"
-		procedure="insert_flac_streaminfo_metadata_entry"
 	elif [ $1 == VORBIS_COMMENT ]
 	then
 		char="="
-		procedure="insert_flac_vorbiscomment_metadata_entry"
 	elif [ $1 == PICTURE ]
 	then
 		char=":"
-		procedure="insert_flac_picture_metadata_entry"
 	else
 		return 1
 	fi
@@ -179,12 +176,14 @@ insert_flac_metadata() {
 		escape_chars field1 "$field1"; field1="\"$field1\""
 		local field2="${col2[ind]}"
 		escape_chars field2 "$field2"; field2="\"$field2\""
+		local mtype="\"$1\""
 		mysql --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
 			START TRANSACTION;
-			CALL $procedure (
+			CALL insert_flac_metadata_entry (
 				$flac_file_id,
+				$mtype,
 				$field1,
 				$field2
 			);

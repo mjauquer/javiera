@@ -87,15 +87,15 @@ declare -a files # The list of pathnames to be processed by this
 declare -a find_opts # A list of options to be passed to the find
                      # command.
 
-find_opts[0]="-maxdepth 1"
+find_opts=( -maxdepth 1 )
 while getoptex "r recursive R verbose" "$@"
 do
 	case "$OPTOPT" in
-		r)         find_opts[0]="-depth"
+		r)         find_opts=( -depth )
 			   ;;
-		recursive) find_opts[0]="-depth"
+		recursive) find_opts=( -depth )
 		           ;;
-		R)         find_opts[0]="-depth"
+		R)         find_opts=( -depth )
 		           ;;
 		verbose)   verbose=true
 	esac
@@ -109,9 +109,7 @@ declare oldifs # Stores the content of the IFS variable as it
                # was when this script was called.
 declare regex  # A regular expresion.
 
-oldifs="$IFS"
-IFS="$(printf '\n\t')"
-regex="./[[:alnum:]._+]{1}[-[:alnum:]._+]*$"
+regex="./[[0-9A-z]._+]{1}[-[0-9A-z]._+]*$"
 
 declare -i i=0
 for arg
@@ -119,7 +117,6 @@ do
 	i=i+1
 	if [[ "$arg" =~ $regex ]]
 	then
-		IFS="$oldifs"
 		if [ -d "$arg" ] 
 		then
 			files+=($(find $arg ${find_opts[@]} -type f))
@@ -129,15 +126,12 @@ do
 		fi
 		set -- "${@:1:$((i-1))}" "${@:$((i+1)):$#}"
 		i=i-1
-		IFS="$(printf '\n\t')"
 	fi
 done
 
 unset -v i
 unset regex
 unset oldifs
-
-IFS="$oldifs"
 
 # Call chpathn on the remaining pathnames that need to be changed.
 
@@ -188,7 +182,7 @@ then
 		printf ' * Top directories:\n'
 		for dir in ${top_dirs[@]}
 		do
-			echo "   $dir"
+			echo "$dir"
 		done
 		unset -v dir
 	fi

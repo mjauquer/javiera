@@ -524,67 +524,6 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
-DROP PROCEDURE IF EXISTS insert_and_get_flac_metadata_block //
-
-CREATE PROCEDURE insert_and_get_flac_metadata_block -- {{{1
-
-	(
-		IN  p_flac_file_id           MEDIUMINT UNSIGNED,
-		IN  p_label                  VARCHAR(256),
-		OUT p_flac_metadata_block_id MEDIUMINT UNSIGNED
-	)
-
-COMMENT -- {{{2
-                     "Parameters: 
-                        IN  <p_flac_file_id>           MEDIUMINT UNSIGNED,
-                        OUT <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'flac_metadata_block' table. Return the id field of the inserted row." -- 2}}}
-
-BEGIN -- {{{2
-	INSERT INTO flac_metadata_block (id, label) VALUES ('', p_label);
-	SELECT LAST_INSERT_ID() INTO p_flac_metadata_block_id;
-
-	CALL link_flac_file_to_metadata_block (p_flac_file_id, p_flac_metadata_block_id);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_and_get_flac_metadata_block',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS insert_and_get_flac_metadata_entry //
-
-CREATE PROCEDURE insert_and_get_flac_metadata_entry -- {{{1
-
-	(
-		IN  p_flac_metadata_block_id MEDIUMINT UNSIGNED,
-		OUT p_flac_metadata_entry_id MEDIUMINT UNSIGNED
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN  <p_flac_metadata_block_id> MEDIUMINT UNSIGNED,
-                        OUT <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'flac_metadata_entry' table. Return the id field of the inserted row." -- 2}}}
-
-BEGIN -- {{{2
-	INSERT INTO flac_metadata_entry (id) VALUES ('');
-	SELECT LAST_INSERT_ID() INTO p_flac_metadata_entry_id;
-
-	CALL link_flac_metadata_entry_to_block (p_flac_metadata_entry_id, p_flac_metadata_block_id);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_and_get_flac_metadata_entry',
-	'user'
-) // -- 1}}}
-
 DROP PROCEDURE IF EXISTS insert_and_get_hard_disk_partition //
 
 CREATE PROCEDURE insert_and_get_hard_disk_partition -- {{{1
@@ -775,54 +714,6 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_and_get_mount_point',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS insert_and_get_recording //
-
-CREATE PROCEDURE insert_and_get_recording -- {{{1
-
-	(
-		IN  p_gid              CHAR(36),
-		IN  p_track_name_id    MEDIUMINT UNSIGNED,
-		IN  p_artist_credit_id MEDIUMINT UNSIGNED,
-		OUT p_recording_id     MEDIUMINT UNSIGNED
-	)
-
-COMMENT  -- {{{2
-                     "Parameters:
-                        IN  <p_gid>              CHAR(36),
-                        IN  <p_track_name_id>    MEDIUMINT,
-                        IN  <p_artist_credit_id> MEDIUMINT,
-                        OUT <p_recording_id>     MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'recording' table. Return the id field of the inserted row." -- 2}}}
-
-BEGIN -- {{{2
-
-	-- Check if an entry already exists in the table 'recording' with the specified p_gid. 
-	SELECT recording.id INTO p_recording_id
-		FROM recording
-		WHERE recording.gid = p_gid
-	;
-
-	-- If it doesn't exist, create it.
-	IF p_recording_id IS NULL
-	THEN
-		INSERT INTO recording (id, gid, track_name_id, artist_credit_id) VALUES (
-			'',
-			p_gid,
-			p_track_name_id,
-			p_artist_credit_id
-		);
-		SELECT LAST_INSERT_ID() INTO p_recording_id;
-	END IF;
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_and_get_recording',
 	'user'
 ) // -- 1}}}
 
@@ -1126,40 +1017,13 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
-DROP PROCEDURE IF EXISTS insert_flac_metadata_block //
+DROP PROCEDURE IF EXISTS insert_flac_metadata_entry //
 
-CREATE PROCEDURE insert_flac_metadata_block -- {{{1
-
-	(
-		IN p_flac_file_id MEDIUMINT UNSIGNED,
-		IN p_label        VARCHAR(256)
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
-                        IN <p_label>        VARCHAR(256).
-                      Description:
-                        Insert an entry in the 'flac_metadata_block' table." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_flac_metadata_block (p_flac_file_id, p_label, v_flac_metadata_block_id);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_flac_metadata_block',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS insert_flac_picture_metadata_entry //
-
-CREATE PROCEDURE insert_flac_picture_metadata_entry -- {{{1
+CREATE PROCEDURE insert_flac_metadata_entry -- {{{1
 
 	(
 		IN p_flac_file_id MEDIUMINT UNSIGNED,
+		IN p_type         VARCHAR(256),
 		IN p_column1      VARCHAR(256),
 		IN p_column2      VARCHAR(256)
 	)
@@ -1167,149 +1031,41 @@ CREATE PROCEDURE insert_flac_picture_metadata_entry -- {{{1
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_flac_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_type>           VARCHAR(256),
                         IN <p_column1>      VARCHAR(256),
                         IN <p_column2>      VARCHAR(256).
                       Description:
-                        Insert an entry in the 'flac_picture_metadata_entry' table." -- 2}}}
+                        Insert an entry in the 'flac_metadata_entry' table." -- 2}}}
 
 BEGIN -- {{{2
-	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
+
 	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id. 
-	SELECT flac_metadata_block_id INTO v_flac_metadata_block_id
-		FROM l_flac_file_to_metadata_block AS file2block
-		INNER JOIN flac_metadata_block AS block
-			ON file2block.flac_metadata_block_id = block.id
-		WHERE block.label = 'picture';
+	-- Check if an entry already exists in the table 'flac_metadata_entry' with the specified paramaters.
+	SELECT id INTO v_flac_metadata_entry_id
+		FROM flac_metadata_entry
+		WHERE type = p_type
+		AND column1 = p_column1
+		AND column2 = p_column2;
 	
 	-- If it doesn't exist, create it.
-	IF v_flac_metadata_block_id IS NULL
+	IF v_flac_metadata_entry_id IS NULL
 	THEN
-		CALL insert_and_get_flac_metadata_block (p_flac_file_id, 'picture', v_flac_metadata_block_id);
+		INSERT INTO flac_metadata_entry (type, column1, column2) VALUES (
+			p_type,
+			p_column1,
+			p_column2
+		);
+		SELECT LAST_INSERT_ID() INTO v_flac_metadata_entry_id;
+		CALL link_flac_file_to_metadata_entry(p_flac_file_id, v_flac_metadata_entry_id);
 	END IF;
-	
-	-- Create an entry in the 'flac_metadata_entry' table.
-	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
 
-	-- Create an entry in the 'flac_picture_metadata_entry' table.
-	INSERT INTO flac_picture_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
-		v_flac_metadata_entry_id,
-		p_column1,
-		p_column2
-	);
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
-	'insert_flac_picture_metadata_entry',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS insert_flac_streaminfo_metadata_entry //
-
-CREATE PROCEDURE insert_flac_streaminfo_metadata_entry -- {{{1
-
-	(
-		IN p_flac_file_id MEDIUMINT UNSIGNED,
-		IN p_column1      VARCHAR(256),
-		IN p_column2      VARCHAR(256)
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
-                        IN <p_column1>      VARCHAR(256),
-                        IN <p_column2>      VARCHAR(256).
-                      Description:
-                        Insert an entry in the 'flac_streaminfo_metadata_entry' table." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
-	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
-
-	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id. 
-	SELECT flac_metadata_block_id INTO v_flac_metadata_block_id
-		FROM l_flac_file_to_metadata_block AS file2block
-		INNER JOIN flac_metadata_block AS block
-			ON file2block.flac_metadata_block_id = block.id
-		WHERE block.label = 'streaminfo';
-	
-	-- If it doesn't exist, create it.
-	IF v_flac_metadata_block_id IS NULL
-	THEN
-		CALL insert_and_get_flac_metadata_block (p_flac_file_id, 'streaminfo', v_flac_metadata_block_id);
-	END IF;
-	
-	-- Create an entry in the 'flac_metadata_entry' table.
-	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
-
-	-- Create an entry in the 'flac_streaminfo_metadata_entry' table.
-	INSERT INTO flac_streaminfo_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
-		v_flac_metadata_entry_id,
-		p_column1,
-		p_column2
-	);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_flac_streaminfo_metadata_entry',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS insert_flac_vorbiscomment_metadata_entry //
-
-CREATE PROCEDURE insert_flac_vorbiscomment_metadata_entry -- {{{1
-
-	(
-		IN p_flac_file_id MEDIUMINT UNSIGNED,
-		IN p_column1      VARCHAR(256),
-		IN p_column2      VARCHAR(256)
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_flac_file_id> MEDIUMINT UNSIGNED,
-                        IN <p_column1>      VARCHAR(256),
-                        IN <p_column2>      VARCHAR(256).
-                      Description:
-                        Insert an entry in the 'flac_vorbiscomment_metadata_entry' table." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_flac_metadata_block_id MEDIUMINT UNSIGNED;
-	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
-
-	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id. 
-	SELECT flac_metadata_block_id INTO v_flac_metadata_block_id
-		FROM l_flac_file_to_metadata_block AS file2block
-		INNER JOIN flac_metadata_block AS block
-			ON file2block.flac_metadata_block_id = block.id
-		WHERE block.label = 'vorbiscomment';
-	
-	-- If it doesn't exist, create it.
-	IF v_flac_metadata_block_id IS NULL
-	THEN
-		CALL insert_and_get_flac_metadata_block (p_flac_file_id, 'vorbiscomment', v_flac_metadata_block_id);
-	END IF;
-	
-	-- Create an entry in the 'flac_metadata_entry' table.
-	CALL insert_and_get_flac_metadata_entry (v_flac_metadata_block_id, v_flac_metadata_entry_id);
-
-	-- Create an entry in the 'flac_vorbiscomment_metadata_entry' table.
-	INSERT INTO flac_vorbiscomment_metadata_entry (flac_metadata_entry_id, column1, column2) VALUES (
-		v_flac_metadata_entry_id,
-		p_column1,
-		p_column2
-	);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_flac_vorbiscomment_metadata_entry',
+	'insert_flac_metadata_entry',
 	'user'
 ) // -- 1}}}
 
@@ -1715,37 +1471,37 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
-DROP PROCEDURE IF EXISTS link_flac_file_to_metadata_block //
+DROP PROCEDURE IF EXISTS link_flac_file_to_metadata_entry //
 
-CREATE PROCEDURE link_flac_file_to_metadata_block -- {{{1
+CREATE PROCEDURE link_flac_file_to_metadata_entry -- {{{1
 
 	(
-		IN p_flac_file_id MEDIUMINT UNSIGNED,
-		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
+		IN p_flac_file_id           MEDIUMINT UNSIGNED,
+		IN p_flac_metadata_entry_id MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_flac_file_id>           MEDIUMINT UNSIGNED,
-                        IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
+                        IN <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED.
                       Description:
-                        Insert an entry in the 'l_audio_file_to_recording' table." -- 2}}}
+                        Insert an entry in the 'l_flac_file_to_metadata_entry' table." -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_block' with the specified p_flac_file_id and p_flac_metadata_block_id. 
+	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_entry' with the specified p_flac_file_id and p_flac_metadata_entry_id. 
 	SELECT COUNT(*) INTO v_count
-		FROM l_flac_file_to_metadata_block
+		FROM l_flac_file_to_metadata_entry
 		WHERE flac_file_id = p_flac_file_id
-		AND flac_metadata_block_id = p_flac_metadata_block_id;
+		AND flac_metadata_entry_id = p_flac_metadata_entry_id;
 	
 	-- If it doesn't exist, create it.
 	IF v_count = 0
 	THEN
-		INSERT INTO l_flac_file_to_metadata_block (flac_file_id, flac_metadata_block_id) VALUES ( 
+		INSERT INTO l_flac_file_to_metadata_entry (flac_file_id, flac_metadata_entry_id) VALUES ( 
 			p_flac_file_id,
-			p_flac_metadata_block_id
+			p_flac_metadata_entry_id
 		);
 	END IF;
 END; // -- 2}}} 1}}}
@@ -1753,37 +1509,7 @@ END; // -- 2}}} 1}}}
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
-	'link_flac_file_to_metadata_block',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS link_flac_metadata_entry_to_block //
-
-CREATE PROCEDURE link_flac_metadata_entry_to_block -- {{{1
-
-	(
-		IN p_flac_metadata_entry_id MEDIUMINT UNSIGNED,
-		IN p_flac_metadata_block_id MEDIUMINT UNSIGNED
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_flac_metadata_entry_id> MEDIUMINT UNSIGNED,
-                        IN <p_flac_metadata_block_id> MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'l_flac_metadata_entry_to_block' table." -- 2}}}
-
-BEGIN -- {{{2
-	INSERT INTO l_flac_metadata_entry_to_block (flac_metadata_entry_id, flac_metadata_block_id) VALUES ( 
-		p_flac_metadata_entry_id,
-		p_flac_metadata_block_id
-	);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'link_flac_metadata_entry_to_block',
+	'link_flac_file_to_metadata_entry',
 	'user'
 ) // -- 1}}}
 
