@@ -37,13 +37,13 @@ CREATE TABLE IF NOT EXISTS description (
 
 CREATE TABLE IF NOT EXISTS data_storage_device (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`timestamp`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	                       		ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS digital_media (
 	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	`timestamp`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                       		ON UPDATE CURRENT_TIMESTAMP,
 	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
 	                       		REFERENCES data_storage_device(id),
 	PRIMARY KEY (id)
@@ -107,8 +107,6 @@ CREATE TABLE IF NOT EXISTS flac_metadata_entry (
 
 CREATE TABLE IF NOT EXISTS hard_disk_partition (
 	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	`timestamp`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                       		ON UPDATE CURRENT_TIMESTAMP,
 	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
 	                       		REFERENCES data_storage_device(id),
 	device_name            VARCHAR(256) NOT NULL,
