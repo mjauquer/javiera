@@ -258,21 +258,6 @@ process_fstab () {
 			file_systems+=( $fs_uuid )
 			local device_name=$(blkid -U $fs_uuid)
 			mount_points+=( ${fields[1]} )
-			device_name=\'$device_name\'
-			fs_uuid=\'$fs_uuid\'
-			mysql --skip-reconnect -u$user -p$pass -D$db \
-				--skip-column-names -e "
-
-				START TRANSACTION;
-				CALL insert_hard_disk_partition (
-					$hostname,
-					$device_name,
-					$fs_uuid
-				);
-				COMMIT;
-
-			"
-			[[ $? -ne 0 ]] && return 1
 		fi
 	done < /etc/fstab
 

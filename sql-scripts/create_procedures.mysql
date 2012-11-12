@@ -524,78 +524,6 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
-DROP PROCEDURE IF EXISTS insert_and_get_hard_disk_partition //
-
-CREATE PROCEDURE insert_and_get_hard_disk_partition -- {{{1
-
-	(
-		IN  p_hostname               VARCHAR(256),
-		IN  p_device_name            VARCHAR(256),
-		IN  p_file_system_uuid       CHAR(36),
-		OUT p_hard_disk_partition_id MEDIUMINT UNSIGNED
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN  <p_hostname>               VARCHAR(256),
-                        IN  <p_device_name>            VARCHAR(256),
-                        IN  <p_file_system_uuid>       CHAR(36),
-                        OUT <p_hard_disk_partition_id> MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 
-                        'l_hard_disk_partition_to_host' tables. Return the id field of the inserted row in the 'hard_disk_partition' table." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_data_storage_device_id MEDIUMINT UNSIGNED;
-	DECLARE v_host_id                MEDIUMINT UNSIGNED;
-	DECLARE v_file_system_id         MEDIUMINT UNSIGNED;
-
-	-- Check if an entry already exists in the table 'hard_disk_partition' with the specified devide_name that is linked to p_hostname and to p_file_system_uuid. 
-	SELECT partition.id INTO p_hard_disk_partition_id
-		FROM l_hard_disk_partition_to_host AS link
-		INNER JOIN hard_disk_partition AS partition
-			ON link.hard_disk_partition_id = partition.id 
-		INNER JOIN host
-			ON link.host_id = host.id
-		INNER JOIN data_storage_device AS device
-			ON device.id = partition.data_storage_device_id
-		INNER JOIN l_file_system_to_data_storage_device AS link2
-			ON link2.data_storage_device_id = device.id
-		INNER JOIN file_system
-			ON link2.file_system_id = file_system.id
-		WHERE host.name = p_hostname
-		AND partition.device_name = p_device_name
-		AND file_system.uuid = p_file_system_uuid
-	;
-	
-	-- If it doesn't exist, create it.
-	IF p_hard_disk_partition_id IS NULL
-	THEN
-		INSERT INTO data_storage_device (id) VALUES ('');
-		SELECT LAST_INSERT_ID() INTO v_data_storage_device_id;
-
-		INSERT INTO hard_disk_partition (id, data_storage_device_id, device_name) VALUES (
-			'',
-			v_data_storage_device_id,
-			p_device_name
-		);
-		SELECT LAST_INSERT_ID() INTO p_hard_disk_partition_id;
-
-		CALL insert_and_get_host (p_hostname, v_host_id);
-		CALL link_hard_disk_partition_to_host (p_hard_disk_partition_id, v_host_id);
-
-		CALL insert_and_get_file_system (p_file_system_uuid, v_file_system_id);
-		CALL link_file_system_to_data_storage_device (v_file_system_id, v_data_storage_device_id);
-	END IF;
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_and_get_hard_disk_partition',
-	'user'
-) // -- 1}}}
-
 DROP PROCEDURE IF EXISTS insert_and_get_host //
 
 CREATE PROCEDURE insert_and_get_host -- {{{1
@@ -1076,37 +1004,6 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
-DROP PROCEDURE IF EXISTS insert_hard_disk_partition //
-
-CREATE PROCEDURE insert_hard_disk_partition -- {{{1
-
-	(
-		IN p_hostname         VARCHAR(256),
-		IN p_device_name      VARCHAR(256),
-		IN p_file_system_uuid CHAR(36)
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_hostname>         VARCHAR(256),
-                        IN <p_device_name>      VARCHAR(256),
-                        IN <p_file_system_uuid> CHAR(36).
-                      Description:
-                        Insert an entry in the 'hard_disk_partition', 'data_storage_device', 'l_file_system_to_data_storage_device' and 
-                        'l_hard_disk_partition_to_host' tables." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_hard_disk_partition_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_hard_disk_partition (p_hostname, p_device_name, p_file_system_uuid, v_hard_disk_partition_id);
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'insert_hard_disk_partition',
-	'user'
-) // -- 1}}}
-
 DROP PROCEDURE IF EXISTS insert_mime_type //
 
 CREATE PROCEDURE insert_mime_type -- {{{1
@@ -1519,48 +1416,6 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'link_flac_file_to_metadata_entry',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS link_hard_disk_partition_to_host //
-
-CREATE PROCEDURE link_hard_disk_partition_to_host -- {{{1
-
-	(
-		IN p_hard_disk_partition_id MEDIUMINT UNSIGNED,
-		IN p_host_id                MEDIUMINT UNSIGNED
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_hard_disk_partition_id> MEDIUMINT UNSIGNED,
-                        IN <p_host_id>                MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'l_hard_disk_partition_to_host' table." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_count MEDIUMINT UNSIGNED;
-
-	-- Check if an entry already exists in the table 'l_hard_disk_partition_to_host' with the specified p_hard_disk_partition_id and p_host_id. 
-	SELECT COUNT(*) INTO v_count
-		FROM l_hard_disk_partition_to_host
-		WHERE hard_disk_partition_id = p_hard_disk_partition_id
-		AND host_id = p_host_id;
-	
-	-- If it doesn't exist, create it.
-	IF v_count = 0
-	THEN
-		INSERT INTO l_hard_disk_partition_to_host (hard_disk_partition_id, host_id) VALUES ( 
-			p_hard_disk_partition_id,
-			p_host_id
-		);
-	END IF;
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'link_hard_disk_partition_to_host',
 	'user'
 ) // -- 1}}}
 
