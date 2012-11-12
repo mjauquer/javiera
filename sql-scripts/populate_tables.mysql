@@ -11,9 +11,9 @@ INSERT INTO host (id, name)
 		('', 'cym')
 ;
 
-INSERT INTO description (id, text)
+INSERT INTO tag (id, text)
 	VALUES 
-		-- Node descriptions related to the 'file type hierarchy' tree.
+		-- Node tags related to the 'file type hierarchy' tree.
 		('', 'regular'),
 			('', 'audio'),
 				('', 'uncompressed'),
@@ -46,16 +46,16 @@ INSERT INTO tree_node (id, parent_id) VALUES ('', NULL);
 SET @tree_node_id = LAST_INSERT_ID();
 INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id) VALUES
 	(@tree_node_id, (SELECT id FROM tree WHERE name='file type hierarchy'));
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id) VALUES
-	(@tree_node_id, (SELECT id FROM description WHERE text='regular'));
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id) VALUES
+	(@tree_node_id, (SELECT id FROM tag WHERE text='regular'));
 SET @tree_node_id = NULL;
 
 INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='regular')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -64,10 +64,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id, 
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='audio')
+		(SELECT id FROM tag WHERE text='audio')
 	);
 SET @tree_node_id = NULL;
 
@@ -75,8 +75,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='audio')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -85,10 +85,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='uncompressed')
+		(SELECT id FROM tag WHERE text='uncompressed')
 	);
 SET @tree_node_id = NULL;
 
@@ -96,8 +96,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='uncompressed')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -106,13 +106,13 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='waveform audio format')
+		(SELECT id FROM tag WHERE text='waveform audio format')
 	),(
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='wav')
+		(SELECT id FROM tag WHERE text='wav')
 	)
 ;
 SET @tree_node_id = NULL;
@@ -121,8 +121,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='uncompressed')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -131,16 +131,16 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='audio interchange file format')
+		(SELECT id FROM tag WHERE text='audio interchange file format')
 	),(
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='aiff')
+		(SELECT id FROM tag WHERE text='aiff')
 	),(
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='aif')
+		(SELECT id FROM tag WHERE text='aif')
 	)
 ;
 SET @tree_node_id = NULL;
@@ -149,8 +149,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='audio')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -159,10 +159,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='compressed')
+		(SELECT id FROM tag WHERE text='compressed')
 	);
 SET @tree_node_id = NULL;
 
@@ -170,8 +170,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='compressed')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -180,10 +180,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='lossless')
+		(SELECT id FROM tag WHERE text='lossless')
 	);
 SET @tree_node_id = NULL;
 
@@ -191,8 +191,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='lossless')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -201,13 +201,13 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='free lossless audio codec')
+		(SELECT id FROM tag WHERE text='free lossless audio codec')
 	),(
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='flac')
+		(SELECT id FROM tag WHERE text='flac')
 	);
 SET @tree_node_id = NULL;
 
@@ -215,8 +215,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='compressed')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -225,10 +225,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='lossy')
+		(SELECT id FROM tag WHERE text='lossy')
 	);
 SET @tree_node_id = NULL;
 
@@ -236,8 +236,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='regular')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -246,10 +246,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='archive')
+		(SELECT id FROM tag WHERE text='archive')
 	);
 SET @tree_node_id = NULL;
 
@@ -257,8 +257,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='archive')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -267,10 +267,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='archiving only')
+		(SELECT id FROM tag WHERE text='archiving only')
 	);
 SET @tree_node_id = NULL;
 
@@ -278,8 +278,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text = 'archiving only')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -288,10 +288,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name = 'file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text = 'tape archive')
+		(SELECT id FROM tag WHERE text = 'tape archive')
 	);
 SET @tree_node_id = NULL;
 
@@ -299,8 +299,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='archiving only')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -309,10 +309,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='tar')
+		(SELECT id FROM tag WHERE text='tar')
 	);
 SET @tree_node_id = NULL;
 
@@ -320,8 +320,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='archive')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -330,10 +330,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='archiving and compression')
+		(SELECT id FROM tag WHERE text='archiving and compression')
 	);
 SET @tree_node_id = NULL;
 
@@ -341,8 +341,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='archive')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -351,10 +351,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='compression only')
+		(SELECT id FROM tag WHERE text='compression only')
 	);
 SET @tree_node_id = NULL;
 
@@ -362,8 +362,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='archive')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -372,10 +372,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='disk image')
+		(SELECT id FROM tag WHERE text='disk image')
 	);
 SET @tree_node_id = NULL;
 
@@ -383,8 +383,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='disk image')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -393,10 +393,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='iso image')
+		(SELECT id FROM tag WHERE text='iso image')
 	);
 SET @tree_node_id = NULL;
 
@@ -404,8 +404,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='disk image')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -414,10 +414,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='iso')
+		(SELECT id FROM tag WHERE text='iso')
 	);
 SET @tree_node_id = NULL;
 
@@ -425,8 +425,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='regular')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -435,10 +435,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text = 'binary')
+		(SELECT id FROM tag WHERE text = 'binary')
 	);
 SET @tree_node_id = NULL;
 
@@ -446,8 +446,8 @@ INSERT INTO tree_node (id, parent_id)
 	VALUES (
 		'',
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS node LEFT JOIN description
-			ON node.description_id = description.id 
+			FROM l_tree_node_to_tag AS node LEFT JOIN tag
+			ON node.tag_id = tag.id 
 			WHERE text='regular')
 	);
 SET @tree_node_id = LAST_INSERT_ID();
@@ -456,10 +456,10 @@ INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id)
 		@tree_node_id,
 		(SELECT id FROM tree WHERE name='file type hierarchy')
 	);
-INSERT INTO l_tree_node_to_description (tree_node_id, description_id)
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id)
 	VALUES (
 		@tree_node_id,
-		(SELECT id FROM description WHERE text='multimedia container')
+		(SELECT id FROM tag WHERE text='multimedia container')
 	);
 SET @tree_node_id = NULL;
 
@@ -489,117 +489,117 @@ INSERT INTO mime_type (id, type_descriptor) VALUES
 INSERT INTO l_mime_type_to_tree_node (tree_node_id, mime_type_id) 
 	VALUES (
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='waveform audio format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='waveform audio format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/wav')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='waveform audio format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='waveform audio format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-wav')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='waveform audio format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='waveform audio format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/wave')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='waveform audio format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='waveform audio format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-pn-wav')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='waveform audio format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='waveform audio format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/vnd-wave')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/aiff')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-aiff')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='sound/aiff')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/rmf')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-rmf')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-pn-aiff')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-gsm')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/mid')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/x-midi')
 	),
 	(
 		(SELECT tree_node_id 
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text='audio interchange file format'), 
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text='audio interchange file format'), 
 		(SELECT id FROM mime_type WHERE type_descriptor='audio/vnd-qcelp')
 	),
 	(
 		(SELECT tree_node_id
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text = 'free lossless audio codec'),
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text = 'free lossless audio codec'),
 		(SELECT id FROM mime_type WHERE type_descriptor = 'audio/x-flac')
 	),
 (
 		(SELECT tree_node_id
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text = 'binary'),
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text = 'binary'),
 		(SELECT id FROM mime_type WHERE type_descriptor = 'application/octet-stream')
 	),
 
 	(
 		(SELECT tree_node_id
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text = 'iso image'),
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text = 'iso image'),
 		(SELECT id FROM mime_type WHERE type_descriptor = 'application/x-iso9660-image')
 	),
 	(
 		(SELECT tree_node_id
-			FROM l_tree_node_to_description AS link LEFT JOIN description ON link.description_id=description.id 
-			WHERE description.text = 'tape archive'),
+			FROM l_tree_node_to_tag AS link LEFT JOIN tag ON link.tag_id=tag.id 
+			WHERE tag.text = 'tape archive'),
 		(SELECT id FROM mime_type WHERE type_descriptor = 'application/x-tar')
 	)
 ;
