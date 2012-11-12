@@ -287,6 +287,7 @@ process_fstab () {
 
 			START TRANSACTION;
 			CALL insert_mount_point (
+				$hostname,
 				$mount_point,
 				$file_system
 			);

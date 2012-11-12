@@ -674,6 +674,7 @@ DROP PROCEDURE IF EXISTS insert_and_get_mount_point //
 CREATE PROCEDURE insert_and_get_mount_point -- {{{1
 
 	(
+		IN  p_hostname         VARCHAR(256),
 		IN  p_pathname         VARCHAR(256),
 		IN  p_file_system_uuid CHAR(36),
 		OUT p_mount_point_id   MEDIUMINT UNSIGNED
@@ -681,6 +682,7 @@ CREATE PROCEDURE insert_and_get_mount_point -- {{{1
 
 COMMENT -- {{{2
                      "Parameters:
+                        IN  <p_hostname>         VARCHAR(256),
                         IN  <p_pathname>         VARCHAR(256),
                         IN  <p_file_system_uuid> MEDIUMINT UNSIGNED,
                         OUT <p_mount_point_id>   MEDIUMINT UNSIGNED.
@@ -689,18 +691,23 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
+	DECLARE v_host_id        MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'mount_point' with the specified file_id. 
+	CALL insert_and_get_host(p_hostname, v_host_id);
+
+	-- Check if an entry already exists in the table 'mount_point'. 
 	SELECT id INTO p_mount_point_id
 		FROM mount_point
-		WHERE pathname = p_pathname
+		WHERE host_id = v_host_id
+		AND pathname = p_pathname
 	;
 	
 	-- If it doesn't exist, create it.
 	IF p_mount_point_id IS NULL
 	THEN
-		INSERT INTO mount_point (id, pathname) VALUES (
+		INSERT INTO mount_point (id, host_id, pathname) VALUES (
 			'',
+			v_host_id,
 			p_pathname
 		);
 		SELECT LAST_INSERT_ID() INTO p_mount_point_id;
@@ -1131,12 +1138,14 @@ DROP PROCEDURE IF EXISTS insert_mount_point //
 CREATE PROCEDURE insert_mount_point -- {{{1
 
 	(
+		IN  p_hostname         VARCHAR(256),
 		IN  p_pathname         VARCHAR(256),
 		IN  p_file_system_uuid CHAR(36)
 	)
 
 COMMENT -- {{{2
                      "Parameters:
+                        IN <p_hostname>         VARCHAR(256),
                         IN <p_pathname>         VARCHAR(256),
                         IN <p_file_system_uuid> MEDIUMINT UNSIGNED.
                       Description:
@@ -1144,7 +1153,7 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 	DECLARE v_mount_point_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_mount_point (p_pathname, p_file_system_uuid, v_mount_point_id);
+	CALL insert_and_get_mount_point (p_hostname, p_pathname, p_file_system_uuid, v_mount_point_id);
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
