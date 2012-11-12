@@ -29,12 +29,6 @@ CREATE TABLE IF NOT EXISTS binary_file (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS description (
-	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	text             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE IF NOT EXISTS data_storage_device (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	`timestamp`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -162,11 +156,11 @@ CREATE TABLE IF NOT EXISTS l_file_system_to_mount_point (
 	                 	REFERENCES file_system(id)
 );
 
-CREATE TABLE IF NOT EXISTS l_tree_node_to_description (
+CREATE TABLE IF NOT EXISTS l_tree_node_to_tag (
 	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
-	description_id   MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES description(id)
+	tag_id           MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES tag(id)
 );
 
 CREATE TABLE IF NOT EXISTS l_tree_node_to_tree (
@@ -208,6 +202,12 @@ CREATE TABLE IF NOT EXISTS software_session (
 	software_id      MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES software(id),
 	software_options VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS tag (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	text             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 

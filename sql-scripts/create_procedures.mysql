@@ -25,8 +25,8 @@ COMMENT -- {{{2
                         IN  <p_descendant> VARCHAR(256),
                         OUT <p_ancestor>   MEDIUMINT.
                       Description:
-                        Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it 
-                        is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is. Store the description 
+                        Find in the tree named <p_tree> a node which is a child of that asociated to the tag or mime_type <p_father> and, if it 
+                        is not asociated to the tag or mime-type <p_descendant>, is and ancestor of one that it is. Store the tag 
                         asociated to the found node in the variable named <p_ancestor>." -- 2}}}
 
 BEGIN -- {{{2
@@ -45,12 +45,12 @@ BEGIN -- {{{2
 		IF v_descendant_left IS NULL
 		THEN
 			SELECT left_extent INTO v_descendant_left
-				FROM l_tree_node_to_description AS node2desc
-				INNER JOIN description
-					ON node2desc.description_id = description.id
+				FROM l_tree_node_to_tag AS node2desc
+				INNER JOIN tag
+					ON node2desc.tag_id = tag.id
 				INNER JOIN tree_node AS node
 					ON node2desc.tree_node_id = node.id
-				WHERE description.text = p_descendant;
+				WHERE tag.text = p_descendant;
 		END IF;
 	END IF;
 	SELECT text INTO p_ancestor
@@ -59,14 +59,14 @@ BEGIN -- {{{2
 			ON node2tree.tree_id = tree.id
 		INNER JOIN tree_node AS node
 			ON node2tree.tree_node_id = node.id
-		INNER JOIN l_tree_node_to_description node2desc
+		INNER JOIN l_tree_node_to_tag node2desc
 			ON node.id = node2desc.tree_node_id
-		INNER JOIN description
-			ON description.id = node2desc.description_id
+		INNER JOIN tag
+			ON tag.id = node2desc.tag_id
 		WHERE parent_id = (SELECT tree_node_id
-					FROM l_tree_node_to_description AS node2desc
-					INNER JOIN description
-						ON node2desc.description_id = description.id
+					FROM l_tree_node_to_tag AS node2desc
+					INNER JOIN tag
+						ON node2desc.tag_id = tag.id
 					WHERE text = p_father)
 		AND tree.name = p_tree
 		AND left_extent <= v_descendant_left
@@ -1536,8 +1536,8 @@ COMMENT -- {{{2
                         IN <p_father>     VARCHAR(256),
                         IN <p_descendant> VARCHAR(256),
                       Description:
-                        Find in the tree named <p_tree> a node which is a child of that asociated to the description or mime_type <p_father> and, if it
-                        is not asociated to the description or mime-type <p_descendant>, is and ancestor of one that it is." -- 2}}}
+                        Find in the tree named <p_tree> a node which is a child of that asociated to the tag or mime_type <p_father> and, if it
+                        is not asociated to the tag or mime-type <p_descendant>, is and ancestor of one that it is." -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_ancestor VARCHAR(256);
