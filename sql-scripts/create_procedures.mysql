@@ -1346,10 +1346,11 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_file_system_to_mount_point' with the specified p_file_system_id. 
+	-- Check if an entry already exists in the table 'l_file_system_to_mount_point' with the specified p_file_system_id and p_mount_point_id. 
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_system_to_mount_point
 		WHERE file_system_id = p_file_system_id
+		AND mount_point_id = p_mount_point_id
 	;
 	
 	-- If it doesn't exist, create it.

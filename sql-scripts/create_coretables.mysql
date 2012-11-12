@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS description (
 
 CREATE TABLE IF NOT EXISTS data_storage_device (
 	id               SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	`timestamp`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	                       		ON UPDATE CURRENT_TIMESTAMP,
+	`timestamp`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (id)
 );
 
@@ -147,30 +147,32 @@ CREATE TABLE IF NOT EXISTS l_flac_file_to_metadata_entry (
 );
 
 CREATE TABLE IF NOT EXISTS l_mime_type_to_tree_node (
-	tree_node_id    MEDIUMINT UNSIGNED NOT NULL
+	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
-	mime_type_id    MEDIUMINT UNSIGNED NOT NULL
+	mime_type_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES mime_type(id)
 );
 
 CREATE TABLE IF NOT EXISTS l_file_system_to_mount_point (
-	mount_point_id MEDIUMINT UNSIGNED NOT NULL
+	`timestamp`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				ON UPDATE CURRENT_TIMESTAMP,
+	mount_point_id   MEDIUMINT UNSIGNED NOT NULL
 	                	REFERENCES mount_point(id),
-	file_system_id MEDIUMINT UNSIGNED NOT NULL
+	file_system_id   MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file_system(id)
 );
 
 CREATE TABLE IF NOT EXISTS l_tree_node_to_description (
-	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
-	description_id      MEDIUMINT UNSIGNED NOT NULL
+	description_id   MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES description(id)
 );
 
 CREATE TABLE IF NOT EXISTS l_tree_node_to_tree (
-	tree_node_id        MEDIUMINT UNSIGNED NOT NULL
+	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
-	tree_id             MEDIUMINT UNSIGNED NOT NULL
+	tree_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree(id)
 );
 
