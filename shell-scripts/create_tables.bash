@@ -40,7 +40,7 @@ progname=$(basename $0)
 
 # Get a list of all the tables in the database.
 
-tables=( $(mysql --skip-reconnect -u$admin_user -p$admin_pass \
+tables=( $($mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 
 	SHOW TABLES;
@@ -55,7 +55,7 @@ pass=\'$pass\'
 for table in ${tables[@]}
 do
 	table=\`$table\`
-	mysql --skip-reconnect -u$admin_user -p$admin_pass \
+	$mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 		-D$db --skip-column-names -e "
 		
 		DROP TABLE $table;
@@ -66,7 +66,7 @@ done
 
 # Create the tables.
 
-mysql --skip-reconnect -u$admin_user -p$admin_pass \
+$mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 	
 	START TRANSACTION;

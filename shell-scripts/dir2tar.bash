@@ -325,7 +325,7 @@ declare db              # A mysql database.
 
 version="$(tar --version | head -n 1)"; version=\'$version\'
 tarsha1=$(sha1sum $tarfile | cut -c1-40); tarsha1=\"$tarsha1\"
-mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
+$mysql_path --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
 	START TRANSACTION;
 	CALL process_output_file (
@@ -360,7 +360,7 @@ do
 	filesha1=${sha1s[ind]}; filesha1=\"$filesha1\"
 	suffix=${suffixes[ind]};  suffix=\"$suffix\"
 	
-	mysql --skip-reconnect -u$user -p$pass -D$db \
+	$mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
 		START TRANSACTION;
@@ -433,7 +433,7 @@ fi
 file_sys=\'$file_sys\'
 new_path=\'$new_path\'
 
-mysql --skip-reconnect -u$user -p$pass -D$db \
+$mysql_path --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
 	START TRANSACTION;

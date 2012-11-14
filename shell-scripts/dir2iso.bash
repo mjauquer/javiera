@@ -192,7 +192,7 @@ version=\'$version\'
 options=\'$options\'
 isosha1=$(sha1sum $output | cut -c1-40); isosha1=\"$isosha1\"
 
-mysql --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
+$mysql_path --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
 	START TRANSACTION;
 	CALL process_output_file (
@@ -220,7 +220,7 @@ do
 	filesha1=\"$filesha1\"
 	suffix=${file#$source_dir}; suffix=\'$suffix\'
 
-	mysql --skip-reconnect -u$user -p$pass \
+	$mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
 		START TRANSACTION;

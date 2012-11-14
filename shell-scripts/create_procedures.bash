@@ -38,7 +38,7 @@ progname=$(basename $0)
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-procedures=( $(mysql --skip-reconnect -u$admin_user -p$admin_pass \
+procedures=( $($mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 
 	START TRANSACTION;
@@ -55,11 +55,11 @@ pass=\'$pass\'
 for procedure in ${procedures[@]}
 do
 	
-	mysql --skip-reconnect -u$admin_user -p$admin_pass \
+	$mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 		-D$db --skip-column-names -e "
 		
 		GRANT EXECUTE ON PROCEDURE $db.$procedure
-			TO $user@'%' IDENTIFIED BY $pass;
+			TO $user@'localhost' IDENTIFIED BY $pass;
 
 	"
 	[[ $? -ne 0 ]] && return 1

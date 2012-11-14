@@ -44,7 +44,7 @@ insert_audio_file () {
 
 		# Insert an entry in the 'audio_file' table and get the
 		# audio_file_id.
-		local audio_file_id=$(mysql --skip-reconnect -u$user -p$pass \
+		local audio_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
 			START TRANSACTION;
@@ -77,7 +77,7 @@ insert_flac_file () {
 	# Insert an entry in the 'flac_file' table and get the
 	# flac_file_id.
 	local audio_file_id=$2; audio_file_id=\"$audio_file_id\"
-	local flac_file_id=$(mysql --skip-reconnect -u$user -p$pass \
+	local flac_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
 		START TRANSACTION;
@@ -177,7 +177,7 @@ insert_flac_metadata() {
 		local field2="${col2[ind]}"
 		escape_chars field2 "$field2"; field2="\"$field2\""
 		local mtype="\"$1\""
-		mysql --skip-reconnect -u$user -p$pass \
+		$mysql_path --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
 			START TRANSACTION;

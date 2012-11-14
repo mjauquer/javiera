@@ -35,7 +35,7 @@ insert_archive_file () {
 	# Insert an entry in the 'archive_file' table.
 	local file_id=$1; file_id=\"$file_id\"
 
-	mysql --skip-reconnect -u$user -p$pass -D$db \
+	$mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
 		START TRANSACTION;

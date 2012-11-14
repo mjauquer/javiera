@@ -199,7 +199,7 @@ declare session_id # A number assigned by the database to the par2
 version=\'$version\'
 options=\'$options\'
 
-session_id=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
+session_id=( $($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
 	START TRANSACTION;
@@ -226,7 +226,7 @@ for file in ${par2files[@]} ${files[@]}
 do
 	javiera $file
 	filesha1=$(sha1sum $file | cut -c1-40); filesha1=\"$filesha1\"
-	mysql --skip-reconnect -u$user -p$pass -D$db \
+	$mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
 		START TRANSACTION;

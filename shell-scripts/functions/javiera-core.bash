@@ -104,7 +104,7 @@ process_file () {
 #              PATHNAME  The pathname of the file it is being query
 #                        about.
 
-	local lastid_bef=$(mysql --skip-reconnect -u$user -p$pass \
+	local lastid_bef=$($mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
 		SELECT MAX(id) FROM file;
@@ -141,7 +141,7 @@ process_file () {
 
 	# Insert file's metadata in the database.
 
-	local lastid=$(mysql --skip-reconnect -u$user -p$pass -D$db \
+	local lastid=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
 		START TRANSACTION;
@@ -168,7 +168,7 @@ process_file () {
 
 	local -a file_type
 
-	file_type=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
+	file_type=( $($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
 		START TRANSACTION;
@@ -267,7 +267,7 @@ process_fstab () {
 		file_system=\'$file_system\'
 		local mount_point=${mount_points[i]}
 		mount_point=\'$mount_point\'
-		mysql --skip-reconnect -u$user -p$pass -D$db \
+		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
 			--skip-column-names -e "
 
 			START TRANSACTION;

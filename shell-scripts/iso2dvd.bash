@@ -87,7 +87,7 @@ declare user         # A mysql user name.
 declare pass         # A mysql password.
 
 # Get dvd types from the database.
-dvd_types=( $(mysql --skip-reconnect -u$user -p$pass -D$db \
+dvd_types=( $($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
 	SELECT id, type_descriptor
@@ -183,7 +183,7 @@ fs_uuid=\'$fs_uuid\'
 options=\'$options\'
 version=\'$version\'
 
-dvd_id=$(mysql --skip-reconnect -u$user -p$pass -D$db \
+dvd_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 	--skip-column-names -e "
 
 	START TRANSACTION;
