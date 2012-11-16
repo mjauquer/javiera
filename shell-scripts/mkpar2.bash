@@ -98,10 +98,10 @@ unset -v notfiles
 declare found_par2 # The founded par2 files.
 
 found_par2="$(find . -regex '.*par2')"
-#if [ "$found_par2" ]
-#then
-#	error_exit "$LINENO: Refuse to run if there are par2 files in the working directory."
-#fi
+if [ "$found_par2" ]
+then
+	error_exit "$LINENO: Refuse to run if there are par2 files in the working directory."
+fi
 
 unset -v found_par2
 
@@ -165,10 +165,10 @@ blockcount=1470
 outputinfo=par2info.txt
 options="create -s${blocksize} -c${blockcount} par2file"
 
-#if ! par2 $options ${files[@]} > $outputinfo
-#then
-#	error_exit "$LINENO: Error after calling par2 utility"
-#fi
+if ! par2 $options ${files[@]} > $outputinfo
+then
+	error_exit "$LINENO: Error after calling par2 utility"
+fi
 version="$(head -n 1 < $outputinfo)"
 
 unset -v outputinfo
