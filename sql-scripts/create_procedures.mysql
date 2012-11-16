@@ -282,22 +282,15 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 	DECLARE v_data_storage_device_id MEDIUMINT UNSIGNED;
-	DECLARE v_digital_media_id       MEDIUMINT UNSIGNED;
 	DECLARE v_dvd_id                 MEDIUMINT UNSIGNED;
 
 	INSERT INTO data_storage_device (id) VALUES ('');
 	SELECT LAST_INSERT_ID() INTO v_data_storage_device_id;
 
-	INSERT INTO digital_media (id, data_storage_device_id) VALUES (
-		'',
-		v_data_storage_device_id
-	);
-	SELECT LAST_INSERT_ID() INTO v_digital_media_id;
-
 	SELECT COALESCE(MAX(id), 0) + 1 FROM dvd INTO p_dvd_id;
-	INSERT INTO dvd (id, digital_media_id, dvd_type_id) VALUES (
+	INSERT INTO dvd (id, data_storage_device_id, dvd_type_id) VALUES (
 		p_dvd_id,
-		v_digital_media_id,
+		v_data_storage_device_id,
 		p_dvd_type_id
 	);
 END; // -- 2}}} 1}}}

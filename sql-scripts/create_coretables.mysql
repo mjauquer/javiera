@@ -36,19 +36,12 @@ CREATE TABLE IF NOT EXISTS data_storage_device (
 	PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS digital_media (
-	id                     MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS dvd (
+	id                     MEDIUMINT UNSIGNED NOT NULL,
 	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
 	                       		REFERENCES data_storage_device(id),
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS dvd (
-	id               MEDIUMINT UNSIGNED NOT NULL,
-	digital_media_id MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES digital_media(id),
-	dvd_type_id      MEDIUMINT UNSIGNED NOT NULL 
-	                 	REFERENCES dvd_type(id),
+	dvd_type_id            MEDIUMINT UNSIGNED NOT NULL 
+	                       		REFERENCES dvd_type(id),
 	PRIMARY KEY (id)
 );
 

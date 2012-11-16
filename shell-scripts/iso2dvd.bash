@@ -190,10 +190,8 @@ dvd_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 	CALL insert_and_get_dvd ($dvd_type_id, @dvd_id);
 	SELECT device.id INTO @data_storage_device_id
 		FROM data_storage_device AS device
-		INNER JOIN digital_media AS media
-			ON device.id = media.data_storage_device_id
 		INNER JOIN dvd
-			ON media.id = dvd.digital_media_id
+			ON device.id = dvd.data_storage_device_id
 		WHERE dvd.id = @dvd_id
 	;
 	SELECT id INTO @file_system_id
