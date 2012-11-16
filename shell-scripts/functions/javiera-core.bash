@@ -200,9 +200,22 @@ process_fstab () {
 #
 # DESCRIPTION: Parse file systems data and insert it in the database.
 
-	local hostname
+	# Get uuids related to hard disk partitions from /etc/fstab.
 
-	# Mount the digital media and get uuid data from it.
+	while read line
+	do
+		local fields=( $line )
+		if [[ ${fields[0]} =~ UUID=.* ]]
+		then
+			local field0=${fields[0]}
+			local fs_uuid=${field0#UUID=}
+			file_systems+=( $fs_uuid )
+			local device_name=$(blkid -U $fs_uuid)
+			mount_points+=( ${fields[1]} )
+		fi
+	done < /etc/fstab
+
+	# Mount any digital media and get uuid data from there.
 
 	local -a media # The mount points where digital media devices
 	               # are expected to be mounted.
@@ -220,12 +233,25 @@ process_fstab () {
 			[[ $? == 0 ]] &&
 			continue
 
-		# Mount media if is not already mounted.
+		# Mount media if it is not already mounted.
 
 		( mount | grep "on $dev type" > /dev/null ) && mounted=true
-		if [[ $mounted != true ]] && ! sudo mount $dev
+		if [[ $mounted != true ]] && ! sudo mount $dev 2> /dev/null
 		then
-			error_exit "$LINENO: Error after trying to mount media on $dev."
+			echo "Could not mount $dev." 
+			echo -n "Should I continue [y/n]?: "
+			while read answer 
+			do
+				case $answer in
+					y) break
+					   ;;
+					n) exit
+					   ;;
+					*) echo -n "Should I continue [y/n]?: "
+					   continue
+					   ;;
+				esac
+			done
 		fi
 
 		# Get data.
@@ -244,22 +270,9 @@ process_fstab () {
 		mounted=false
 	done
 
-	# Get uuids related to hard disk partitions from /etc/fstab.
+	# Insert any new file system or mount point in the db.
 
-	hostname=$(hostname); hostname=\'$hostname\'
-
-	while read line
-	do
-		local fields=( $line )
-		if [[ ${fields[0]} =~ UUID=.* ]]
-		then
-			local field0=${fields[0]}
-			local fs_uuid=${field0#UUID=}
-			file_systems+=( $fs_uuid )
-			local device_name=$(blkid -U $fs_uuid)
-			mount_points+=( ${fields[1]} )
-		fi
-	done < /etc/fstab
+	local hostname=$(hostname); hostname=\'$hostname\'
 
 	for (( i=0; i<${#file_systems[@]}; i++ ))
 	do

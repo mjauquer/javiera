@@ -148,8 +148,6 @@ CREATE TABLE IF NOT EXISTS l_mime_type_to_tree_node (
 );
 
 CREATE TABLE IF NOT EXISTS l_file_system_to_mount_point (
-	`timestamp`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-				ON UPDATE CURRENT_TIMESTAMP,
 	mount_point_id   MEDIUMINT UNSIGNED NOT NULL
 	                	REFERENCES mount_point(id),
 	file_system_id   MEDIUMINT UNSIGNED NOT NULL
