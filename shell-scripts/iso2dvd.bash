@@ -124,7 +124,7 @@ unset -v dvd_types
 declare options  # The options to be passed to the cdrecord command.
 declare version  # The version of the cdrecord command.
 
-options="-v speed=4 dev=ATAPI:0,0,0" 
+options="-v -eject speed=4 dev=ATAPI:0,0,0" 
 
 
 version="$(cdrecord -version)"
@@ -147,6 +147,18 @@ then
 fi
 
 unset -v input
+
+echo "Close the tray and press <c> to continue: "
+while read answer 
+do
+	case $answer in
+		c) break
+		   ;;
+		*) echo "Close the tray and press <c> to continue: "
+		   continue
+		   ;;
+	esac
+done
 
 #-----------------------------------------------------------------------
 # Update the backup database.

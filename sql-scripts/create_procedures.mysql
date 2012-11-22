@@ -448,26 +448,16 @@ BEGIN -- {{{2
 
 	CALL insert_and_get_file_system (p_uuid, v_file_system_id);
 
-	-- Check if an entry already exists in the table 'file_system_location' with the specified p_uuid and p_pathname.
-	SELECT id INTO p_file_system_location_id
-		FROM file_system_location
-		WHERE file_system_id = v_file_system_id
-		AND pathname = p_pathname
-	;
-	
-	-- If it doesn't exist, create it.
-	IF p_file_system_location_id IS NULL
-	THEN
-		INSERT INTO location (id) VALUES ('');
-		SELECT LAST_INSERT_ID() INTO v_location_id;
+	INSERT INTO location (id) VALUES ('');
+	SELECT LAST_INSERT_ID() INTO v_location_id;
 
-		INSERT INTO file_system_location (location_id, file_system_id, pathname) VALUES (
-			v_location_id,
-			v_file_system_id,
-			p_pathname
-		);
-		SELECT LAST_INSERT_ID() INTO p_file_system_location_id;
-	END IF;
+	INSERT INTO file_system_location (location_id, file_system_id, pathname) VALUES (
+		v_location_id,
+		v_file_system_id,
+		p_pathname
+	);
+	SELECT LAST_INSERT_ID() INTO p_file_system_location_id;
+
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -881,7 +871,7 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 	DECLARE v_file_system_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_file_system (p_uuid);
+	CALL insert_and_get_file_system (p_uuid, v_file_system_id);
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -972,7 +962,8 @@ BEGIN -- {{{2
 	-- Check if an entry already exists in the table 'flac_metadata_entry' with the specified paramaters.
 	SELECT id INTO v_flac_metadata_entry_id
 		FROM flac_metadata_entry
-		WHERE type = p_type
+		WHERE flac_file_id = p_flac_file_id
+		AND type = p_type
 		AND column1 = p_column1
 		AND column2 = p_column2;
 	

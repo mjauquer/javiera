@@ -284,6 +284,9 @@ process_fstab () {
 			--skip-column-names -e "
 
 			START TRANSACTION;
+			CALL insert_file_system (
+				$file_system
+			);
 			CALL insert_mount_point (
 				$hostname,
 				$mount_point,
