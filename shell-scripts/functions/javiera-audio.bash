@@ -77,11 +77,32 @@ insert_flac_file () {
 	# Insert an entry in the 'flac_file' table and get the
 	# flac_file_id.
 	local audio_file_id=$2; audio_file_id=\"$audio_file_id\"
+	local min_blocksize=\"$(metaflac --show-min-blocksize $1)\"
+	local max_blocksize=\"$(metaflac --show-max-blocksize $1)\"
+	local min_framesize=\"$(metaflac --show-min-framesize $1)\"
+	local max_framesize=\"$(metaflac --show-max-framesize $1)\"
+	local sample_rate=\"$(metaflac --show-sample-rate $1)\"
+	local channels=\"$(metaflac --show-channels $1)\"
+	local bits_per_sample=\"$(metaflac --show-bps $1)\"
+	local total_samples=\"$(metaflac --show-total-samples $1)\"
+	local md5sum=\"$(metaflac --show-md5sum $1)\"
+
 	local flac_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
 		START TRANSACTION;
-		CALL insert_flac_file ($audio_file_id);
+		CALL insert_flac_file (
+			$audio_file_id,
+			$min_blocksize,
+			$max_blocksize,
+			$min_framesize,
+			$max_framesize,
+			$sample_rate,
+			$channels,
+			$bits_per_sample,
+			$total_samples,
+			$md5sum
+		);
 		SELECT MAX(id) FROM flac_file;
 		COMMIT;
 
@@ -91,10 +112,6 @@ insert_flac_file () {
 	# Insert metadata entries related to the picture metadata
 	# block.
 	! insert_flac_metadata PICTURE $1 $flac_file_id && return 1
-
-	# Insert metadata entries related to the streaminfo metadata
-	# block.
-	! insert_flac_metadata STREAMINFO $1 $flac_file_id && return 1
 
 	# Insert metadata entries related to the vorbis_comment metadata
 	# block.

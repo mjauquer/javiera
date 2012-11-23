@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS flac_file (
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES audio_file(id),
+	min_blocksize    TINYINT UNSIGNED NOT NULL,
+	max_blocksize    MEDIUMINT UNSIGNED NOT NULL,
+	min_framesize    MEDIUMINT UNSIGNED NOT NULL,
+	max_framesize    MEDIUMINT UNSIGNED NOT NULL,
+	sample_rate      MEDIUMINT UNSIGNED NOT NULL,
+	channels         TINYINT UNSIGNED NOT NULL,
+	bits_per_sample  TINYINT UNSIGNED NOT NULL,
+	total_samples    MEDIUMINT UNSIGNED NOT NULL,
+	md5_signature    CHAR(32) NOT NULL,
 	PRIMARY KEY (id)
 );
 

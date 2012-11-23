@@ -472,14 +472,32 @@ DROP PROCEDURE IF EXISTS insert_and_get_flac_file //
 CREATE PROCEDURE insert_and_get_flac_file -- {{{1
 
 	(
-		IN  p_audio_file_id MEDIUMINT UNSIGNED,
-		OUT p_flac_file_id  MEDIUMINT UNSIGNED
+		IN  p_audio_file_id   MEDIUMINT UNSIGNED,
+		IN  p_min_blocksize   TINYINT UNSIGNED,
+		IN  p_max_blocksize   MEDIUMINT UNSIGNED,
+		IN  p_min_framesize   MEDIUMINT UNSIGNED,
+		IN  p_max_framesize   MEDIUMINT UNSIGNED,
+		IN  p_sample_rate     MEDIUMINT UNSIGNED,
+		IN  p_channels        TINYINT UNSIGNED,
+		IN  p_bits_per_sample TINYINT UNSIGNED,
+		IN  p_total_samples   MEDIUMINT UNSIGNED,
+		IN  p_md5_signature   CHAR(32),
+		OUT p_flac_file_id    MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN  <p_audio_file_id> MEDIUMINT UNSIGNED,
-                        OUT <p_flac_file_id>  MEDIUMINT UNSIGNED.
+                        IN  <p_audio_file_id>   MEDIUMINT UNSIGNED,
+		        IN  <p_min_blocksize>   TINYINT UNSIGNED,
+		        IN  <p_max_blocksize>   MEDIUMINT UNSIGNED,
+	        	IN  <p_min_framesize>   MEDIUMINT UNSIGNED,
+	        	IN  <p_max_framesize>   MEDIUMINT UNSIGNED,
+	        	IN  <p_sample_rate>     MEDIUMINT UNSIGNED,
+	        	IN  <p_channels>        TINYINT UNSIGNED,
+	        	IN  <p_bits_per_sample> TINYINT UNSIGNED,
+	        	IN  <p_total_samples>   MEDIUMINT UNSIGNED,
+	        	IN  <p_md5_signature>   CHAR(32),
+                        OUT <p_flac_file_id>    MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry in the 'flac_file' table. Return the id field of the inserted row." -- 2}}}
 
@@ -492,9 +510,18 @@ BEGIN -- {{{2
 	-- If it doesn't exist, create it.
 	IF p_flac_file_id IS NULL
 	THEN
-		INSERT INTO flac_file (id, audio_file_id) VALUES (
+		INSERT INTO flac_file (id, audio_file_id, min_blocksize, max_blocksize, min_framesize, max_framesize, sample_rate, channels, bits_per_sample, total_samples, md5_signature) VALUES (
 			'',
-			p_audio_file_id
+			p_audio_file_id,
+		        p_min_blocksize,
+		        p_max_blocksize,
+	        	p_min_framesize,
+	        	p_max_framesize,
+	        	p_sample_rate,
+	        	p_channels,
+	        	p_bits_per_sample,
+	        	p_total_samples,
+	        	p_md5_signature
 		);
 		SELECT LAST_INSERT_ID() INTO p_flac_file_id;
 	END IF;
@@ -914,18 +941,37 @@ DROP PROCEDURE IF EXISTS insert_flac_file //
 CREATE PROCEDURE insert_flac_file -- {{{1
 
 	(
-		IN p_audio_file_id MEDIUMINT UNSIGNED
+		IN p_audio_file_id MEDIUMINT UNSIGNED,
+		IN p_min_blocksize   TINYINT UNSIGNED,
+		IN p_max_blocksize   MEDIUMINT UNSIGNED,
+		IN p_min_framesize   MEDIUMINT UNSIGNED,
+		IN p_max_framesize   MEDIUMINT UNSIGNED,
+		IN p_sample_rate     MEDIUMINT UNSIGNED,
+		IN p_channels        TINYINT UNSIGNED,
+		IN p_bits_per_sample TINYINT UNSIGNED,
+		IN p_total_samples   MEDIUMINT UNSIGNED,
+		IN p_md5_signature   CHAR(32)
 	)
 
 COMMENT -- {{{2
                      "Parameters: 
-                        IN <p_audio_file_id> MEDIUMINT UNSIGNED.
+                        IN <p_audio_file_id>   MEDIUMINT UNSIGNED,
+		        IN <p_min_blocksize>   TINYINT UNSIGNED,
+		        IN <p_max_blocksize>   MEDIUMINT UNSIGNED,
+	        	IN <p_min_framesize>   MEDIUMINT UNSIGNED,
+	        	IN <p_max_framesize>   MEDIUMINT UNSIGNED,
+	        	IN <p_sample_rate>     MEDIUMINT UNSIGNED,
+	        	IN <p_channels>        TINYINT UNSIGNED,
+	        	IN <p_bits_per_sample> TINYINT UNSIGNED,
+	        	IN <p_total_samples>   MEDIUMINT UNSIGNED,
+	        	IN <p_md5_signature>   CHAR(32).
                       Description:
                         Insert an entry in the 'flac_file' table." -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_flac_file_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_flac_file (p_audio_file_id, v_flac_file_id);
+	CALL insert_and_get_flac_file (p_audio_file_id, p_min_blocksize, p_max_blocksize, p_min_framesize, p_max_framesize, p_sample_rate, p_channels, p_bits_per_sample, p_total_samples, p_md5_signature, v_flac_file_id);
+
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -949,7 +995,7 @@ CREATE PROCEDURE insert_flac_metadata_entry -- {{{1
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_flac_file_id> MEDIUMINT UNSIGNED,
-                        IN <p_type>           VARCHAR(256),
+                        IN <p_type>         VARCHAR(256),
                         IN <p_column1>      VARCHAR(256),
                         IN <p_column2>      VARCHAR(256).
                       Description:
@@ -959,25 +1005,15 @@ BEGIN -- {{{2
 
 	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
 
-	-- Test if the entry already exists in the table `flac_metadata_entry`.
-	SELECT id INTO v_flac_metadata_entry_id
-		FROM flac_metadata_entry
-		WHERE flac_file_id = p_flac_file_id
-		AND type = p_type
-		AND column1 = p_column1
-		AND column2 = p_column2;
-	
-	-- If it doesn't exist, create it.
-	IF v_flac_metadata_entry_id IS NULL
-	THEN
-		INSERT INTO flac_metadata_entry (type, column1, column2) VALUES (
-			p_type,
-			p_column1,
-			p_column2
-		);
-		SELECT LAST_INSERT_ID() INTO v_flac_metadata_entry_id;
-		CALL link_flac_file_to_metadata_entry(p_flac_file_id, v_flac_metadata_entry_id);
-	END IF;
+	INSERT INTO flac_metadata_entry (type, column1, column2) VALUES (
+		p_type,
+		p_column1,
+		p_column2
+	);
+
+	SELECT LAST_INSERT_ID() INTO v_flac_metadata_entry_id;
+
+	CALL link_flac_file_to_metadata_entry(p_flac_file_id, v_flac_metadata_entry_id);
 
 END; // -- 2}}} 1}}}
 
