@@ -97,7 +97,7 @@ COMMENT -- {{{2
                         Insert an entry in the 'archive_file' table. Return the id field of the inserted row." -- 2}}}
 
 BEGIN -- {{{2
-	-- Check if an entry already exists in the table 'archive_file' with the specified file_id. 
+	-- Test if the entry already exists in the table `archive_file`.
 	SELECT id INTO p_archive_file_id
 		FROM archive_file
 		WHERE file_id = p_file_id;
@@ -142,7 +142,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_location_id MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'archive_location' with the specified p_hostname and p_pathname. 
+	-- Test if the entry already exists in the table `archive_location`. 
 	SELECT archive_location.id INTO p_archive_location_id
 		FROM archive_location
 		WHERE archive_file_id = p_archive_file_id
@@ -193,7 +193,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_recording_id MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'audio_file' with the specified file_id. 
+	-- Test if the entry already exists in the table `audio_file`.
 	SELECT id INTO p_audio_file_id
 		FROM audio_file
 		WHERE file_id = p_file_id
@@ -241,7 +241,7 @@ COMMENT -- {{{2
                         Insert an entry in the 'binary_file' table. Return the id field of the inserted row." -- 2}}}
 
 BEGIN -- {{{2
-	-- Check if an entry already exists in the table 'binary_file' with the specified file_id. 
+	-- Test if the entry already exists in the table `binary_file`.
 	SELECT id INTO p_binary_file_id
 		FROM binary_file
 		WHERE file_id = p_file_id;
@@ -344,7 +344,7 @@ BEGIN -- {{{2
 		WHERE fs_location.id = v_file_system_location_id
 	;
 	
-	-- Check if an entry already exists in the table 'file' with the specified p_sha1. 
+	-- Test if the entry already exists in the table `file`.
 	SELECT id INTO p_file_id
 		FROM file
 		WHERE sha1 = p_sha1;
@@ -362,7 +362,7 @@ BEGIN -- {{{2
 		SELECT LAST_INSERT_ID() INTO p_file_id;
 	END IF;
 
-	-- Check if an entry already exists in the table 'l_file_to_location' that is related to v_file_id and v_file_system_location_id.
+	-- Test if an entry already exists in the table `l_file_to_location` that is related to v_file_id and v_file_system_location_id.
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_to_location AS link
 		INNER JOIN location
@@ -403,7 +403,7 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 
-	-- Check if an entry already exists in the table 'file_system' with the specified p_uuid. 
+	-- Test if the entry already exists in the table `file_system`.
 	SELECT id INTO p_file_system_id
 		FROM file_system
 		WHERE uuid = p_uuid;
@@ -484,7 +484,7 @@ COMMENT -- {{{2
                         Insert an entry in the 'flac_file' table. Return the id field of the inserted row." -- 2}}}
 
 BEGIN -- {{{2
-	-- Check if an entry already exists in the table 'flac_file' with the specified audio_file_id. 
+	-- Test if the entry already exists in the table `flac_file`. 
 	SELECT id INTO p_flac_file_id
 		FROM flac_file
 		WHERE audio_file_id = p_audio_file_id;
@@ -524,7 +524,7 @@ COMMENT -- {{{2
                         Insert an entry in the 'host' table. Return the id field of the inserted row." -- 2}}}
 
 BEGIN -- {{{2
-	-- Check if an entry already exists in the table 'host' with the specified name. 
+	-- Test if the entry already exists in the table `host`.
 	SELECT id INTO p_host_id FROM host WHERE name = p_name;
 	
 	-- If it doesn't exist, create it.
@@ -560,7 +560,7 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 
-	-- Check if an entry already exists in the table 'mime_type' with the specified p_type_descriptor. 
+	-- Test the entry already exists in the table `mime_type`.
 	SELECT id INTO p_mime_type_id
 		FROM mime_type
 		WHERE type_descriptor = p_type_descriptor;
@@ -606,7 +606,7 @@ BEGIN -- {{{2
 
 	CALL insert_and_get_host(p_hostname, v_host_id);
 
-	-- Check if an entry already exists in the table 'mount_point'. 
+	-- Test if the entry already exists in the table `mount_point`. 
 	SELECT id INTO p_mount_point_id
 		FROM mount_point
 		WHERE host_id = v_host_id
@@ -654,7 +654,7 @@ COMMENT  -- {{{2
                         Insert an entry in the 'software' table. Return the id field of the inserted row." -- 2}}}
 
 BEGIN -- {{{2
-	-- Check if an entry already exists in the table 'software' with the specified <p_name> and <p_software_version> values. 
+	-- Test if the entry already exists in the table `software`.
 	SELECT id INTO p_software_id
 		FROM software
 		WHERE name = p_name
@@ -959,7 +959,7 @@ BEGIN -- {{{2
 
 	DECLARE v_flac_metadata_entry_id MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'flac_metadata_entry' with the specified paramaters.
+	-- Test if the entry already exists in the table `flac_metadata_entry`.
 	SELECT id INTO v_flac_metadata_entry_id
 		FROM flac_metadata_entry
 		WHERE flac_file_id = p_flac_file_id
@@ -1120,7 +1120,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_audio_file_to_recording' with the specified p_audio_file_id and p_recording_id. 
+	-- Test if the entry already exists in the table `l_audio_file_to_recording`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_audio_file_to_recording
 		WHERE audio_file_id = p_audio_file_id
@@ -1162,7 +1162,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_dvd_to_software_session' with the specified <p_dvd_id> and <p_software_session_id>. 
+	-- Test if the entry already exists in the table `l_dvd_to_software_session`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_dvd_to_software_session
 		WHERE dvd_id = p_dvd_id
@@ -1204,7 +1204,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_file_to_location' with the specified p_file_id and p_location_id. 
+	-- Test if the entry already exists in the table `l_file_to_location`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_to_location
 		WHERE file_id = p_file_id
@@ -1246,7 +1246,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_file_to_software_session' with the specified <p_file_id> and <p_software_session_id>. 
+	-- Test if the entry already exists in the table `l_file_to_software_session`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_to_software_session
 		WHERE file_id = p_file_id
@@ -1288,7 +1288,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_file_system_to_data_storage_device' with the specified p_file_system_id and p_data_storage_device_id. 
+	-- Test if the entry already exists in the table `l_file_system_to_data_storage_device`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_system_to_data_storage_device
 		WHERE file_system_id = p_file_system_id
@@ -1330,7 +1330,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_file_system_to_mount_point' with the specified p_file_system_id and p_mount_point_id. 
+	-- Test if the entry already exists in the table `l_file_system_to_mount_point`. 
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_system_to_mount_point
 		WHERE file_system_id = p_file_system_id
@@ -1381,7 +1381,7 @@ COMMENT -- {{{2
 BEGIN -- {{{2
 	DECLARE v_count MEDIUMINT UNSIGNED;
 
-	-- Check if an entry already exists in the table 'l_flac_file_to_metadata_entry' with the specified p_flac_file_id and p_flac_metadata_entry_id. 
+	-- Test if the entry already exists in the table `l_flac_file_to_metadata_entry`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_flac_file_to_metadata_entry
 		WHERE flac_file_id = p_flac_file_id
