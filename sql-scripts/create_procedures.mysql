@@ -177,21 +177,18 @@ CREATE PROCEDURE insert_and_get_audio_file -- {{{1
 
 	(
 		IN  p_file_id       MEDIUMINT UNSIGNED,
-		IN  p_recording_gid CHAR(36),
 		OUT p_audio_file_id MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
                         IN  <p_file_id>       MEDIUMINT UNSIGNED,
-                        IN  <p_recording_gid> CHAR(36),
                         OUT <p_audio_file_id> MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted
                         row in the 'file' table." -- 2}}}
 
 BEGIN -- {{{2
-	DECLARE v_recording_id MEDIUMINT UNSIGNED;
 
 	-- Test if the entry already exists in the table `audio_file`.
 	SELECT id INTO p_audio_file_id
@@ -209,12 +206,6 @@ BEGIN -- {{{2
 		SELECT LAST_INSERT_ID() INTO p_audio_file_id;
 	END IF;
 
-	IF p_recording_gid IS NOT NULL
-	THEN
-		CALL insert_and_get_recording (p_recording_gid, NULL, NULL, v_recording_id);
-
-		CALL link_audio_file_to_recording (p_audio_file_id, v_recording_id);
-	END IF;
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -823,20 +814,18 @@ DROP PROCEDURE IF EXISTS insert_audio_file //
 CREATE PROCEDURE insert_audio_file -- {{{1
 
 	(
-		IN  p_file_id       MEDIUMINT UNSIGNED,
-		IN  p_recording_gid CHAR(36)
+		IN  p_file_id       MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_file_id>       MEDIUMINT UNSIGNED,
-                        IN <p_recording_gid> CHAR(36).
                       Description:
-                        Insert an entry in the 'audio_file', 'recording' and 'l_audio_file_to_recording' tables." -- 2}}}
+                        Insert an entry in the 'audio_file'" -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_audio_file_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_audio_file (p_file_id, p_recording_gid, v_audio_file_id);
+	CALL insert_and_get_audio_file (p_file_id, v_audio_file_id);
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -1134,48 +1123,6 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_software_session',
-	'user'
-) // -- 1}}}
-
-DROP PROCEDURE IF EXISTS link_audio_file_to_recording //
-
-CREATE PROCEDURE link_audio_file_to_recording -- {{{1
-
-	(
-		IN p_audio_file_id MEDIUMINT UNSIGNED,
-		IN p_recording_id  MEDIUMINT UNSIGNED
-	)
-
-COMMENT -- {{{2
-                     "Parameters:
-                        IN <p_audio_file_id> MEDIUMINT UNSIGNED,
-                        IN <p_recording_id>  MEDIUMINT UNSIGNED.
-                      Description:
-                        Insert an entry in the 'l_audio_file_to_recording' table." -- 2}}}
-
-BEGIN -- {{{2
-	DECLARE v_count MEDIUMINT UNSIGNED;
-
-	-- Test if the entry already exists in the table `l_audio_file_to_recording`.
-	SELECT COUNT(*) INTO v_count
-		FROM l_audio_file_to_recording
-		WHERE audio_file_id = p_audio_file_id
-		AND recording_id = p_recording_id;
-	
-	-- If it doesn't exist, create it.
-	IF v_count = 0
-	THEN
-		INSERT INTO l_audio_file_to_recording (audio_file_id, recording_id) VALUES ( 
-			p_audio_file_id,
-			p_recording_id
-		);
-	END IF;
-END; // -- 2}}} 1}}}
-
--- Insert an entry into the temporal 'procedures' table. -- {{{1
-INSERT INTO procedures (id, name, level) VALUES (
-	'',
-	'link_audio_file_to_recording',
 	'user'
 ) // -- 1}}}
 

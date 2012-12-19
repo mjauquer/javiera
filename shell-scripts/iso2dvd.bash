@@ -148,9 +148,9 @@ fi
 
 unset -v input
 
-echo "Close the tray and press <c> to continue: "
-while read answer 
+while printf "Close the tray and press <c> to continue: "
 do
+	read answer 
 	case $answer in
 		c) break
 		   ;;

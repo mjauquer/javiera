@@ -36,10 +36,6 @@ insert_audio_file () {
 	if [ $(file -b --mime-type "$1") == audio/x-flac ]
 	then
 		# Get data from the file.
-		local record_id="$(metaflac --show-tag=musicbrainz_record_id $1)"
-		record_id=${record_id##musicbrainz_record_id=}
-		record_id=${record_id:-NULL}
-		[[ $record_id != NULL ]] && record_id=\"$record_id\"
 		local file_id=$2; file_id=\"$file_id\"
 
 		# Insert an entry in the 'audio_file' table and get the
@@ -49,8 +45,7 @@ insert_audio_file () {
 
 			START TRANSACTION;
 			CALL insert_audio_file (
-				$file_id,
-				$record_id
+				$file_id
 			);
 			SELECT MAX(id) FROM audio_file;
 			COMMIT;
