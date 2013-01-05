@@ -22,47 +22,97 @@
 #               the dots).
 
 source ~/.myconf/javiera.cnf || exit 1
+source ~/projects/javiera/submodules/getoptx/getoptx.bash || exit 1
 
-declare progname      # The name of this script.
-declare admin_user    # A mysql user name.
-declare admin_pass    # A mysql password.
-declare user          # A mysql user name.
-declare pass          # A mysql password.
-declare db            # A mysql database.
-declare -a tables     # An array with the tables created in
-                      # the 'javiera' database.
+usage () {
 
-progname=$(basename $0)
+#        NAME: usage
+#
+#       USAGE: usage
+#
+# DESCRIPTION: Print a help message to stdout.
+
+	cat <<- EOF
+	Usage: create_tables.sh [OPTIONS] 
+	
+	Create the tables of the 'javiera' database.
+
+	 -h         Print this help.
+	--force     Delete any existing table in the database before
+	            creating the tables.
+	--populate  Populate some tables with predetermined rows.
+	EOF
+}
+
+error_exit () {
+
+#       USAGE: error_exit [MESSAGE]
+#
+# DESCRIPTION: Function for exit due to fatal program error.
+#
+#   PARAMETER: MESSAGE An optional description of the error.
+
+	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	exit 1
+}
 
 #-----------------------------------------------------------------------
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-# Get a list of all the tables in the database.
+declare progname       # The name of this script.
+declare admin_user     # A mysql user name.
+declare admin_pass     # A mysql password.
+declare db             # A mysql database.
+declare -a tabs        # An array with the tables created in
+                       # the 'javiera' database.
+declare force=false    # Indicates if it is required to delete previously
+                       # existing tables.
+declare populate=false # Indicates if it is required to populate the tables
+                       # with predetermined rows.
 
-tables=( $($mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
-	-D$db --skip-column-names -e "
+progname=$(basename $0)
 
-	SHOW TABLES;
-") )
-[[ $? -ne 0 ]] && return 1
+# Parse the options passed in the command line.
 
-user=\'$user\'
-pass=\'$pass\'
-
-# Remove every table in the database.
-
-for table in ${tables[@]}
+while getoptex "h force populate" "$@"
 do
-	table=\`$table\`
-	$mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
-		-D$db --skip-column-names -e "
-		
-		DROP TABLE $table;
-
-	"
-	[[ $? -ne 0 ]] && exit 1
+	case "$OPTOPT" in
+		h)        usage; exit 0
+		          ;;
+		force)    force=true
+			  ;;
+		populate) populate=true
+	esac
 done
+shift $(($OPTIND-1))
+
+if [ $force == true ]
+then
+	# Get a list of all the tables in the database.
+	tables=( $($mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
+		-D$db --skip-column-names -e "
+
+		SHOW TABLES;
+	") )
+	[[ $? -ne 0 ]] && return 1
+
+	# Remove every table in the database.
+	for table in ${tables[@]}
+	do
+		table=\`$table\`
+		$mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
+			-D$db --skip-column-names -e "
+			
+			DROP TABLE $table;
+
+		"
+		if [ $? -ne 0 ]
+		then
+			error_exit "$LINENO: Error after trying to drop a table."
+		fi
+	done
+fi
 
 # Create the tables.
 
@@ -71,7 +121,27 @@ $mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	
 	START TRANSACTION;
 	source ~/projects/javiera/sql-scripts/create_coretables.mysql
-	source ~/projects/javiera/sql-scripts/populate_tables.mysql
+	source ~/projects/javiera/sql-scripts/create_mbtables.mysql
 	COMMIT;
 
 "
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after trying to create tables."
+fi
+
+if [ $populate == true ]
+then
+	$mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
+		-D$db --skip-column-names -e "
+		
+		START TRANSACTION;
+		source ~/projects/javiera/sql-scripts/populate_tables.mysql
+		COMMIT;
+
+	"
+	if [ $? -ne 0 ]
+	then
+		error_exit "$LINENO: Error after trying to populate tables."
+	fi
+fi
