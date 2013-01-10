@@ -309,13 +309,13 @@ CREATE PROCEDURE insert_and_get_file  -- {{{1
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN  <p_fs_uuid>  VARCHAR(256),
-                        IN  <p_pathname> VARCHAR(256),
+                        IN  <p_fs_uuid>   VARCHAR(256),
+                        IN  <p_pathname>  VARCHAR(256),
                         IN  <p_mime_type> VARCHAR(256),
-                        IN  <p_sha1>     CHAR(40),
-                        IN  <p_fsize>    BIGINT UNSIGNED,
-                        IN  <p_mtime>    INT UNSIGNED,
-                        OUT <p_file_id>  MEDIUMINT UNSIGNED.
+                        IN  <p_sha1>      CHAR(40),
+                        IN  <p_fsize>     BIGINT UNSIGNED,
+                        IN  <p_mtime>     INT UNSIGNED,
+                        OUT <p_file_id>   MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry in the 'file', 'location', 'file_system_location' and 'l_file_to_location' tables. Return the id field of the 
                         inserted row in the 'file' table." -- 2}}}
@@ -353,20 +353,25 @@ BEGIN -- {{{2
 		SELECT LAST_INSERT_ID() INTO p_file_id;
 	END IF;
 
-	-- Test if an entry already exists in the table `l_file_to_location` that is related to v_file_id and v_file_system_location_id.
+	-- Test if an entry already exists in the table `l_file_to_location` that is related to v_file_system_location_id.
 	SELECT COUNT(*) INTO v_count
 		FROM l_file_to_location AS link
 		INNER JOIN location
 			ON link.location_id = v_location_id
-		WHERE link.file_id = p_file_id
-		AND   location.id = v_location_id
+		WHERE location.id = v_location_id
 	;
 	
-	-- If it doesn't exist, create it.
+	-- If it doesn't exist, create it. If it does exist, update it.
 	IF v_count = 0
 	THEN
 		CALL link_file_to_location (p_file_id, v_location_id);
+	ELSE
+		UPDATE l_file_to_location SET file_id = p_file_id
+			WHERE location_id = v_location_id
+			LIMIT 1
+		;
 	END IF;
+
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -439,16 +444,27 @@ BEGIN -- {{{2
 
 	CALL insert_and_get_file_system (p_uuid, v_file_system_id);
 
-	INSERT INTO location (id) VALUES ('');
-	SELECT LAST_INSERT_ID() INTO v_location_id;
+	-- Test if the entry already exists in the table `file_system_location`.
+	SELECT id INTO p_file_system_location_id
+		FROM file_system_location
+		WHERE file_system_id = v_file_system_id
+		AND   pathname = p_pathname
+		LIMIT 1
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_file_system_location_id IS NULL
+	THEN
+		INSERT INTO location (id) VALUES ('');
+		SELECT LAST_INSERT_ID() INTO v_location_id;
 
-	INSERT INTO file_system_location (location_id, file_system_id, pathname) VALUES (
-		v_location_id,
-		v_file_system_id,
-		p_pathname
-	);
-	SELECT LAST_INSERT_ID() INTO p_file_system_location_id;
-
+		INSERT INTO file_system_location (location_id, file_system_id, pathname) VALUES (
+			v_location_id,
+			v_file_system_id,
+			p_pathname
+		);
+		SELECT LAST_INSERT_ID() INTO p_file_system_location_id;
+	END IF;
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1

@@ -218,10 +218,15 @@ fi
 
 # Update the database.
 
-process_fstab
+if ! process_fstab
+then
+	error_exit "$LINENO: Error after calling process_fstab()."
+fi
+
 for file in ${files[@]}
 do
 	file=$(readlink -f $file)
+	[[ $? -ne 0 ]] && return 1
 	if ! process_file $(hostname) $file 
 	then
 		error_exit "$LINENO: Error after calling process_file()."

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# javiera.flib <Core functions of the javiera.bash script.>
+# javiera-archive.bash <Archive file functions of the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               upvars.bash, filetype.flib
+# REQUIREMENTS: --
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).

@@ -130,18 +130,27 @@ process_file () {
 
 	# Get the other needed data about the file.
 
-	local mime_type=$(file -b --mime-type $2)
+	local mime_type; mime_type=$(file -b --mime-type $2)
+	[[ $? -ne 0 ]] && return 1
+
 	mime_type=\'$mime_type\'
-	local sha1=$(sha1sum $2 | cut -c1-40)
+	local sha1; sha1=$(sha1sum $2)
+	[[ $? -ne 0 ]] && return 1
+
+	sha1=$(echo $sha1 | cut -c1-40)
 	sha1=\'$sha1\'
-	local fsize=$(stat --format='%s' $2)
+	local fsize; fsize=$(stat --format='%s' $2)
+	[[ $? -ne 0 ]] && return 1
+
 	fsize=\'$fsize\'
-	local mtime=$(stat --format='%Y' $2)
+	local mtime; mtime=$(stat --format='%Y' $2)
+	[[ $? -ne 0 ]] && return 1
+
 	mtime=\'$mtime\'
 
 	# Insert file's metadata in the database.
 
-	local lastid=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
+	local lastid; lastid=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
 
 		START TRANSACTION;
@@ -210,7 +219,10 @@ process_fstab () {
 			local field0=${fields[0]}
 			local fs_uuid=${field0#UUID=}
 			file_systems+=( $fs_uuid )
-			local device_name=$(blkid -U $fs_uuid)
+
+			local device_name; device_name=$(blkid -U $fs_uuid)
+			[[ $? -ne 0 ]] && return 1
+
 			mount_points+=( ${fields[1]} )
 		fi
 	done < /etc/fstab
