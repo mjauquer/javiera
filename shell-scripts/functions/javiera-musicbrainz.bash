@@ -57,6 +57,7 @@ process_artist_mbid () {
 	local artist_type
 	local artist_name
 	local artist_sort
+	local comment
 	local wget_error
 	
 	queried_mbid=$($mysql_path --skip-reconnect -u$user -p$pass \
@@ -67,29 +68,55 @@ process_artist_mbid () {
 	")
 	[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
 
-	if [ $queried_mbid -ne $mbid ]
+	if [ -z $queried_mbid ]
 	then
 		[[ ! -d $temp_root ]] && mkdir -p $temp_root
 		cd $temp_root
 		[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 		temp_dir=$(readlink -f $(mktemp -d tmp.XXX))
 		limit_mbcon
-		wget -q -O -w 1 - "http://musicbrainz.org/ws/2/artist/$mbid" > $temp_dir/artist.xml
+		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/artist/$1" > $temp_dir/artist.xml
 		wget_error=$?
 		[[ $wget_error -ne 0 ]] && echo "wget: exit status is $wget_error" && return 1
 		MUSICBRAINZ_LTIME=$(date +%s)
+
 		artist_type="$(xml sel -N my=http://musicbrainz.org/ns/mmd-2.0# -t -m //my:metadata/my:artist/@type -v . $temp_dir/artist.xml)"
 		[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+		artist_type=\'$artist_type\'
+
 		artist_name="$(xml sel -N my=http://musicbrainz.org/ns/mmd-2.0# -t -m //my:metadata/my:artist/my:name -v . $temp_dir/artist.xml)"
 		[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+		artist_name=\'$artist_name\'
+
 		artist_sort="$(xml sel -N my=http://musicbrainz.org/ns/mmd-2.0# -t -m //my:metadata/my:artist/my:sort-name -v . $temp_dir/artist.xml)"
 		[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+		artist_sort=\'$artist_sort\'
+
+		comment="$(xml sel -N my=http://musicbrainz.org/ns/mmd-2.0# -t -m //my:metadata/my:artist/my:disambiguation -v . $temp_dir/artist.xml)"
+		[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+		comment=\'$comment\'
+
 		rm -r $temp_dir
 		[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
 		cd $old_pwd
 		[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
-echo "type: $artist_type"
-echo "name: $artist_name"
-echo "sort: $artist_sort"
+
+		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
+			--skip-column-names -e "
+
+			START TRANSACTION;
+			CALL insert_artist (
+				$mbid,
+				$artist_type,
+				$artist_name,
+				$artist_sort,
+				$comment
+			);
+			COMMIT;
+		"
+		if [ $? -ne 0 ]
+		then
+			error_exit "$LINENO: Error after calling mysql."
+		fi
 	fi
 }

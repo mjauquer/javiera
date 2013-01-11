@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS artist (
 	                 	REFERENCES artist_name(id),
 	sort_name        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES artist_name(id),
+	comment          VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
 

@@ -140,6 +140,7 @@ COMMENT -- {{{2
                         'archive_location' table." -- 2}}}
 
 BEGIN -- {{{2
+
 	DECLARE v_location_id MEDIUMINT UNSIGNED;
 
 	-- Test if the entry already exists in the table `archive_location`. 
@@ -171,6 +172,92 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
+DROP PROCEDURE IF EXISTS insert_and_get_artist //
+
+CREATE PROCEDURE insert_and_get_artist -- {{{1
+
+	(
+		IN  p_mbid      CHAR(36),
+		IN  p_type      ENUM('Person', 'Group', 'Other', 'Unknown'),
+		IN  p_name      VARCHAR(256),
+		IN  p_sort_name VARCHAR(256),
+		IN  p_comment   VARCHAR(256),
+		OUT p_artist_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>      CHAR(36),
+		        IN  <p_type>      ENUM('Person', 'Group', 'Other', 'Unknown'),
+		        IN  <p_name>      VARCHAR(256),
+		        IN  <p_sort_name> VARCHAR(256),
+		        IN  <p_comment>   VARCHAR(256),
+                        OUT <p_artist_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'artist' table. Return the id field of the inserted row." -- 2}}}
+
+BEGIN -- {{{2
+
+	DECLARE v_name_id      MEDIUMINT UNSIGNED;
+	DECLARE v_sort_name_id MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `artist`.
+	SELECT id INTO p_artist_id
+		FROM artist
+		WHERE mbid = p_mbid
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_artist_id IS NULL
+	THEN
+		SELECT id INTO v_name_id
+			FROM artist_name
+			WHERE text = p_name
+		;
+
+		IF v_name_id IS NULL
+		THEN
+			INSERT INTO artist_name (id, text) VALUES (
+				'',
+				p_name
+			);
+			SELECT LAST_INSERT_ID() INTO v_name_id;
+		END IF;
+
+		SELECT id INTO v_sort_name_id
+			FROM artist_name
+			WHERE text = p_sort_name
+		;
+
+		IF v_sort_name_id IS NULL
+		THEN
+			INSERT INTO artist_name (id, text) VALUES (
+				'',
+				p_sort_name
+			);
+			SELECT LAST_INSERT_ID() INTO v_sort_name_id;
+		END IF;
+
+		INSERT INTO artist (id, mbid, type, name, sort_name, comment) VALUES (
+			'',
+			p_mbid,
+			p_type,
+			v_name_id,
+			v_sort_name_id,
+			p_comment
+		);
+		SELECT LAST_INSERT_ID() INTO p_artist_id;
+	END IF;
+
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_artist',
+	'user'
+) // -- 1}}}
+
 DROP PROCEDURE IF EXISTS insert_and_get_audio_file //
 
 CREATE PROCEDURE insert_and_get_audio_file -- {{{1
@@ -185,8 +272,7 @@ COMMENT -- {{{2
                         IN  <p_file_id>       MEDIUMINT UNSIGNED,
                         OUT <p_audio_file_id> MEDIUMINT UNSIGNED.
                       Description:
-                        Insert an entry in the 'file', 'location', 'host_location' and 'l_file_to_location' tables. Return the id field of the inserted
-                        row in the 'file' table." -- 2}}}
+                        Insert an entry in the 'audio_file'. Return the id field of the inserted row." -- 2}}}
 
 BEGIN -- {{{2
 
@@ -822,6 +908,40 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_archive_location',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_artist //
+
+CREATE PROCEDURE insert_artist -- {{{1
+
+	(
+		IN  p_mbid      CHAR(36),
+		IN  p_type      ENUM('Person', 'Group', 'Other', 'Unknown'),
+		IN  p_name      VARCHAR(256),
+		IN  p_sort_name VARCHAR(256),
+		IN  p_comment   VARCHAR(256)
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>      CHAR(36),
+		        IN  <p_type>      ENUM('Person', 'Group', 'Other', 'Unknown'),
+		        IN  <p_name>      VARCHAR(256),
+		        IN  <p_sort_name> VARCHAR(256),
+		        IN  <p_comment>   VARCHAR(256),
+                      Description:
+                        Insert an entry in the 'artist' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_artist_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_artist (p_mbid, p_type, p_name, p_sort_name, p_comment, v_artist_id);
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_artist',
 	'user'
 ) // -- 1}}}
 
