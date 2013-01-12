@@ -21,6 +21,9 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
+source ~/projects/javiera/shell-scripts/functions/javiera-musicbrainz.bash ||
+	exit 1
+
 insert_audio_file () {
 
 #       USAGE: insert_audio_file PATHNAME FILE_ID
@@ -185,8 +188,14 @@ insert_flac_metadata() {
 	for (( ind=0; ind<${#col1[@]}; ind++)) 
 	do
 		local field1="${col1[ind]}"
-		escape_chars field1 "$field1"; field1="\"$field1\""
 		local field2="${col2[ind]}"
+		case $field1 in
+			[mM][uU][sS][iI][cC][bB][rR][aA[iI][nN][zZ]_[aA][rR][tT][iI][sS][tT][iI][dD]) process_artist_mbid $field2
+			   ;;
+			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[aA][lL][bB][uU][mM][aA][rR][tT][iI][sS][tT][iI][dD]) process_artist_mbid $field2
+			   ;;
+		esac
+		escape_chars field1 "$field1"; field1="\"$field1\""
 		escape_chars field2 "$field2"; field2="\"$field2\""
 		local mtype="\"$1\""
 		$mysql_path --skip-reconnect -u$user -p$pass \
