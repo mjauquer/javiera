@@ -755,6 +755,213 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
+DROP PROCEDURE IF EXISTS insert_and_get_recording //
+
+CREATE PROCEDURE insert_and_get_recording -- {{{1
+
+	(
+		IN  p_mbid         CHAR(36),
+		IN  p_name         VARCHAR(256),
+		IN  p_length       BIGINT UNSIGNED,
+		IN  p_comment      VARCHAR(256),
+		OUT p_recording_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>         CHAR(36),
+		        IN  <p_name>         VARCHAR(256),
+		        IN  <p_length>       BIGINT UNSIGNED,
+		        IN  <p_comment>      VARCHAR(256),
+                        OUT <p_recording_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'recording' table. Return the id field of the inserted row." -- 2}}}
+
+BEGIN -- {{{2
+
+	DECLARE v_name_id MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `recording`.
+	SELECT id INTO p_recording_id
+		FROM recording
+		WHERE mbid = p_mbid
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_recording_id IS NULL
+	THEN
+		SELECT id INTO v_name_id
+			FROM recording_name
+			WHERE text = p_name
+		;
+
+		IF v_name_id IS NULL
+		THEN
+			INSERT INTO recording_name (id, text) VALUES (
+				'',
+				p_name
+			);
+			SELECT LAST_INSERT_ID() INTO v_name_id;
+		END IF;
+
+		INSERT INTO recording (id, mbid, name, length, comment) VALUES (
+			'',
+			p_mbid,
+			v_name_id,
+			p_length,
+			p_comment
+		);
+		SELECT LAST_INSERT_ID() INTO p_recording_id;
+	END IF;
+
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_recording',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_and_get_release //
+
+CREATE PROCEDURE insert_and_get_release -- {{{1
+
+	(
+		IN  p_mbid             CHAR(36),
+		IN  p_status           ENUM('official', 'promotional', 'bootleg', 'pseudo-release'),
+		IN  p_name             VARCHAR(256),
+	        IN  p_release_group_id MEDIUMINT UNSIGNED,
+		IN  p_comment          VARCHAR(256),
+		OUT p_release_id       MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>             CHAR(36),
+		        IN  <p_status>           ENUM('official', 'promotional', 'bootleg', 'pseudo-release'),
+		        IN  <p_name>             VARCHAR(256),
+	                IN  <p_release_group_id> MEDIUMINT UNSIGNED,
+		        IN  <p_comment>          VARCHAR(256),
+                        OUT <p_release_id>       MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'release' table. Return the id field of the inserted row." -- 2}}}
+
+BEGIN -- {{{2
+
+	DECLARE v_name_id          MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `release`.
+	SELECT id INTO p_release_id
+		FROM `release`
+		WHERE mbid = p_mbid
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_release_id IS NULL
+	THEN
+		SELECT id INTO v_name_id
+			FROM release_name
+			WHERE text = p_name
+		;
+
+		IF v_name_id IS NULL
+		THEN
+			INSERT INTO release_name (id, text) VALUES (
+				'',
+				p_name
+			);
+			SELECT LAST_INSERT_ID() INTO v_name_id;
+		END IF;
+
+		INSERT INTO `release` (id, mbid, status, name, release_group_id, comment) VALUES (
+			'',
+			p_mbid,
+			p_status,
+			v_name_id,
+			p_release_group_id,
+			p_comment
+		);
+		SELECT LAST_INSERT_ID() INTO p_release_id;
+	END IF;
+
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_release',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_and_get_release_group //
+
+CREATE PROCEDURE insert_and_get_release_group -- {{{1
+
+	(
+		IN  p_mbid             CHAR(36),
+		IN  p_type             ENUM('Album', 'Single', 'EP', 'Broadcast', 'Other'),
+		IN  p_name             VARCHAR(256),
+		IN  p_comment          VARCHAR(256),
+		OUT p_release_group_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>             CHAR(36),
+		        IN  <p_type>             ENUM('Album', 'Single', 'EP', 'Broadcast', 'Other'),
+		        IN  <p_name>             VARCHAR(256),
+		        IN  <p_comment>          VARCHAR(256),
+                        OUT <p_release_group_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'release_group' table. Return the id field of the inserted row." -- 2}}}
+
+BEGIN -- {{{2
+
+	DECLARE v_name_id      MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `release_group`.
+	SELECT id INTO p_release_group_id
+		FROM release_group
+		WHERE mbid = p_mbid
+	;
+	
+	-- If it doesn't exist, create it.
+	IF p_release_group_id IS NULL
+	THEN
+		SELECT id INTO v_name_id
+			FROM release_name
+			WHERE text = p_name
+		;
+
+		IF v_name_id IS NULL
+		THEN
+			INSERT INTO release_name (id, text) VALUES (
+				'',
+				p_name
+			);
+			SELECT LAST_INSERT_ID() INTO v_name_id;
+		END IF;
+
+		INSERT INTO release_group (id, mbid, type, name, comment) VALUES (
+			'',
+			p_mbid,
+			p_type,
+			v_name_id,
+			p_comment
+		);
+		SELECT LAST_INSERT_ID() INTO p_release_group_id;
+	END IF;
+
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_release_group',
+	'user'
+) // -- 1}}}
+
 DROP PROCEDURE IF EXISTS insert_and_get_software //
 
 CREATE PROCEDURE insert_and_get_software -- {{{1
@@ -929,7 +1136,7 @@ COMMENT -- {{{2
 		        IN  <p_type>      ENUM('Person', 'Group', 'Other', 'Unknown'),
 		        IN  <p_name>      VARCHAR(256),
 		        IN  <p_sort_name> VARCHAR(256),
-		        IN  <p_comment>   VARCHAR(256),
+		        IN  <p_comment>   VARCHAR(256).
                       Description:
                         Insert an entry in the 'artist' table." -- 2}}}
 
@@ -1205,6 +1412,105 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
+DROP PROCEDURE IF EXISTS insert_recording //
+
+CREATE PROCEDURE insert_recording -- {{{1
+
+	(
+		IN  p_mbid         CHAR(36),
+		IN  p_name         VARCHAR(256),
+		IN  p_length       BIGINT UNSIGNED,
+		IN  p_comment      VARCHAR(256)
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>         CHAR(36),
+		        IN  <p_name>         VARCHAR(256),
+		        IN  <p_length>       BIGINT UNSIGNED,
+		        IN  <p_comment>      VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'recording' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_recording_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_recording (p_mbid, p_name, p_length, p_comment, v_recording_id);
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_recording',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_release //
+
+CREATE PROCEDURE insert_release -- {{{1
+
+	(
+		IN  p_mbid             CHAR(36),
+		IN  p_status           ENUM('official', 'promotional', 'bootleg', 'pseudo-release'),
+		IN  p_name             VARCHAR(256),
+	        IN  p_release_group_id MEDIUMINT UNSIGNED,
+		IN  p_comment          VARCHAR(256)
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>             CHAR(36),
+		        IN  <p_status>           ENUM('official', 'promotional', 'bootleg', 'pseudo-release'),
+		        IN  <p_name>             VARCHAR(256),
+	                IN  <p_release_group_id> MEDIUMINT UNSIGNED,
+		        IN  <p_comment>          VARCHAR(256),
+                        OUT <p_release_id>       MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'release' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_release_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_release (p_mbid, p_status, p_name, p_release_group_id, p_comment, v_release_id);
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_release',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_release_group //
+
+CREATE PROCEDURE insert_release_group -- {{{1
+
+	(
+		IN  p_mbid    CHAR(36),
+		IN  p_type    ENUM('Album', 'Single', 'EP', 'Broadcast', 'Other'),
+		IN  p_name    VARCHAR(256),
+		IN  p_comment VARCHAR(256)
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+		        IN  <p_mbid>    CHAR(36),
+		        IN  <p_type>    ENUM('Album', 'Single', 'EP', 'Broadcast', 'Other'),
+		        IN  <p_name>    VARCHAR(256),
+		        IN  <p_comment> VARCHAR(256).
+                      Description:
+                        Insert an entry in the 'release_group' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_release_group_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_release_group (p_mbid, p_type, p_name, p_comment, v_release_group_id);
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_release_group',
+	'user'
+) // -- 1}}}
+
 DROP PROCEDURE IF EXISTS insert_software //
 
 CREATE PROCEDURE insert_software -- {{{1
@@ -1259,6 +1565,144 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_software_session',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS link_artist_to_recording //
+
+CREATE PROCEDURE link_artist_to_recording -- {{{1
+
+	(
+		IN p_artist_id    MEDIUMINT UNSIGNED,
+		IN p_type         VARCHAR(256),
+		IN p_recording_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN <p_artist_id>    MEDIUMINT UNSIGNED,
+		        IN <p_type>         VARCHAR(256),
+                        IN <p_recording_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_artist_to_recording' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `l_artist_to_recording`.
+	SELECT COUNT(*) INTO v_count
+		FROM l_artist_to_recording
+		WHERE artist_id = p_artist_id
+		AND type = p_type
+		AND recording_id = p_recording_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_artist_to_recording (artist_id, type, recording_id) VALUES ( 
+			p_artist_id,
+			p_type,
+			p_recording_id
+		);
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_artist_to_recording',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS link_artist_to_release //
+
+CREATE PROCEDURE link_artist_to_release -- {{{1
+
+	(
+		IN p_artist_id  MEDIUMINT UNSIGNED,
+		IN p_type       VARCHAR(256),
+		IN p_release_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN <p_artist_id>  MEDIUMINT UNSIGNED,
+		        IN <p_type>       VARCHAR(256),
+                        IN <p_release_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_artist_to_release' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `l_artist_to_release`.
+	SELECT COUNT(*) INTO v_count
+		FROM l_artist_to_release
+		WHERE artist_id = p_artist_id
+		AND type = p_type
+		AND release_id = p_release_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_artist_to_release (artist_id, type, release_id) VALUES ( 
+			p_artist_id,
+			p_type,
+			p_release_id
+		);
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_artist_to_release',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS link_artist_to_release_group //
+
+CREATE PROCEDURE link_artist_to_release_group -- {{{1
+
+	(
+		IN p_artist_id        MEDIUMINT UNSIGNED,
+		IN p_type             VARCHAR(256),
+		IN p_release_group_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN <p_artist_id>    MEDIUMINT UNSIGNED,
+		        IN <p_type>         VARCHAR(256),
+                        IN <p_release_group_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_artist_to_release_group' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `l_artist_to_release_group`.
+	SELECT COUNT(*) INTO v_count
+		FROM l_artist_to_release_group
+		WHERE artist_id = p_artist_id
+		AND type = p_type
+		AND release_group_id = p_release_group_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_artist_to_release_group (artist_id, type, release_group_id) VALUES ( 
+			p_artist_id,
+			p_type,
+			p_release_group_id
+		);
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_artist_to_release_group',
 	'user'
 ) // -- 1}}}
 
@@ -1520,6 +1964,48 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'link_flac_file_to_metadata_entry',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS link_recording_to_release //
+
+CREATE PROCEDURE link_recording_to_release -- {{{1
+
+	(
+		IN p_recording_id MEDIUMINT UNSIGNED,
+		IN p_release_id   MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN <p_recording_id> MEDIUMINT UNSIGNED,
+                        IN <p_release_id>   MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'l_recording_to_release' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `l_recording_to_release`.
+	SELECT COUNT(*) INTO v_count
+		FROM l_recording_to_release
+		WHERE recording_id = p_recording_id
+		AND release_id = p_release_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_recording_to_release (recording_id, release_id) VALUES ( 
+			p_recording_id,
+			p_release_id
+		);
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_recording_to_release',
 	'user'
 ) // -- 1}}}
 

@@ -36,26 +36,40 @@ insert_audio_file () {
 #              FILE_ID   The value of the 'id' column in the 'file'
 #                        table of the database.
 
+	local file_id=$2 
+	local release_mbid
+	local recording_mbid
+
+	# Insert an entry in the 'audio_file' table and get the
+	# audio_file_id.
+
+	file_id=\"$file_id\"
+	local audio_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
+		-D$db --skip-column-names -e "
+
+		START TRANSACTION;
+		CALL insert_audio_file (
+			$file_id
+		);
+		SELECT MAX(id) FROM audio_file;
+		COMMIT;
+
+	")
+	[[ $? -ne 0 ]] && return 1
+
+	# Process the audio file according to its mime-type.
 	if [ $(file -b --mime-type "$1") == audio/x-flac ]
 	then
-		# Get data from the file.
-		local file_id=$2; file_id=\"$file_id\"
+		insert_flac_file $1 $audio_file_id
+		if [[ $? -ne 0 ]]
+		then
+			echo "Error after call to insert_flac_file()."
+			return 1
+		fi
 
-		# Insert an entry in the 'audio_file' table and get the
-		# audio_file_id.
-		local audio_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
-			-D$db --skip-column-names -e "
-
-			START TRANSACTION;
-			CALL insert_audio_file (
-				$file_id
-			);
-			SELECT MAX(id) FROM audio_file;
-			COMMIT;
-
-		")
-		[[ $? -ne 0 ]] && return 1
-		! insert_flac_file $1 $audio_file_id && return 1
+		release_mbid=$(metaflac --show-tag=musicbrainz_albumid $1)
+		release_mbid=${release_mbid##*=}
+		echo $release_mbid
 	fi
 	return 0
 }
@@ -189,14 +203,20 @@ insert_flac_metadata() {
 	do
 		local field1="${col1[ind]}"
 		local field2="${col2[ind]}"
-		case $field1 in
-			[mM][uU][sS][iI][cC][bB][rR][aA[iI][nN][zZ]_[aA][rR][tT][iI][sS][tT][iI][dD]) process_artist_mbid $field2
-			   ;;
-			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[aA][lL][bB][uU][mM][aA][rR][tT][iI][sS][tT][iI][dD]) process_artist_mbid $field2
-			   ;;
-		esac
 		escape_chars field1 "$field1"; field1="\"$field1\""
 		escape_chars field2 "$field2"; field2="\"$field2\""
+		case ${col1[ind]} in
+			[mM][uU][sS][iI][cC][bB][rR][aA[iI][nN][zZ]_[aA][rR][tT][iI][sS][tT][iI][dD])                          process_artist_mbid ${col2[ind]}
+			                                                                                                       ;;
+			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[aA][lL][bB][uU][mM][aA][rR][tT][iI][sS][tT][iI][dD])     process_artist_mbid ${col2[ind]}
+			                                                                                                       ;;
+			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[tT][rR][aA][cC][kK][iI][dD])                             process_recording_mbid ${col2[ind]}
+			                                                                                                       ;;
+			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[rR][eE][lL][eE][aA][sS][eE][gG][rR][oO][uU][pP][iI][dD]) process_release_group_mbid ${col2[ind]}
+			                                                                                                       ;;
+			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[aA][lL][bB][uU][mM][iI][dD])                             process_release_mbid ${col2[ind]}
+			                                                                                                       ;;
+		esac
 		local mtype="\"$1\""
 		$mysql_path --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
