@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /BIN/Bash
 
 # javiera-musicbrainz.bash <musicbrainz.org related functions for the
 #                          javiera.bash script.>
@@ -173,6 +173,10 @@ echo "entra: process_recording_mbid"
 	local recording_name
 	local recording_length
 	local comment
+	local -a rel_types
+	local -a rel_artists
+	local rel_artist
+	local rel_artist_id
 	local wget_error
 	
 	# Is this recording already in the database?
@@ -199,6 +203,14 @@ echo "entra: process_recording_mbid"
 		MUSICBRAINZ_LTIME=$(date +%s)
 
 		xml ed $temp_dir/rec.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $temp_dir/recording.xml
+
+		limit_mbcon
+		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/recording/$1?inc=artist-rels" > $temp_dir/rec2.xml
+		wget_error=$?
+		[[ $wget_error -ne 0 ]] && echo "wget: exit status is $wget_error" && return 1
+		MUSICBRAINZ_LTIME=$(date +%s)
+
+		xml ed $temp_dir/rec2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $temp_dir/recording2.xml
 
 		# Parse data.
 		if xml el $temp_dir/recording.xml | grep -q "metadata/recording-list/recording/title"
@@ -254,7 +266,7 @@ echo "entra: process_recording_mbid"
 		[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
 		recording_id=\'$recording_id\'
 
-		# Insert artist-recording relationships.
+		# Insert artist (credited for) recording relationship.
 		if xml el -a $temp_dir/recording.xml | grep -q "metadata/recording-list/recording/artist-credit/name-credit/artist/@id"
 		then
 			artists=( $(xml sel -t -m //metadata/recording-list/recording/artist-credit/name-credit/artist/@id -n -v . $temp_dir/recording.xml) )
@@ -282,6 +294,61 @@ echo "entra: process_recording_mbid"
 					CALL link_artist_to_recording (
 						$artist_id,
 						'is credited for',
+						$recording_id
+					);
+					COMMIT;
+				"
+				if [ $? -ne 0 ]
+				then
+					error_exit "$LINENO: Error after calling mysql."
+				fi
+			done
+		fi
+
+		# Insert extended artist-recording relationships.
+
+		if xml el -a $temp_dir/recording2.xml | grep -q "metadata/recording/relation-list/relation/@type"
+		then
+			while read line
+			do
+				! [[ -z $line ]] && rel_types+=( "$line" )
+			done < <(xml sel -t -m //metadata/recording/relation-list/relation -n -v ./@type $temp_dir/recording2.xml)
+			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+		fi
+		if xml el -a $temp_dir/recording2.xml | grep -q "metadata/recording/relation-list/relation/artist/@id"
+		then
+			while read line
+			do
+				! [[ -z $line ]] && rel_artists+=( "$line" )
+			done < <(xml sel -t -m //metadata/recording/relation-list/relation -n -v ./artist/@id $temp_dir/recording2.xml)
+			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+		fi
+		if [[ ${#rel_types[@]} -eq ${#rel_artists[@]} ]]
+		then
+			for (( i=0; i < ${#rel_artists[@]}; i++ ))
+			do
+				rel_artist=${rel_artists[i]}
+				process_artist_mbid $rel_artist
+				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." && return 1
+				rel_artist=\'$rel_artist\'
+				rel_artist_id=$($mysql_path --skip-reconnect -u$user -p$pass \
+					-D$db --skip-column-names -e "
+
+					SELECT id FROM artist WHERE mbid = $rel_artist;
+
+				")
+				[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
+
+				rel_type=${rel_types[i]}; escape_chars rel_type "$rel_type"
+				rel_type=\'$rel_type\'
+				rel_artist_id=\'$rel_artist_id\'
+				$mysql_path --skip-reconnect -u$user -p$pass -D$db \
+					--skip-column-names -e "
+
+					START TRANSACTION;
+					CALL link_artist_to_recording (
+						$rel_artist_id,
+						$rel_type,
 						$recording_id
 					);
 					COMMIT;
