@@ -662,6 +662,66 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
+DROP PROCEDURE IF EXISTS insert_and_get_medium //
+
+CREATE PROCEDURE insert_and_get_medium -- {{{1
+
+	(
+		IN  p_release_id MEDIUMINT UNSIGNED,
+		IN  p_format     VARCHAR(100),
+		IN  p_position   TINYINT UNSIGNED,
+		OUT p_medium_id  MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN  <p_release_id> MEDIUMINT UNSIGNED,
+                        IN  <p_format>     VARCHAR(100),
+                        IN  <p_position>   TINYINT UNSIGNED,
+                        OUT <p_medium_id>  MEDIUMINT UNSIGNED
+
+                      Description:
+                        Insert an entry into the 'medium' table. " -- 2}}}
+
+BEGIN -- {{{2
+
+	DECLARE v_medium_format_id TINYINT UNSIGNED;
+
+	-- Test if the format already exists in the table `medium_format`.
+	SELECT id INTO v_medium_format_id
+		FROM medium_format
+		WHERE name = p_format;
+	
+	-- If it doesn't exist, create it.
+	IF v_medium_format_id IS NULL
+	THEN
+		INSERT INTO medium_format (name) VALUES (p_format);
+		SELECT LAST_INSERT_ID() INTO v_medium_format_id;
+	END IF;
+
+	-- Insert medium.
+	INSERT INTO medium (id, format_id, position) VALUES (
+		'',
+		v_medium_format_id,
+		p_position
+	);
+	SELECT LAST_INSERT_ID() INTO p_medium_id;
+
+	-- Link medium to release.
+	INSERT INTO l_medium_to_release (medium_id, release_id) VALUES (
+		p_medium_id,
+		p_release_id
+	);
+
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_medium',
+	'user'
+) // -- 1}}}
+
 DROP PROCEDURE IF EXISTS insert_and_get_mime_type //
 
 CREATE PROCEDURE insert_and_get_mime_type -- {{{1
@@ -753,7 +813,7 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_and_get_mount_point',
 	'user'
-) // -- 1}}}
+) // -- 1}}} DROP PROCEDURE IF EXISTS insert_and_get_recording //
 
 DROP PROCEDURE IF EXISTS insert_and_get_recording //
 

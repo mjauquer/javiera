@@ -40,11 +40,32 @@ CREATE TABLE IF NOT EXISTS l_artist_to_release_group (
 	                 	REFERENCES release_group(id)
 );
 
-CREATE TABLE IF NOT EXISTS l_recording_to_release (
-	recording_id   MEDIUMINT UNSIGNED NOT NULL
-	                	REFERENCES recording(id),
-	release_id     MEDIUMINT UNSIGNED NOT NULL
+CREATE TABLE IF NOT EXISTS l_medium_to_release (
+	medium_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES medium(id),
+	release_id       MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES `release`(id)
+);
+
+CREATE TABLE IF NOT EXISTS l_recording_to_medium (
+	recording_id     MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES recording(id),
+	medium_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES medium(id)
+);
+
+CREATE TABLE IF NOT EXISTS medium (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	format_id        TINYINT UNSIGNED NOT NULL
+	                 	REFERENCES medium_format(id),
+	position         TINYINT UNSIGNED NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS medium_format (
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(100) NOT NULL,
+	PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS recording (

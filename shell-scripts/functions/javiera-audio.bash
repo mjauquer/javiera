@@ -36,6 +36,8 @@ insert_audio_file () {
 #              FILE_ID   The value of the 'id' column in the 'file'
 #                        table of the database.
 
+echo "entra: insert_audio_file()"
+
 	local file_id=$2 
 	local release_mbid
 	local recording_mbid
@@ -69,8 +71,10 @@ insert_audio_file () {
 
 		release_mbid=$(metaflac --show-tag=musicbrainz_albumid $1)
 		release_mbid=${release_mbid##*=}
-		echo $release_mbid
+		recording_mbid=$(metaflac --show-tag=musicbrainz_trackid $1)
+		recording_mbid=${recording_mbid##*=}
 	fi
+echo "sale: insert_audio_file()"
 	return 0
 }
 
@@ -85,6 +89,8 @@ insert_flac_file () {
 #  PARAMETERS: PATHNAME      A unix filesystem formatted string. 
 #              AUDIO_FILE_ID The value of the 'id' column in the
 #                            'audio_file' table of the database.
+
+echo "entra: insert_flac_file()"
 
 	# Insert an entry in the 'flac_file' table and get the
 	# flac_file_id.
@@ -129,6 +135,8 @@ insert_flac_file () {
 	# block.
 	! insert_flac_metadata VORBIS_COMMENT $1 $flac_file_id && return 1
 
+echo "sale: insert_flac_file()"
+
 	return 0
 }
 
@@ -144,6 +152,8 @@ insert_flac_metadata() {
 #              PATHNAME A unix filesystem formatted string. 
 #              FLAC_ID  The value of the 'id' column in the 'audio_file'
 #                       table of the database.
+
+echo "entra: insert_flac_metadata()"
 
 	local -a col1
 	local -a col2
@@ -233,5 +243,6 @@ insert_flac_metadata() {
 		"
 		[[ $? -ne 0 ]] && return 1
 	done
+echo "sale: insert_flac_metadata()"
 	return 0
 }

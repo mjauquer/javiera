@@ -48,7 +48,7 @@ process_artist_mbid () {
 #
 #   PARAMETER: ARTIST_MBID A 36 character string used by musicbrainz.org
 #                          as an unique identifier.
-
+echo "entra: process_artist_mbid"
 	local old_pwd=$(pwd)
 	local temp_root="/dev/shm/javiera"
 	local temp_dir
@@ -91,6 +91,8 @@ process_artist_mbid () {
 			artist_type="$(xml sel -N my=$xmlns -t -m //my:metadata/my:artist/@type -v . $temp_dir/artist.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
+		escape_chars artist_type "$artist_type"
+		artist_type="${artist_type##+([-[[:space:]])}"
 		artist_type=\'$artist_type\'
 
 		if xml el $temp_dir/artist.xml | grep -q "metadata/artist/name"
@@ -98,21 +100,27 @@ process_artist_mbid () {
 			artist_name="$(xml sel -N my=$xmlns -t -m //my:metadata/my:artist/my:name -v . $temp_dir/artist.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars artist_name "$artist_name"; artist_name=\'$artist_name\'
+		escape_chars artist_name "$artist_name"
+		artist_name="${artist_name##+([-[[:space:]])}"
+		artist_name=\'$artist_name\'
 
 		if xml el $temp_dir/artist.xml | grep -q "metadata/artist/sort-name"
 		then
 			artist_sort="$(xml sel -N my=$xmlns -t -m //my:metadata/my:artist/my:sort-name -v . $temp_dir/artist.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars artist_sort "$artist_sort"; artist_sort=\'$artist_sort\'
+		escape_chars artist_sort "$artist_sort"
+		artist_sort="${artist_sort##+([-[[:space:]])}"
+		artist_sort=\'$artist_sort\'
 
 		if xml el $temp_dir/artist.xml | grep -q "metadata/artist/disambiguation"
 		then
 			comment="$(xml sel -N my=$xmlns -t -m //my:metadata/my:artist/my:disambiguation -v . $temp_dir/artist.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars comment "$comment"; comment=\'$comment\'
+		escape_chars comment "$comment"
+		comment="${comment##+([-[[:space:]])}"
+		comment=\'$comment\'
 
 		rm -r $temp_dir
 		[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
@@ -138,6 +146,7 @@ process_artist_mbid () {
 			error_exit "$LINENO: Error after calling mysql."
 		fi
 	fi
+echo "sale: process_artist_mbid"
 	return 0
 }
 
@@ -151,6 +160,7 @@ process_recording_mbid () {
 #
 #   PARAMETER: RECORDING_MBID A 36 character string used by musicbrainz.org
 #                          as an unique identifier.
+echo "entra: process_recording_mbid"
 
 	local old_pwd=$(pwd)
 	local temp_root="/dev/shm/javiera"
@@ -196,21 +206,27 @@ process_recording_mbid () {
 			recording_name="$(xml sel -t -m //metadata/recording-list/recording/title -v . $temp_dir/recording.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars recording_name "$recording_name"; recording_name=\'$recording_name\'
+		escape_chars recording_name "$recording_name"
+		recording_name="${recording_name##+([-[[:space:]])}"
+		recording_name=\'$recording_name\'
 
 		if xml el $temp_dir/recording.xml | grep -q "metadata/recording-list/recording/length"
 		then
 			recording_length="$(xml sel -t -m //metadata/recording-list/recording/length -v . $temp_dir/recording.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars recording_length "$recording_length"; recording_length=\'$recording_length\'
+		escape_chars recording_length "$recording_length"
+		recording_length="${recording_length##+([-[[:space:]])}"
+		recording_length=\'$recording_length\'
 
 		if xml el $temp_dir/recording.xml | grep -q "metadata/recording-list/recording/disambiguation"
 		then
 			comment="$(xml sel -t -m //metadata/recording-list/recording/disambiguation -v . $temp_dir/recording.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars comment "$comment"; comment=\'$comment\'
+		escape_chars comment "$comment"
+		comment="${comment##+([-[[:space:]])}"
+		comment=\'$comment\'
 
 		# Insert recording.
 		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
@@ -283,6 +299,7 @@ process_recording_mbid () {
 		cd $old_pwd
 		[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 	fi
+echo "sale: process_recording_mbid"
 	return 0
 }
 
@@ -296,6 +313,7 @@ process_release_mbid () {
 #
 #   PARAMETER: release_MBID A 36 character string used by musicbrainz.org
 #                          as an unique identifier.
+echo "entra: process_release_mbid"
 
 	local old_pwd=$(pwd)
 	local temp_root="/dev/shm/javiera"
@@ -312,6 +330,9 @@ process_release_mbid () {
 	local release_group
 	local release_group_id
 	local comment
+	local -i medium_count
+	local medium_format
+	local medium_position
 	local wget_error
 	
 	# Is this release already in the database?
@@ -331,6 +352,7 @@ process_release_mbid () {
 		cd $temp_root
 		[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 		temp_dir=$(readlink -f $(mktemp -d tmp.XXX))
+
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release?query=reid:$1" > $temp_dir/rel.xml
 		wget_error=$?
@@ -339,12 +361,22 @@ process_release_mbid () {
 
 		xml ed $temp_dir/rel.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $temp_dir/release.xml
 
+		limit_mbcon
+		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release/$1?inc=recordings+media" > $temp_dir/rel2.xml
+		wget_error=$?
+		[[ $wget_error -ne 0 ]] && echo "wget: exit status is $wget_error" && return 1
+		MUSICBRAINZ_LTIME=$(date +%s)
+
+		xml ed $temp_dir/rel2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $temp_dir/release2.xml
+
 		# Parse data.
 		if xml el $temp_dir/release.xml | grep -q "metadata/release-list/release/status"
 		then
 			release_status="$(xml sel -t -m //metadata/release-list/release/status -v . $temp_dir/release.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
+		escape_chars release_status "$release_status"
+		release_status="${release_status##+([-[[:space:]])}"
 		release_status=\'$release_status\'
 
 		if xml el $temp_dir/release.xml | grep -q "metadata/release-list/release/title"
@@ -376,7 +408,9 @@ process_release_mbid () {
 			comment="$(xml sel -t -m //metadata/release-list/release/disambiguation -v . $temp_dir/release.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars comment "$comment"; comment=\'$comment\'
+		escape_chars comment "$comment"
+		comment="${comment##+([-[[:space:]])}"
+		comment=\'$comment\'
 
 		# Insert release.
 		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
@@ -444,51 +478,65 @@ process_release_mbid () {
 			done
 		fi
 
-		# Insert recording-release relationship.
-		limit_mbcon
-		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release/$1?inc=recordings" > $temp_dir/rel2.xml
-		wget_error=$?
-		[[ $wget_error -ne 0 ]] && echo "wget: exit status is $wget_error" && return 1
-		MUSICBRAINZ_LTIME=$(date +%s)
+		### Insert release's tracks into the database.
+		medium_count="$(xml sel -t -m //metadata/release/medium-list/@count -n -v . $temp_dir/release2.xml)"
 
-		xml ed $temp_dir/rel2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $temp_dir/release2.xml
+		for (( i=1; i <= $medium_count; i++ ))
+		do
 
-		if xml el -a $temp_dir/release2.xml | grep -q "metadata/release/medium-list/medium/track-list/track/recording/@id"
-		then
-			recordings="$(xml sel -t -m //metadata/release/medium-list/medium/track-list/track/recording/@id -n -v . $temp_dir/release2.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
-			for recording in ${recordings[@]}
-			do
-				process_recording_mbid $recording
-				[[ $? -ne 0 ]] && echo "Error after calling to process_recording_mbid()." && return 1
-				recording=\'$recording\'
-				recording_ids+=( $($mysql_path --skip-reconnect -u$user -p$pass \
-					-D$db --skip-column-names -e "
+			medium_format="$(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./format $temp_dir/release2.xml)"
+			escape_chars medium_format "$medium_format";
+			medium_format="${medium_format##+([-[[:space:]])}"
+			medium_format=\'$medium_format\'
+			medium_position=\'$i\'
 
-					SELECT id FROM recording WHERE mbid = $recording;
+			medium_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
+				--skip-column-names -e "
 
-				") )
-				[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
-			done
-			for recording_id in ${recording_ids[@]}
-			do
-				recording_id=\'$recording_id\'
-				$mysql_path --skip-reconnect -u$user -p$pass -D$db \
-					--skip-column-names -e "
+				START TRANSACTION;
+				CALL insert_and_get_medium (
+					$release_id,
+					$medium_format,
+					$medium_position,
+					@medium_id
+				);
+				SELECT @medium_id;
+				COMMIT;
+			")
+			if [ $? -ne 0 ]
+			then
+				error_exit "$LINENO: Error after calling mysql."
+			fi
 
-					START TRANSACTION;
-					CALL link_recording_to_release (
-						$recording_id,
-						$release_id
-					);
-					COMMIT;
-				"
-				if [ $? -ne 0 ]
-				then
-					error_exit "$LINENO: Error after calling mysql."
-				fi
-			done
-		fi
+			medium_format=
+			medium_position=
+
+			if xml el -a $temp_dir/release2.xml | grep -q "metadata/release/medium-list/medium/track-list/track/recording/@id"
+			then
+				recordings=( $(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./track-list/track/recording/@id $temp_dir/release2.xml) )
+				[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+				for recording in ${recordings[@]}
+				do
+					process_recording_mbid $recording
+					[[ $? -ne 0 ]] && echo "Error after calling to process_recording_mbid()." && return 1
+					recording=\'$recording\'
+					recording_ids+=( $($mysql_path --skip-reconnect -u$user -p$pass \
+						-D$db --skip-column-names -e "
+
+						START TRANSACTION;
+						SELECT id into @recording_id FROM recording WHERE mbid = $recording;
+						INSERT INTO l_recording_to_medium (recording_id, medium_id) VALUES (
+							@recording_id,
+							$medium_id
+						);
+						SELECT @recording_id;
+						COMMIT;
+
+					") )
+					[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
+				done
+			fi
+		done
 
 		# Delete temporal directory.
 		rm -r $temp_dir
@@ -496,6 +544,7 @@ process_release_mbid () {
 		cd $old_pwd
 		[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 	fi
+echo "sale: process_release_mbid"
 	return 0
 }
 
@@ -509,6 +558,7 @@ process_release_group_mbid () {
 #
 #   PARAMETER: RELEASE_GROUP_MBID A 36 character string used by musicbrainz.org
 #                          as an unique identifier.
+echo "entra: process_release_group_mbid"
 
 	local old_pwd=$(pwd)
 	local temp_root="/dev/shm/javiera"
@@ -554,6 +604,8 @@ process_release_group_mbid () {
 			release_group_type="$(xml sel -t -m //metadata/release-group-list/release-group/primary-type -v . $temp_dir/release_group.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
+		escape_chars release_group_type "$release_group_type"
+		release_group_type="${release_group_type##+([-[[:space:]])}"
 		release_group_type=\'$release_group_type\'
 
 		if xml el $temp_dir/release_group.xml | grep -q "metadata/release-group-list/release-group/title"
@@ -568,7 +620,9 @@ process_release_group_mbid () {
 			comment="$(xml sel -t -m //metadata/release-group-list/release-group/disambiguation -v . $temp_dir/release_group.xml)"
 			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
 		fi
-		escape_chars comment "$comment"; comment=\'$comment\'
+		escape_chars comment "$comment"
+		comment="${comment##+([-[[:space:]])}"
+		comment=\'$comment\'
 
 		# Update the database.
 		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
@@ -641,5 +695,6 @@ process_release_group_mbid () {
 		cd $old_pwd
 		[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 	fi
+echo "sale: process_release_group_mbid"
 	return 0
 }
