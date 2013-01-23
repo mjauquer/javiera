@@ -40,6 +40,8 @@ echo "entra: insert_audio_file()"
 
 	local file_id=$2 
 	local release_mbid
+	local medium_count
+	local medium_position
 	local recording_mbid
 
 	# Insert an entry in the 'audio_file' table and get the
@@ -71,8 +73,46 @@ echo "entra: insert_audio_file()"
 
 		release_mbid=$(metaflac --show-tag=musicbrainz_albumid $1)
 		release_mbid=${release_mbid##*=}
+		medium_count=$(metaflac --show-tag=totaldiscs $1)
+		medium_count=${medium_count##*=}
+		if [ -z $medium_count ]
+		then
+			medium_count=$(metaflac --show-tag=disctotal $1)
+			medium_count=${medium_count##*=}
+		fi
+		medium_position=$(metaflac --show-tag=discnumber $1)
+		medium_position=${medium_position##*=}
 		recording_mbid=$(metaflac --show-tag=musicbrainz_trackid $1)
 		recording_mbid=${recording_mbid##*=}
+
+		if ! [[ -z $release_mbid ]]
+		then
+			process_release_mbid $release_mbid
+		elif ! [[ -z $recording_mbid ]] 
+		then
+			process_recording_mbid $recording_mbid
+		fi
+
+		audio_file_id=\'$audio_file_id\'
+		release_mbid=\'$release_mbid\'
+		medium_count=\'$medium_count\'
+		medium_position=\'$medium_position\'
+		recording_mbid=\'$recording_mbid\'
+
+		$mysql_path --skip-reconnect -u$user -p$pass \
+			-D$db --skip-column-names -e "
+
+			START TRANSACTION;
+			CALL link_audio_file_to_recording (
+				$audio_file_id,
+				$release_mbid,
+				$medium_count,
+				$medium_position,
+				$recording_mbid
+			);
+			COMMIT;"
+
+		[[ $? -ne 0 ]] && return 1
 	fi
 echo "sale: insert_audio_file()"
 	return 0
@@ -179,7 +219,7 @@ echo "entra: insert_flac_metadata()"
 	else
 		return 1
 	fi
-	metaflac --list --block-type=$1 $2 > $tempdir/tempfile.txt
+	metaflac --list --block-type=$1 $2 | sed ':begin;N;s/\n\([^ ][^ ][^ ][^ ][^c][^o][^m][^m][^e][^n]\)/ \1/;tbegin;P;D' > $tempdir/tempfile.txt
 	while read line
 	do
 		if [[ "$line" =~ length:.* ]]
@@ -213,36 +253,165 @@ echo "entra: insert_flac_metadata()"
 	do
 		local field1="${col1[ind]}"
 		local field2="${col2[ind]}"
-		escape_chars field1 "$field1"; field1="\"$field1\""
-		escape_chars field2 "$field2"; field2="\"$field2\""
-		case ${col1[ind]} in
-			[mM][uU][sS][iI][cC][bB][rR][aA[iI][nN][zZ]_[aA][rR][tT][iI][sS][tT][iI][dD])                          process_artist_mbid ${col2[ind]}
-			                                                                                                       ;;
-			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[aA][lL][bB][uU][mM][aA][rR][tT][iI][sS][tT][iI][dD])     process_artist_mbid ${col2[ind]}
-			                                                                                                       ;;
-			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[tT][rR][aA][cC][kK][iI][dD])                             process_recording_mbid ${col2[ind]}
-			                                                                                                       ;;
-			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[rR][eE][lL][eE][aA][sS][eE][gG][rR][oO][uU][pP][iI][dD]) process_release_group_mbid ${col2[ind]}
-			                                                                                                       ;;
-			[mM][uU][sS][iI][cC][bB][rR][aA][iI][nN][zZ]_[aA][lL][bB][uU][mM][iI][dD])                             process_release_mbid ${col2[ind]}
-			                                                                                                       ;;
+		escape_chars field1 "$field1"
+		escape_chars field2 "$field2"
+
+		case "$field1" in
+			[Cc][Oo][Mm][Mm][Ee][Nn][Tt]) ;&
+			[Ee][Nn][Cc][Oo][Dd][Ee][Rr]) ;&
+			"vendor string")              field1="\"$field1\""
+			                              field2="\"$field2\""
+			                              local mtype="\"$1\""
+			                              $mysql_path --skip-reconnect -u$user -p$pass \
+			                              	-D$db --skip-column-names -e "
+
+			                              	START TRANSACTION;
+			                              	CALL insert_flac_metadata_entry (
+			                                	$flac_file_id,
+			                                 	$mtype,
+				                                	$field1,
+				                              	$field2
+		                              	        );
+				                        COMMIT;
+
+				                      "
+				                      [[ $? -ne 0 ]] && return 1
+				                      ;;
 		esac
-		local mtype="\"$1\""
-		$mysql_path --skip-reconnect -u$user -p$pass \
-			-D$db --skip-column-names -e "
-
-			START TRANSACTION;
-			CALL insert_flac_metadata_entry (
-				$flac_file_id,
-				$mtype,
-				$field1,
-				$field2
-			);
-			COMMIT;
-
-		"
-		[[ $? -ne 0 ]] && return 1
 	done
 echo "sale: insert_flac_metadata()"
 	return 0
+}
+
+legacy_release_mbid () {
+
+	local -a mbids=( $( $mysql_path --skip-reconnect -u$user -p$pass \
+			-D$db --skip-column-names -e "
+
+			START TRANSACTION;
+			SELECT DISTINCT column2
+				FROM flac_metadata_entry
+				WHERE column1 LIKE 'musicbrainz_albumid';
+			COMMIT;") )
+	for (( pos=0; pos < ${#mbids[@]}; pos++ ))
+	do
+		echo "${pos}) ${mbids[pos]}"
+		process_release_mbid ${mbids[pos]}
+	done
+}
+
+legacy_link () {
+	local -a flac_ids=( $( $mysql_path --skip-reconnect -u$user -p$pass \
+			-D$db --skip-column-names -e "
+
+			SELECT DISTINCT flac_file_id
+				FROM l_flac_file_to_metadata_entry; ") )
+
+	[[ $? -ne 0 ]] && echo "Error" && return 1
+
+	for (( pos=0; pos < ${#flac_ids[@]}; pos++ ))
+	do
+		flac_id=\'${flac_ids[pos]}\'; echo "flac_id: $flac_id"
+		audio_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
+				-D$db --skip-column-names -e "
+
+			SELECT audio_file_id
+				FROM flac_file
+				WHERE id = $flac_id;")
+
+		[[ $? -ne 0 ]] && echo "Error" && return 1
+
+		audio_file_id=\'$audio_file_id\'
+		echo "audio_file_id: $audio_file_id"
+
+		release_mbid=$($mysql_path --skip-reconnect -u$user -p$pass \
+				-D$db --skip-column-names -e "
+			SELECT column2
+				FROM flac_metadata_entry
+				INNER JOIN l_flac_file_to_metadata_entry AS link
+					ON flac_metadata_entry.id = link.flac_metadata_entry_id
+				WHERE link.flac_file_id = $flac_id
+				AND column1 LIKE 'musicbrainz_albumid';")
+		
+		[[ $? -ne 0 ]] && echo "Error" && return 1
+
+		release_mbid=\'$release_mbid\'
+		echo "release_mbid: $release_mbid"
+
+		medium_count=$($mysql_path --skip-reconnect -u$user -p$pass \
+				-D$db --skip-column-names -e "
+
+			SELECT column2
+				FROM flac_metadata_entry
+				INNER JOIN l_flac_file_to_metadata_entry AS link
+					ON flac_metadata_entry.id = link.flac_metadata_entry_id
+				WHERE link.flac_file_id = $flac_id
+				AND column1 LIKE 'totaldiscs';")
+
+		[[ $? -ne 0 ]] && echo "Error" && return 1
+
+		medium_count=\'$medium_count\'
+		echo "medium_count: $medium_count"
+
+		if [ -z $medium_count ]
+		then
+			medium_count=$($mysql_path --skip-reconnect -u$user -p$pass \
+					-D$db --skip-column-names -e "
+
+				SELECT column2
+					FROM flac_metadata_entry
+					INNER JOIN l_flac_file_to_metadata_entry AS link
+						ON flac_metadata_entry.id = link.flac_metadata_entry_id
+					WHERE link.flac_file_id = $flac_id
+					AND column1 LIKE 'disctotal';")
+
+			[[ $? -ne 0 ]] && echo "Error" && return 1
+
+			medium_count=\'$medium_count\'
+			echo "medium_count: $medium_count"
+		fi
+
+		medium_position=$($mysql_path --skip-reconnect -u$user -p$pass \
+				-D$db --skip-column-names -e "
+
+			SELECT column2
+				FROM flac_metadata_entry
+				INNER JOIN l_flac_file_to_metadata_entry AS link
+					ON flac_metadata_entry.id = link.flac_metadata_entry_id
+				WHERE link.flac_file_id = $flac_id
+				AND column1 LIKE 'discnumber';")
+
+		[[ $? -ne 0 ]] && echo "Error" && return 1
+
+		medium_position=\'$medium_position\'
+		echo "medium_position: $medium_position"
+
+		recording_mbid=$($mysql_path --skip-reconnect -u$user -p$pass \
+				-D$db --skip-column-names -e "
+
+			SELECT column2
+				FROM flac_metadata_entry
+				INNER JOIN l_flac_file_to_metadata_entry AS link
+					ON flac_metadata_entry.id = link.flac_metadata_entry_id
+				WHERE link.flac_file_id = $flac_id
+				AND column1 LIKE 'musicbrainz_trackid';")
+
+		[[ $? -ne 0 ]] && echo "Error" && return 1
+
+		recording_mbid=\'$recording_mbid\'
+		echo "recording_mbid: $recording_mbid"
+
+		$mysql_path --skip-reconnect -u$user -p$pass \
+				-D$db --skip-column-names -e "
+
+				CALL link_audio_file_to_recording (
+					$audio_file_id,
+					$release_mbid,
+					$medium_count,
+					$medium_position,
+					$recording_mbid)"
+					
+		[[ $? -ne 0 ]] && echo "Error" && return 1
+
+	done
 }

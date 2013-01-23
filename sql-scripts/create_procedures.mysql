@@ -1766,6 +1766,83 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
+DROP PROCEDURE IF EXISTS link_audio_file_to_recording //
+
+CREATE PROCEDURE link_audio_file_to_recording -- {{{1
+
+	(
+		IN p_audio_file_id   MEDIUMINT UNSIGNED,
+		IN p_release_mbid    CHAR(36),
+		IN p_medium_count    TINYINT UNSIGNED,
+		IN p_medium_position TINYINT UNSIGNED,
+		IN p_recording_mbid  CHAR(36)
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN <p_audio_file_id>   MEDIUMINT UNSIGNED,
+                        IN <p_release_mbid>    CHAR(36),
+                        IN <p_medium_count>    TINYINT UNSIGNED,
+                        IN <p_medium_position> TINYINT UNSIGNED,
+                        IN <p_recording_mbid>  CHAR(36).
+                      Description:
+                        If <p_recording_mbid> is not null, insert an entry in the 'l_audio_file_to_recording' table.
+                        If <p_recording_mbid> is null and <p_medium_count> is not equal to <p_medium_position>, insert an entry for each recording in the medium related to <p_medium_position>.
+                        If <p_recording_mbid> in null and <p_medium_count> is equal to <p_medium_position>, insert an entry for each recording in the release related to <p_release_mbid>." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_count        MEDIUMINT UNSIGNED;
+	DECLARE v_recording_id MEDIUMINT UNSIGNED;
+	DECLARE v_release_id   MEDIUMINT UNSIGNED;
+
+	-- Get the release id.
+	SELECT id INTO v_release_id
+		FROM `release`
+		WHERE mbid = p_release_mbid;
+
+	IF p_recording_mbid != ''
+	THEN
+		-- Get the recording id.
+		SELECT id INTO v_recording_id
+			FROM recording
+			WHERE mbid = p_recording_mbid;
+
+		-- Test if an entry already exists in the table `l_audio_file_to_recording`.
+		SELECT COUNT(*) INTO v_count
+			FROM l_audio_file_to_recording
+			WHERE audio_file_id = p_audio_file_id
+			AND recording_id = v_recording_id;
+		
+		-- If it doesn't exist, create it.
+		IF v_count = 0
+		THEN
+			INSERT INTO l_audio_file_to_recording (audio_file_id, recording_id) VALUES ( 
+				p_audio_file_id,
+				v_recording_id
+			);
+		END IF;
+	ELSE
+		INSERT INTO l_audio_file_to_recording (audio_file_id, recording_id)
+			SELECT p_audio_file_id, recording.id
+				FROM recording
+				INNER JOIN l_recording_to_medium AS link
+					ON link.recording_id = recording.id
+				INNER JOIN l_medium_to_release AS link2
+					ON link2.medium_id = link.medium_id
+				INNER JOIN medium
+					ON link2.medium_id = medium.id
+				WHERE link2.release_id = v_release_id
+				AND medium.position = p_medium_position;
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_audio_file_to_recording',
+	'user'
+) // -- 1}}}
+
 DROP PROCEDURE IF EXISTS link_dvd_to_software_session //
 
 CREATE PROCEDURE link_dvd_to_software_session -- {{{1

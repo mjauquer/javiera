@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS l_artist_to_release_group (
 	                 	REFERENCES release_group(id)
 );
 
+CREATE TABLE IF NOT EXISTS l_audio_file_to_recording (
+	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES audio_file(id),
+	recording_id     MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES recording(id)
+);
+
 CREATE TABLE IF NOT EXISTS l_medium_to_release (
 	medium_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES medium(id),
