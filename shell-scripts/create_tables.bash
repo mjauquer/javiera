@@ -120,8 +120,7 @@ $mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 	
 	START TRANSACTION;
-	source ~/projects/javiera/sql-scripts/create_coretables.mysql
-	source ~/projects/javiera/sql-scripts/create_mbtables.mysql
+	source ~/projects/javiera/sql-scripts/create_tables.mysql
 	COMMIT;
 
 "
