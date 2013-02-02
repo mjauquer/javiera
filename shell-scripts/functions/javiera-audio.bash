@@ -201,8 +201,8 @@ echo "entra: insert_flac_metadata()"
 	local char
 	local line
 	local procedure
-	local tempdir=$(readlink -f $(mktemp -d tmp.XXX))
-	if [ ! -d $tempdir ]
+	local flac_tmpdir=$(readlink -f $(mktemp -d flac_tmpdir.XXX))
+	if [ ! -d $flac_tmpdir ]
 	then
 		echo "Coudn't create a temporal directory."
 		return 1
@@ -219,7 +219,7 @@ echo "entra: insert_flac_metadata()"
 	else
 		return 1
 	fi
-	metaflac --list --block-type=$1 $2 | sed ':begin;N;s/\n\([^ ][^ ][^ ][^ ][^c][^o][^m][^m][^e][^n]\)/ \1/;tbegin;P;D' > $tempdir/tempfile.txt
+	metaflac --list --block-type=$1 $2 | sed ':begin;N;s/\n\([^ ][^ ][^ ][^ ][^c][^o][^m][^m][^e][^n]\)/ \1/;tbegin;P;D' > $flac_tmpdir/tempfile.txt
 	while read line
 	do
 		if [[ "$line" =~ length:.* ]]
@@ -243,8 +243,8 @@ echo "entra: insert_flac_metadata()"
 			col1+=( "${line%%${char}*}" )
 			col2+=( "${line##*${char}}" )
 		fi
-	done < $tempdir/tempfile.txt
-	rm -r $tempdir
+	done < $flac_tmpdir/tempfile.txt
+	rm -r $flac_tmpdir
 	[[ $? -ne 0 ]] && return 1
 
 	# For each tag, insert an entry in the database.
@@ -285,19 +285,61 @@ echo "sale: insert_flac_metadata()"
 
 legacy_release_mbid () {
 
-	local -a mbids=( $( $mysql_path --skip-reconnect -u$user -p$pass \
-			-D$db --skip-column-names -e "
+	local lgy_oldpwd=$(pwd)
+	local -a mbids
+	local lgy_tmpdir
 
-			START TRANSACTION;
-			SELECT DISTINCT column2
-				FROM flac_metadata_entry
-				WHERE column1 LIKE 'musicbrainz_albumid';
-			COMMIT;") )
+	# Change directory to the temporal root directory of the script.
+	cd $tmp_root
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+
+	# Create a temporal directory for use of this function.
+	lgy_tmpdir="$(mktemp -d lgy.XXX)"
+	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
+	lgy_tmpdir="$(readlink -f $lgy_tmpdir)"
+	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
+
+	mbids=( $( $mysql_path --skip-reconnect -u$user -p$pass \
+		-D$db --skip-column-names -e "
+
+		START TRANSACTION;
+		SELECT DISTINCT column2
+			FROM flac_metadata_entry
+			WHERE column1 LIKE 'musicbrainz_albumid';
+		COMMIT;") )
+
+
+	# Process mbids.
 	for (( pos=0; pos < ${#mbids[@]}; pos++ ))
 	do
 		echo "${pos}) ${mbids[pos]}"
-		process_release_mbid ${mbids[pos]}
+
+		> $lgy_tmpdir/legacy_relquery.mysql
+		process_release_mbid ${mbids[pos]} $lgy_tmpdir/legacy_relquery.mysql
+		if [ $? -ne 0 ]
+		then
+			echo "Error after a call to process_release_mbid() (mbid: ${mbids[pos]})"
+			continue
+		fi
+		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
+			--skip-column-names -e "
+
+			START TRANSACTION;
+			source $lgy_tmpdir/legacy_relquery.mysql
+			COMMIT;
+		"
+		if [ $? -ne 0 ]
+		then
+			error_exit "$LINENO: Error after a call to mysql in order to insert a release (mbid: ${mbids[pos]})."
+			continue
+		fi
 	done
+
+	# Delete the temporal directory.
+	rm -r $lgy_tmpdir
+	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
+	cd $lgy_oldpwd
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 }
 
 legacy_link () {

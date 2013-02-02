@@ -68,19 +68,24 @@ error_exit () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-declare progname # The name of this script.
+# If no argument was passed, print usage message and exit.
 
-progname=$(basename $0)
+[[ $# -eq 0 ]] && usage && exit
 
 # Enable extended regular expresion handling.
 
 shopt -s extglob 
 
-declare -a files # The list of pathnames to be processed by this
+# Store this script's name in a variable for further use.
 
-# If no argument was passed, print usage message and exit.
+declare progname
+progname=$(basename $0)
 
-[[ $# -eq 0 ]] && usage && exit
+# Create a temporal directory.
+
+[[ ! -d $tmp_root ]] &&
+	mkdir -p $tmp_root ||
+	error_exit "$LINENO: Error after trying to create a temporal directory."
 
 # Parse command line options.
 
@@ -103,11 +108,13 @@ done
 shift $(($OPTIND-1))
 
 # Select from the list of pathname arguments, those that do not need to
-# be changed. Store them in the <files> array.
+# be changed. Store them in the 'files' array.
 
-declare oldifs # Stores the content of the IFS variable as it 
-               # was when this script was called.
-declare regex  # A regular expresion.
+declare -a files # The list of pathnames to be processed by this script.
+
+declare oldifs   # Stores the content of the IFS variable as it 
+                 # was when this script was called.
+declare regex    # A regular expresion.
 
 regex="./[[0-9A-z]._+]{1}[-[0-9A-z]._+]*$"
 

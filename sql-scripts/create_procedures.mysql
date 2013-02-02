@@ -813,7 +813,7 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_and_get_mount_point',
 	'user'
-) // -- 1}}} DROP PROCEDURE IF EXISTS insert_and_get_recording //
+) // -- 1}}}
 
 DROP PROCEDURE IF EXISTS insert_and_get_recording //
 
