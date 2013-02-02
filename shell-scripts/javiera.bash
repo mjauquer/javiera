@@ -83,9 +83,10 @@ progname=$(basename $0)
 
 # Create a temporal directory.
 
-[[ ! -d $tmp_root ]] &&
-	mkdir -p $tmp_root ||
-	error_exit "$LINENO: Error after trying to create a temporal directory."
+if [ ! -d $tmp_root ]
+then
+	mkdir -p $tmp_root || error_exit "$LINENO: Error after trying to create a temporal directory."
+fi
 
 # Parse command line options.
 

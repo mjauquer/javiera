@@ -36,19 +36,31 @@ insert_audio_file () {
 #              FILE_ID   The value of the 'id' column in the 'file'
 #                        table of the database.
 
-echo "entra: insert_audio_file()"
-
 	local file_id=$2 
-	local release_mbid
-	local medium_count
-	local medium_position
-	local recording_mbid
+	local aud_rel_mbid
+	local aud_med_count
+	local aud_med_pos
+	local aud_rec_mbid
+	local aud_oldpwd=$(pwd)
+	local aud_tmpdir
+	local -i aud_i
+	local -i aud_j
+
+	# Change directory to the temporal root directory of the script.
+	cd $tmp_root
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+
+	# Create a temporal directory for use of this function.
+	aud_tmpdir="$(mktemp -d aud.XXX)"
+	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
+	aud_tmpdir="$(readlink -f $aud_tmpdir)"
+	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
 
 	# Insert an entry in the 'audio_file' table and get the
 	# audio_file_id.
 
 	file_id=\"$file_id\"
-	local audio_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
+	local aud_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
 		START TRANSACTION;
@@ -64,57 +76,119 @@ echo "entra: insert_audio_file()"
 	# Process the audio file according to its mime-type.
 	if [ $(file -b --mime-type "$1") == audio/x-flac ]
 	then
-		insert_flac_file $1 $audio_file_id
+		insert_flac_file $1 $aud_file_id
 		if [[ $? -ne 0 ]]
 		then
 			echo "Error after call to insert_flac_file()."
 			return 1
 		fi
 
-		release_mbid=$(metaflac --show-tag=musicbrainz_albumid $1)
-		release_mbid=${release_mbid##*=}
-		medium_count=$(metaflac --show-tag=totaldiscs $1)
-		medium_count=${medium_count##*=}
-		if [ -z $medium_count ]
+		aud_rel_mbid=$(metaflac --show-tag=musicbrainz_albumid $1)
+		aud_rel_mbid=${aud_rel_mbid##*=}
+		aud_med_count=$(metaflac --show-tag=totaldiscs $1)
+		aud_med_count=${aud_med_count##*=}
+		if [ -z $aud_med_count ]
 		then
-			medium_count=$(metaflac --show-tag=disctotal $1)
-			medium_count=${medium_count##*=}
+			aud_med_count=$(metaflac --show-tag=disctotal $1)
+			aud_med_count=${aud_med_count##*=}
 		fi
-		medium_position=$(metaflac --show-tag=discnumber $1)
-		medium_position=${medium_position##*=}
-		recording_mbid=$(metaflac --show-tag=musicbrainz_trackid $1)
-		recording_mbid=${recording_mbid##*=}
+		aud_med_pos=$(metaflac --show-tag=discnumber $1)
+		aud_med_pos=${aud_med_pos##*=}
+		aud_rec_mbid=$(metaflac --show-tag=musicbrainz_trackid $1)
+		aud_rec_mbid=${aud_rec_mbid##*=}
 
-		if ! [[ -z $release_mbid ]]
+		if ! [[ -z $aud_rel_mbid ]]
 		then
-			process_release_mbid $release_mbid
-		elif ! [[ -z $recording_mbid ]] 
+			while true
+			do
+				aud_i=$(expr $aud_i + 1)
+				> $aud_tmpdir/aud_relquery.mysql
+				process_release_mbid $aud_rel_mbid $aud_tmpdir/aud_relquery.mysql
+				if [ $? -ne 0 ]
+				then
+					printf "\nError after a call to process_release_mbid().
+						(audio file id: %b)
+						(release mbid: %b)
+						(attempt nº: %b)\n" $aud_file_id $aud_rel_mbid $aud_i 
+					continue
+				fi
+				break
+			done
+			$mysql_path --skip-reconnect -u$user -p$pass -D$db \
+				--skip-column-names -e "
+
+				START TRANSACTION;
+				source $aud_tmpdir/aud_relquery.mysql
+				COMMIT;
+			"
+			if [ $? -ne 0 ]
+			then
+				echo "insert_audio_file(): Error after querying the database."
+				return 1
+			fi
+		elif ! [[ -z $aud_rec_mbid ]] 
 		then
-			process_recording_mbid $recording_mbid
+			while true
+			do
+				aud_j=$(expr $aud_j + 1)
+				> $aud_tmpdir/aud_recquery.mysql
+				process_recording_mbid $aud_rec_mbid $aud_tmpdir/aud_recquery.mysql
+				if [ $? -ne 0 ]
+				then
+					printf "\nError after a call to process_recording_mbid().
+						(audio file id: %b)
+						(recording mbid: %b)
+						(attempt nº: %b)\n" $aud_file_id $aud_rec_mbid $aud_j 
+					continue
+				fi
+				break
+			done
+			$mysql_path --skip-reconnect -u$user -p$pass -D$db \
+				--skip-column-names -e "
+
+				START TRANSACTION;
+				source $aud_tmpdir/aud_recquery.mysql
+				COMMIT;
+			"
+			if [ $? -ne 0 ]
+			then
+				echo "insert_audio_file(): Error after querying the database."
+				return 1
+			fi
 		fi
 
-		audio_file_id=\'$audio_file_id\'
-		release_mbid=\'$release_mbid\'
-		medium_count=\'$medium_count\'
-		medium_position=\'$medium_position\'
-		recording_mbid=\'$recording_mbid\'
+		aud_file_id=\'$aud_file_id\'
+		aud_rel_mbid=\'$aud_rel_mbid\'
+		aud_med_count=\'$aud_med_count\'
+		aud_med_pos=\'$aud_med_pos\'
+		aud_rec_mbid=\'$aud_rec_mbid\'
 
 		$mysql_path --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
 			START TRANSACTION;
 			CALL link_audio_file_to_recording (
-				$audio_file_id,
-				$release_mbid,
-				$medium_count,
-				$medium_position,
-				$recording_mbid
+				$aud_file_id,
+				$aud_rel_mbid,
+				$aud_med_count,
+				$aud_med_pos,
+				$aud_rec_mbid
 			);
 			COMMIT;"
 
-		[[ $? -ne 0 ]] && return 1
+		if [ $? -ne 0 ]
+		then
+			echo "insert_audio_file(): Error after querying the database."
+			return 1
+		fi
 	fi
-echo "sale: insert_audio_file()"
+
+	# Delete the temporal directory.
+	rm -r $aud_tmpdir
+	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
+	cd $aud_oldpwd
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+
 	return 0
 }
 
@@ -129,8 +203,6 @@ insert_flac_file () {
 #  PARAMETERS: PATHNAME      A unix filesystem formatted string. 
 #              AUDIO_FILE_ID The value of the 'id' column in the
 #                            'audio_file' table of the database.
-
-echo "entra: insert_flac_file()"
 
 	# Insert an entry in the 'flac_file' table and get the
 	# flac_file_id.
@@ -175,8 +247,6 @@ echo "entra: insert_flac_file()"
 	# block.
 	! insert_flac_metadata VORBIS_COMMENT $1 $flac_file_id && return 1
 
-echo "sale: insert_flac_file()"
-
 	return 0
 }
 
@@ -192,8 +262,6 @@ insert_flac_metadata() {
 #              PATHNAME A unix filesystem formatted string. 
 #              FLAC_ID  The value of the 'id' column in the 'audio_file'
 #                       table of the database.
-
-echo "entra: insert_flac_metadata()"
 
 	local -a col1
 	local -a col2
@@ -279,7 +347,7 @@ echo "entra: insert_flac_metadata()"
 				                      ;;
 		esac
 	done
-echo "sale: insert_flac_metadata()"
+
 	return 0
 }
 
@@ -343,6 +411,7 @@ legacy_release_mbid () {
 }
 
 legacy_link () {
+
 	local -a flac_ids=( $( $mysql_path --skip-reconnect -u$user -p$pass \
 			-D$db --skip-column-names -e "
 
