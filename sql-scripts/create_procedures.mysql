@@ -1821,7 +1821,8 @@ BEGIN -- {{{2
 				v_recording_id
 			);
 		END IF;
-	ELSE
+	ELSEIF p_medium_position != ''
+	THEN
 		INSERT INTO l_audio_file_to_recording (audio_file_id, recording_id)
 			SELECT p_audio_file_id, recording.id
 				FROM recording
@@ -1833,6 +1834,17 @@ BEGIN -- {{{2
 					ON link2.medium_id = medium.id
 				WHERE link2.release_id = v_release_id
 				AND medium.position = p_medium_position;
+	ELSE
+		INSERT INTO l_audio_file_to_recording (audio_file_id, recording_id)
+			SELECT p_audio_file_id, recording.id
+				FROM recording
+				INNER JOIN l_recording_to_medium AS link
+					ON link.recording_id = recording.id
+				INNER JOIN l_medium_to_release AS link2
+					ON link2.medium_id = link.medium_id
+				INNER JOIN medium
+					ON link2.medium_id = medium.id
+				WHERE link2.release_id = v_release_id;
 	END IF;
 END; // -- 2}}} 1}}}
 
