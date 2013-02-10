@@ -22,6 +22,25 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
+handle_wgeterr () {
+
+#       USAGE: handle_wgeterr
+#
+# DESCRIPTION: Return 0 when wget returned a 0 exit status.
+#              Otherwise, handle the error and return 1.
+
+	MUSICBRAINZ_LTIME=$(date +%s)
+	case $1 in
+		0)	mb_wait=2
+			return 0
+			;;
+		*)	mb_wait=$(expr $mb_wait * 2)
+			;;
+	esac
+	echo "wget: exit status is $1" 1>&2
+	return 1
+}
+
 limit_mbcon () {
 
 #       USAGE: limit_mbcon
@@ -29,12 +48,12 @@ limit_mbcon () {
 # DESCRIPTION: Returns 0 when is safe to connect to musicbrainz.org.
 
 	local now=$(date +%s)
-	local recently=$(expr $now - 2)
+	local recently=$(expr $now - $mb_wait)
 
-	while [ $recently -le $MUSICBRAINZ_LTIME ]
+	while [[ $recently -le $MUSICBRAINZ_LTIME ]]
 	do
 		now=$(date +%s)
-		recently=$(expr $now - 2)
+		recently=$(expr $now - $mb_wait)
 	done
 }
 
@@ -61,7 +80,6 @@ process_artist_mbid () {
 	local art_name
 	local art_sort
 	local art_comment
-	local art_wgeterr
 	local art_xmlns="http://musicbrainz.org/ns/mmd-2.0#"
 	
 	# Check for well-formatted arguments.
@@ -69,19 +87,19 @@ process_artist_mbid () {
 	then
 		art_mbid=\'$1\'
 	else
-		echo "Error: $1 is not a valid mbid."
+		echo "Error: $1 is not a valid mbid." 1>&2
 		return 1
 	fi
 
 	# Change directory to the temporal root directory of the script.
 	cd $tmp_root
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	# Create a temporal directory for use of this function.
 	art_tmpdir="$(mktemp -d art.XXX)"
-	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." 1>&2 && return 1
 	art_tmpdir="$(readlink -f $art_tmpdir)"
-	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
+	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." 1>&2 && return 1
 
 	# Is this artist already in the database?
 	art_id=$($mysql_path --skip-reconnect -u$user -p$pass \
@@ -90,7 +108,7 @@ process_artist_mbid () {
 		SELECT id FROM artist WHERE mbid = $art_mbid;
 
 	")
-	[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
+	[[ $? -ne 0 ]] && echo "Error after querying the database." 1>&2 && return 1
 
 	printf "SET @art_id = %b;\n" \'$art_id\' >> $2
 
@@ -100,16 +118,14 @@ process_artist_mbid () {
 		# Query musicbrainz.
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/artist/$1" > $art_tmpdir/artist.xml
-		art_wgeterr=$?
-		[[ $art_wgeterr -ne 0 ]] && echo "wget: exit status is $art_wgeterr" && return 1
-
-		MUSICBRAINZ_LTIME=$(date +%s)
+		handle_wgeterr $?
+		[[ $? -ne 0 ]] && return 1
 
 		# Parse data.
 		if xml el -a $art_tmpdir/artist.xml | grep -q "metadata/artist/@type"
 		then
 			art_type="$(xml sel -N my=$art_xmlns -t -m //my:metadata/my:artist/@type -v . $art_tmpdir/artist.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars art_type "$art_type"
 		art_type="${art_type##+([-[[:space:]])}"
@@ -118,7 +134,7 @@ process_artist_mbid () {
 		if xml el $art_tmpdir/artist.xml | grep -q "metadata/artist/name"
 		then
 			art_name="$(xml sel -N my=$art_xmlns -t -m //my:metadata/my:artist/my:name -v . $art_tmpdir/artist.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars art_name "$art_name"
 		art_name="${art_name##+([-[[:space:]])}"
@@ -127,7 +143,7 @@ process_artist_mbid () {
 		if xml el $art_tmpdir/artist.xml | grep -q "metadata/artist/sort-name"
 		then
 			art_sort="$(xml sel -N my=$art_xmlns -t -m //my:metadata/my:artist/my:sort-name -v . $art_tmpdir/artist.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars art_sort "$art_sort"
 		art_sort="${art_sort##+([-[[:space:]])}"
@@ -136,7 +152,7 @@ process_artist_mbid () {
 		if xml el $art_tmpdir/artist.xml | grep -q "metadata/artist/disambiguation"
 		then
 			art_comment="$(xml sel -N my=$art_xmlns -t -m //my:metadata/my:artist/my:disambiguation -v . $art_tmpdir/artist.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars art_comment "$art_comment"
 		art_comment="${art_comment##+([-[[:space:]])}"
@@ -155,9 +171,9 @@ process_artist_mbid () {
 
 	# Delete the temporal directory.
 	rm -r $art_tmpdir
-	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." 1>&2 && return 1
 	cd $art_oldpwd
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	return 0
 }
@@ -189,26 +205,25 @@ process_recording_mbid () {
 	local -a rec_xtypes
 	local -a rec_xarts
 	local rec_xart
-	local rec_wgeterr
 	
 	# Check for well-formatted arguments.
 	if echo $1 | grep -q '^[-0123456789abcdef]\{36\}$'
 	then
 		rec_mbid=\'$1\'
 	else
-		echo "Error: $1 is not a valid mbid."
+		echo "Error: $1 is not a valid mbid." 1>&2
 		return 1
 	fi
 
 	# Change directory to the temporal root directory of the script.
 	cd $tmp_root
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	# Create a temporal directory for use of this function.
 	rec_tmpdir="$(mktemp -d rec.XXX)"
-	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." 1>&2 && return 1
 	rec_tmpdir="$(readlink -f $rec_tmpdir)"
-	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
+	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." 1>&2 && return 1
 
 	# Is this recording already in the database?
 	rec_id=$($mysql_path --skip-reconnect -u$user -p$pass \
@@ -217,7 +232,7 @@ process_recording_mbid () {
 		SELECT id FROM recording WHERE mbid = $rec_mbid;
 
 	")
-	[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
+	[[ $? -ne 0 ]] && echo "Error after querying the database." 1>&2 && return 1
 
 	printf "SET @art_id = %b;\n" \'$rec_id\' >> $2
 
@@ -227,17 +242,15 @@ process_recording_mbid () {
 		# Query musicbrainz.
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/recording?query=rid:$1" > $rec_tmpdir/rec.xml
-		rec_wgeterr=$?
-		[[ $rec_wgeterr -ne 0 ]] && echo "wget: exit status is $rec_wgeterr" && return 1
-		MUSICBRAINZ_LTIME=$(date +%s)
+		handle_wgeterr $?
+		[[ $? -ne 0 ]] && return 1
 
 		xml ed $rec_tmpdir/rec.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rec_tmpdir/recording.xml
 
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/recording/$1?inc=artist-rels" > $rec_tmpdir/rec2.xml
-		rec_wgeterr=$?
-		[[ $rec_wgeterr -ne 0 ]] && echo "wget: exit status is $rec_wgeterr" && return 1
-		MUSICBRAINZ_LTIME=$(date +%s)
+		handle_wgeterr $?
+		[[ $? -ne 0 ]] && return 1
 
 		xml ed $rec_tmpdir/rec2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rec_tmpdir/recording2.xml
 
@@ -245,7 +258,7 @@ process_recording_mbid () {
 		if xml el $rec_tmpdir/recording.xml | grep -q "metadata/recording-list/recording/title"
 		then
 			rec_name="$(xml sel -t -m //metadata/recording-list/recording/title -v . $rec_tmpdir/recording.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rec_name "$rec_name"
 		rec_name="${rec_name##+([-[[:space:]])}"
@@ -254,7 +267,7 @@ process_recording_mbid () {
 		if xml el $rec_tmpdir/recording.xml | grep -q "metadata/recording-list/recording/length"
 		then
 			rec_length="$(xml sel -t -m //metadata/recording-list/recording/length -v . $rec_tmpdir/recording.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rec_length "$rec_length"
 		rec_length="${rec_length##+([-[[:space:]])}"
@@ -263,7 +276,7 @@ process_recording_mbid () {
 		if xml el $rec_tmpdir/recording.xml | grep -q "metadata/recording-list/recording/disambiguation"
 		then
 			rec_comment="$(xml sel -t -m //metadata/recording-list/recording/disambiguation -v . $rec_tmpdir/recording.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rec_comment "$rec_comment"
 		rec_comment="${rec_comment##+([-[[:space:]])}"
@@ -282,11 +295,11 @@ process_recording_mbid () {
 		if xml el -a $rec_tmpdir/recording.xml | grep -q "metadata/recording-list/recording/artist-credit/name-credit/artist/@id"
 		then
 			rec_arts=( $(xml sel -t -m //metadata/recording-list/recording/artist-credit/name-credit/artist/@id -n -v . $rec_tmpdir/recording.xml) )
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 			for rec_art in ${rec_arts[@]}
 			do
 				process_artist_mbid $rec_art $2
-				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." && return 1
+				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." 1>&2 && return 1
 
 				printf "CALL link_artist_to_recording (
 						@art_id,
@@ -305,7 +318,7 @@ process_recording_mbid () {
 			do
 				! [[ -z $line ]] && rec_xtypes+=( "$line" )
 			done < <(xml sel -t -m //metadata/recording/relation-list/relation -n -v ./@type $rec_tmpdir/recording2.xml)
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		if xml el -a $rec_tmpdir/recording2.xml | grep -q "metadata/recording/relation-list/relation/artist/@id"
 		then
@@ -313,7 +326,7 @@ process_recording_mbid () {
 			do
 				! [[ -z $line ]] && rec_xarts+=( "$line" )
 			done < <(xml sel -t -m //metadata/recording/relation-list/relation -n -v ./artist/@id $rec_tmpdir/recording2.xml)
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		if [[ ${#rec_xtypes[@]} -eq ${#rec_xarts[@]} ]]
 		then
@@ -321,7 +334,7 @@ process_recording_mbid () {
 			do
 				rec_xart=${rec_xarts[j]}
 				process_artist_mbid $rec_xart $2
-				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." && return 1
+				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." 1>&2 && return 1
 				
 				rel_type=${rec_xtypes[j]}; escape_chars rel_type "$rel_type"
 				rel_type=\'$rel_type\'
@@ -339,9 +352,9 @@ process_recording_mbid () {
 
 	# Delete the temporal directory.
 	rm -r $rec_tmpdir
-	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." 1>&2 && return 1
 	cd $rec_oldpwd
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	return 0
 }
@@ -376,26 +389,25 @@ process_release_mbid () {
 	local -i rel_med_count
 	local rel_med_format
 	local rel_med_pos
-	local rel_wgeterr
 	
 	# Check for well-formatted arguments.
 	if echo $1 | grep -q '^[-0123456789abcdef]\{36\}$'
 	then
 		rel_mbid=\'$1\'
 	else
-		echo "Error: $1 is not a valid mbid."
+		echo "Error: $1 is not a valid mbid." 1>&2
 		return 1
 	fi
 
 	# Change directory to the temporal root directory of the script.
 	cd $tmp_root
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	# Create a temporal directory for use of this function.
 	rel_tmpdir="$(mktemp -d rel.XXX)"
-	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." 1>&2 && return 1
 	rel_tmpdir="$(readlink -f $rel_tmpdir)"
-	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
+	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." 1>&2 && return 1
 
 	# Is this release already in the database?
 	rel_id=$($mysql_path --skip-reconnect -u$user -p$pass \
@@ -404,7 +416,7 @@ process_release_mbid () {
 		SELECT id FROM \`release\` WHERE mbid = $rel_mbid;
 
 	")
-	[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
+	[[ $? -ne 0 ]] && echo "Error after querying the database." 1>&2 && return 1
 
 	printf "SET @rel_id = %b;\n" \'$rel_id\' >> $2
 
@@ -414,17 +426,15 @@ process_release_mbid () {
 		# Query musicbrainz.
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release?query=reid:$1" > $rel_tmpdir/rel.xml
-		rel_wgeterr=$?
-		[[ $rel_wgeterr -ne 0 ]] && echo "wget: exit status is $rel_wgeterr" && return 1
-		MUSICBRAINZ_LTIME=$(date +%s)
+		handle_wgeterr $?
+		[[ $? -ne 0 ]] && return 1
 
 		xml ed $rel_tmpdir/rel.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rel_tmpdir/release.xml
 
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release/$1?inc=recordings+media" > $rel_tmpdir/rel2.xml
-		rel_wgeterr=$?
-		[[ $rel_wgeterr -ne 0 ]] && echo "wget: exit status is $rel_wgeterr" && return 1
-		MUSICBRAINZ_LTIME=$(date +%s)
+		handle_wgeterr $?
+		[[ $? -ne 0 ]] && return 1
 
 		xml ed $rel_tmpdir/rel2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rel_tmpdir/release2.xml
 
@@ -432,7 +442,7 @@ process_release_mbid () {
 		if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/status"
 		then
 			rel_status="$(xml sel -t -m //metadata/release-list/release/status -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rel_status "$rel_status"
 		rel_status="${rel_status##+([-[[:space:]])}"
@@ -441,22 +451,22 @@ process_release_mbid () {
 		if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/title"
 		then
 			rel_name="$(xml sel -t -m //metadata/release-list/release/title -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rel_name "$rel_name"; rel_name=\'$rel_name\'
 
 		if xml el -a $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/release-group/@id"
 		then
 			rel_rgroup="$(xml sel -t -m //metadata/release-list/release/release-group/@id -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		process_release_group_mbid $rel_rgroup $2
-		[[ $? -ne 0 ]] && echo "Error after calling to process_release_group_mbid()." && return 1
+		[[ $? -ne 0 ]] && echo "Error after calling to process_release_group_mbid()." 1>&2 && return 1
 
 		if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/disambiguation"
 		then
 			rel_comment="$(xml sel -t -m //metadata/release-list/release/disambiguation -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rel_comment "$rel_comment"
 		rel_comment="${rel_comment##+([-[[:space:]])}"
@@ -476,11 +486,11 @@ process_release_mbid () {
 		if xml el -a $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/artist-credit/name-credit/artist/@id"
 		then
 			rel_arts=( $(xml sel -t -m //metadata/release-list/release/artist-credit/name-credit/artist/@id -n -v . $rel_tmpdir/release.xml) )
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 			for rel_art in ${rel_arts[@]}
 			do
 				process_artist_mbid $rel_art $2
-				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." && return 1
+				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." 1>&2 && return 1
 
 				printf "CALL link_artist_to_release (
 						@art_id,
@@ -514,11 +524,11 @@ process_release_mbid () {
 			if xml el -a $rel_tmpdir/release2.xml | grep -q "metadata/release/medium-list/medium/track-list/track/recording/@id"
 			then
 				rel_recs=( $(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./track-list/track/recording/@id $rel_tmpdir/release2.xml) )
-				[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+				[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 				for rel_rec in ${rel_recs[@]}
 				do
 					process_recording_mbid $rel_rec $2
-					[[ $? -ne 0 ]] && echo "Error after calling to process_recording_mbid()." && return 1
+					[[ $? -ne 0 ]] && echo "Error after calling to process_recording_mbid()." 1>&2 && return 1
 
 					rel_rec=\'$rel_rec\'
 
@@ -534,9 +544,9 @@ process_release_mbid () {
 
 	# Delete the temporal directory.
 	rm -r $rel_tmpdir
-	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." 1>&2 && return 1
 	cd $rel_oldpwd
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	return 0
 }
@@ -566,26 +576,25 @@ process_release_group_mbid () {
 	local rgr_name
 	local rgr_type
 	local rgr_comment
-	local rgr_wgeterr
 	
 	# Check for well-formatted arguments.
 	if echo $1 | grep -q '^[-0123456789abcdef]\{36\}$'
 	then
 		rgr_mbid=\'$1\'
 	else
-		echo "Error: $1 is not a valid mbid."
+		echo "Error: $1 is not a valid mbid." 1>&2
 		return 1
 	fi
 
 	# Change directory to the temporal root directory of the script.
 	cd $tmp_root
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	# Create a temporal directory for use of this function.
 	rgr_tmpdir="$(mktemp -d rgr.XXX)"
-	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." 1>&2 && return 1
 	rgr_tmpdir="$(readlink -f $rgr_tmpdir)"
-	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
+	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." 1>&2 && return 1
 
 	# Is this release_group already in the database?
 	rgr_id=$($mysql_path --skip-reconnect -u$user -p$pass \
@@ -594,7 +603,7 @@ process_release_group_mbid () {
 		SELECT id FROM release_group WHERE mbid = $rgr_mbid;
 
 	")
-	[[ $? -ne 0 ]] && echo "Error after querying the database." && return 1
+	[[ $? -ne 0 ]] && echo "Error after querying the database." 1>&2 && return 1
 
 	printf "SET @rgr_id = %b;\n" \'$rgr_id\' >> $2
 
@@ -604,9 +613,8 @@ process_release_group_mbid () {
 		# Query musicbrainz.
 		limit_mbcon
 		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release-group?query=rgid:$1" > $rgr_tmpdir/rg.xml
-		rgr_wgeterr=$?
-		[[ $rgr_wgeterr -ne 0 ]] && echo "wget: exit status is $rgr_wgeterr" && return 1
-		MUSICBRAINZ_LTIME=$(date +%s)
+		handle_wgeterr $?
+		[[ $? -ne 0 ]] && return 1
 
 		xml ed $rgr_tmpdir/rg.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rgr_tmpdir/release_group.xml
 
@@ -614,7 +622,7 @@ process_release_group_mbid () {
 		if xml el $rgr_tmpdir/release_group.xml | grep -q "metadata/release-group-list/release-group/primary-type"
 		then
 			rgr_type="$(xml sel -t -m //metadata/release-group-list/release-group/primary-type -v . $rgr_tmpdir/release_group.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rgr_type "$rgr_type"
 		rgr_type="${rgr_type##+([-[[:space:]])}"
@@ -623,14 +631,14 @@ process_release_group_mbid () {
 		if xml el $rgr_tmpdir/release_group.xml | grep -q "metadata/release-group-list/release-group/title"
 		then
 			rgr_name="$(xml sel -t -m //metadata/release-group-list/release-group/title -v . $rgr_tmpdir/release_group.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rgr_name "$rgr_name"; rgr_name=\'$rgr_name\'
 
 		if xml el $rgr_tmpdir/release_group.xml | grep -q "metadata/release-group-list/release-group/disambiguation"
 		then
 			rgr_comment="$(xml sel -t -m //metadata/release-group-list/release-group/disambiguation -v . $rgr_tmpdir/release_group.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		escape_chars rgr_comment "$rgr_comment"
 		rgr_comment="${rgr_comment##+([-[[:space:]])}"
@@ -649,11 +657,11 @@ process_release_group_mbid () {
 		if xml el -a $rgr_tmpdir/release_group.xml | grep -q "metadata/release-group-list/release-group/artist-credit/name-credit/artist/@id"
 		then
 			rgr_arts=( $(xml sel -t -m //metadata/release-group-list/release-group/artist-credit/name-credit/artist/@id -n -v . $rgr_tmpdir/release_group.xml) )
-			[[ $? -ne 0 ]] && echo "xml: parsing error." && return 1
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 			for rgr_art in ${rgr_arts[@]}
 			do
 				process_artist_mbid $rgr_art $2
-				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." && return 1
+				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." 1>&2 && return 1
 
 				printf "CALL link_artist_to_release_group (
 						@art_id,
@@ -667,9 +675,9 @@ process_release_group_mbid () {
 
 	# Delete temporal directory.
 	rm -r $rgr_tmpdir
-	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
+	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." 1>&2 && return 1
 	cd $rgr_oldpwd
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
+	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
 	return 0
 }

@@ -326,6 +326,7 @@ insert_flac_metadata() {
 
 		case "$field1" in
 			[Cc][Oo][Mm][Mm][Ee][Nn][Tt]) ;&
+			[Dd][Ee][Ss][Cc][Rr][Ii][Pp][Tt][Ii][Oo][Nn]) ;&
 			[Ee][Nn][Cc][Oo][Dd][Ee][Rr]) ;&
 			"vendor string")              field1="\"$field1\""
 			                              field2="\"$field2\""
@@ -337,7 +338,7 @@ insert_flac_metadata() {
 			                              	CALL insert_flac_metadata_entry (
 			                                	$flac_file_id,
 			                                 	$mtype,
-				                                	$field1,
+								$field1,
 				                              	$field2
 		                              	        );
 				                        COMMIT;

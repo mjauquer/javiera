@@ -1,0 +1,399 @@
+SELECT 1;
+ALTER TABLE archive_file
+	ADD CONSTRAINT fk_archive_file__file__file_id
+		FOREIGN KEY (file_id)
+		REFERENCES file (id)
+		ON DELETE CASCADE
+;
+
+SELECT 2;
+ALTER TABLE archive_location
+	ADD CONSTRAINT fk_archive_location__location__location_id
+		FOREIGN KEY (location_id)
+		REFERENCES location (id)
+		ON DELETE CASCADE
+;
+
+SELECT 3;
+ALTER TABLE archive_location
+	ADD CONSTRAINT fk_archive_location__archive_file__archive_file_id
+		FOREIGN KEY (archive_file_id)
+		REFERENCES archive_file (id)
+		ON DELETE CASCADE
+;
+
+SELECT 4;
+ALTER TABLE artist
+	ADD CONSTRAINT fk_artist__artist_name__name
+ 		FOREIGN KEY (name)
+ 		REFERENCES artist_name (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 5;
+ALTER TABLE artist
+	ADD CONSTRAINT fk_artist__artist_name__sort_name
+ 		FOREIGN KEY (sort_name)
+ 		REFERENCES artist_name (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 6;
+ALTER TABLE audio_file
+	ADD CONSTRAINT fk_audio_file__file__file_id
+ 		FOREIGN KEY (file_id)
+ 		REFERENCES file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 7;
+ALTER TABLE binary_file
+	ADD CONSTRAINT fk_binary_file__file__file_id
+ 		FOREIGN KEY (file_id)
+ 		REFERENCES file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 8;
+ALTER TABLE dvd
+	ADD CONSTRAINT fk_dvd__data_storage_device_id__data_storage_device_id
+ 		FOREIGN KEY (data_storage_device_id)
+ 		REFERENCES data_storage_device (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 9;
+ALTER TABLE dvd
+	ADD CONSTRAINT fk_dvd__dvd_type__dvd_type_id
+ 		FOREIGN KEY (dvd_type_id)
+ 		REFERENCES dvd_type (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 10;
+ALTER TABLE file
+	ADD CONSTRAINT fk_file__mime_type__mime_type_id
+ 		FOREIGN KEY (mime_type_id)
+ 		REFERENCES mime_type (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 11;
+ALTER TABLE file_system_location
+	ADD CONSTRAINT fk_file_system_location__location__location_id
+ 		FOREIGN KEY (location_id)
+ 		REFERENCES location (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 12;
+ALTER TABLE file_system_location
+	ADD CONSTRAINT fk_file_system_location__file_system__file_system_id
+ 		FOREIGN KEY (file_system_id)
+ 		REFERENCES file_system (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 13;
+ALTER TABLE flac_file
+	ADD CONSTRAINT fk_flac_file__audio_file__audio_file_id
+ 		FOREIGN KEY (audio_file_id)
+ 		REFERENCES audio_file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 14;
+ALTER TABLE l_artist_to_recording
+	ADD CONSTRAINT fk_l_artist_to_recording__artist__artist_id
+ 		FOREIGN KEY (artist_id)
+ 		REFERENCES artist (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 15;
+ALTER TABLE l_artist_to_recording
+	ADD CONSTRAINT fk_l_artist_to_recording__recording__recording_id
+ 		FOREIGN KEY (recording_id)
+ 		REFERENCES recording (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 16;
+ALTER TABLE l_artist_to_release
+	ADD CONSTRAINT fk_l_artist_to_release__artist__artist_id
+ 		FOREIGN KEY (artist_id)
+ 		REFERENCES artist (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 17;
+ALTER TABLE l_artist_to_release
+	ADD CONSTRAINT fk_l_artist_to_release__release__release_id
+ 		FOREIGN KEY (release_id)
+ 		REFERENCES `release` (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 18;
+ALTER TABLE l_artist_to_release_group
+	ADD CONSTRAINT fk_l_artist_to_release_group__artist__artist_id
+ 		FOREIGN KEY (artist_id)
+ 		REFERENCES artist (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 19;
+ALTER TABLE l_artist_to_release_group
+	ADD CONSTRAINT fk_l_artist_to_release_group__release_group__release_group_id
+ 		FOREIGN KEY (release_group_id)
+ 		REFERENCES release_group (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 20;
+ALTER TABLE l_audio_file_to_recording
+	ADD CONSTRAINT fk_l_audio_file_to_recording__audio_file__audio_file_id
+ 		FOREIGN KEY (audio_file_id)
+ 		REFERENCES audio_file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 21;
+ALTER TABLE l_audio_file_to_recording
+	ADD CONSTRAINT fk_l_audio_file_to_recording__recording__recording_id
+ 		FOREIGN KEY (recording_id)
+ 		REFERENCES recording (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 22;
+ALTER TABLE l_dvd_to_software_session
+	ADD CONSTRAINT fk_l_dvd_to_software_session__dvd__dvd_id
+ 		FOREIGN KEY (dvd_id)
+ 		REFERENCES dvd (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 23;
+ALTER TABLE l_dvd_to_software_session
+	ADD CONSTRAINT fk_l_dvd_to_sw_session__sw_session__sw_session_id
+ 		FOREIGN KEY (software_session_id)
+ 		REFERENCES software_session (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 24;
+ALTER TABLE l_file_to_location
+	ADD CONSTRAINT fk_l_file_to_locatiion__file__file_id
+ 		FOREIGN KEY (file_id)
+ 		REFERENCES file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 25;
+ALTER TABLE l_file_to_location
+	ADD CONSTRAINT fk_l_file_to_location__location__location_id
+ 		FOREIGN KEY (location_id)
+ 		REFERENCES location (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 26;
+ALTER TABLE l_file_to_software_session
+	ADD CONSTRAINT fk_l_file_to_software_session__file__file_id
+ 		FOREIGN KEY (file_id)
+ 		REFERENCES file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 27;
+ALTER TABLE l_file_to_software_session
+	ADD CONSTRAINT fk_l_file_to_sw_session__sw_session__sw_session_id
+ 		FOREIGN KEY (software_session_id)
+ 		REFERENCES software_session (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 28;
+ALTER TABLE l_file_system_to_data_storage_device
+	ADD CONSTRAINT fk_l_file_sys_to_data_st_dev__file_sys__file_sys_id
+ 		FOREIGN KEY (file_system_id)
+ 		REFERENCES file_system (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 29;
+ALTER TABLE l_file_system_to_data_storage_device
+	ADD CONSTRAINT fk_l_file_sys_to_data_st_dev__data_st_dev__data_st_dev_id
+ 		FOREIGN KEY (data_storage_device_id)
+ 		REFERENCES data_storage_device (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 30;
+ALTER TABLE l_file_system_to_mount_point
+	ADD CONSTRAINT fk_l_file_system_to_mount_point__mount_point__mount_point_id
+ 		FOREIGN KEY (mount_point_id)
+ 		REFERENCES mount_point (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 31;
+ALTER TABLE l_file_system_to_mount_point
+	ADD CONSTRAINT fk_l_file_system_to_mount_point__file_system__file_system_id
+ 		FOREIGN KEY (file_system_id)
+ 		REFERENCES file_system (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 32;
+ALTER TABLE l_flac_file_to_metadata_entry
+	ADD CONSTRAINT fk_l_flac_file_to_metadata_entry__flac_file__flac_file_id
+ 		FOREIGN KEY (flac_file_id)
+ 		REFERENCES flac_file (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 33;
+ALTER TABLE l_flac_file_to_metadata_entry
+	ADD CONSTRAINT fk_l_flac_file_to_met_entry__flac_met_entry_flac_met_entry_id
+ 		FOREIGN KEY (flac_metadata_entry_id)
+ 		REFERENCES flac_metadata_entry (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 34;
+ALTER TABLE l_medium_to_release
+	ADD CONSTRAINT fk_l_medium_to_release__medium__medium_id
+ 		FOREIGN KEY (medium_id)
+ 		REFERENCES medium (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 35;
+ALTER TABLE l_medium_to_release
+	ADD CONSTRAINT fk_l_medium_to_release__release__release_id
+ 		FOREIGN KEY (release_id)
+ 		REFERENCES `release` (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 36;
+ALTER TABLE l_mime_type_to_tree_node
+	ADD CONSTRAINT fk_l_mime_type_to_tree_node__tree_node__tree_node_id
+ 		FOREIGN KEY (tree_node_id)
+ 		REFERENCES tree_node (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 37;
+ALTER TABLE l_mime_type_to_tree_node
+	ADD CONSTRAINT fk_l_mime_type_to_tree_node__mime_type__mime_type_id
+ 		FOREIGN KEY (mime_type_id)
+ 		REFERENCES mime_type (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 38;
+ALTER TABLE l_recording_to_medium
+	ADD CONSTRAINT fk_l_recording_to_medium__recording__recording_id
+ 		FOREIGN KEY (recording_id)
+ 		REFERENCES recording (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 39;
+ALTER TABLE l_recording_to_medium
+	ADD CONSTRAINT fk_l_recording_to_medium__medium__medium_id
+ 		FOREIGN KEY (medium_id)
+ 		REFERENCES medium (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 40;
+ALTER TABLE l_tree_node_to_tag
+	ADD CONSTRAINT fk_l_tree_node_to_tag__tree_node__tree_node_id
+ 		FOREIGN KEY (tree_node_id)
+ 		REFERENCES tree_node (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 41;
+ALTER TABLE l_tree_node_to_tag
+	ADD CONSTRAINT fk_l_tree_node_to_tag__tag__tag_id
+ 		FOREIGN KEY (tag_id)
+ 		REFERENCES tag (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 42;
+ALTER TABLE l_tree_node_to_tree
+	ADD CONSTRAINT fk_l_tree_node_to_tree__tree_node__tree_node_id
+ 		FOREIGN KEY (tree_node_id)
+ 		REFERENCES tree_node (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 43;
+ALTER TABLE l_tree_node_to_tree
+	ADD CONSTRAINT fk_l_tree_node_to_tree__tree__tree_id
+ 		FOREIGN KEY (tree_id)
+ 		REFERENCES tree (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 44;
+ALTER TABLE medium
+	ADD CONSTRAINT fk_medium__medium_format__format_id
+ 		FOREIGN KEY (format_id)
+ 		REFERENCES medium_format (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 45;
+ALTER TABLE recording
+	ADD CONSTRAINT fk_recording__recording_name__name
+ 		FOREIGN KEY (name)
+ 		REFERENCES recording_name (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 46;
+ALTER TABLE `release`
+	ADD CONSTRAINT fk_release__release_name__name
+ 		FOREIGN KEY (name)
+ 		REFERENCES release_name (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 47;
+ALTER TABLE `release`
+	ADD CONSTRAINT fk_release__release_group__release_group_id
+ 		FOREIGN KEY (release_group_id)
+ 		REFERENCES release_group (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 48;
+ALTER TABLE release_group
+	ADD CONSTRAINT fk_release_group__release_name__name
+ 		FOREIGN KEY (name)
+ 		REFERENCES release_name (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 49;
+ALTER TABLE software_session
+	ADD CONSTRAINT fk_software_session__software__software_id
+ 		FOREIGN KEY (software_id)
+ 		REFERENCES software (id)
+ 		ON DELETE CASCADE
+;
+
+SELECT 50;
+ALTER TABLE tree_node
+	ADD CONSTRAINT fk_tree_node__tree_node__parent_id
+ 		FOREIGN KEY (parent_id)
+ 		REFERENCES tree_node (id)
+ 		ON DELETE CASCADE
+;

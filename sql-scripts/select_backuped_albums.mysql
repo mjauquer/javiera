@@ -1,0 +1,88 @@
+SELECT
+	artist_name.text AS 'artist name',
+	release_name.text AS album,
+	release.mbid AS 'release mbid',
+	recording_name.text AS title,
+	medium_format.name AS format,
+	flac_file.sample_rate AS 'sample rate',
+	flac_file.bits_per_sample AS bps,
+	archive.dvd_id AS dvd
+FROM artist
+
+-- Uncomment if you want to select by artist at an album level.
+-- --------v
+INNER JOIN /* (
+		SELECT id, text
+		FROM artist_name
+		WHERE text LIKE '%Bowie%'
+) AS */ artist_name ON artist.sort_name = artist_name.id
+-- ---^
+	
+INNER JOIN l_artist_to_release 
+	ON l_artist_to_release.artist_id = artist.id
+INNER JOIN `release`
+	ON `release`.id = l_artist_to_release.release_id
+
+-- Uncomment if you want to select by album name.
+-- --------v
+INNER JOIN /* (
+		SELECT id, text 
+		FROM release_name 
+		WHERE text LIKE '%Hunky Dory%'
+) AS */ release_name ON release_name.id = `release`.name
+-- ---^
+	
+INNER JOIN l_medium_to_release
+	ON l_medium_to_release.release_id = `release`.id
+INNER JOIN medium
+	ON medium.id = l_medium_to_release.medium_id
+INNER JOIN medium_format
+	ON medium_format.id = medium.format_id
+INNER JOIN l_recording_to_medium
+	ON l_recording_to_medium.medium_id = l_medium_to_release.medium_id
+
+-- Uncomment if you want to select by artist at a recording level (e.g. composer, instrumentist, producer, etc).
+-- --------v
+INNER JOIN /* (
+		SELECT DISTINCT(recording.id) AS id, recording.name AS name
+		FROM recording
+		INNER JOIN l_artist_to_recording AS link
+			ON link.recording_id = recording.id
+		INNER JOIN artist
+			ON artist.id = link.artist_id
+		INNER JOIN artist_name
+			ON artist_name.id = artist.sort_name
+		WHERE artist_name.text LIKE '%Bowie%'
+) AS */ recording ON recording.id = l_recording_to_medium.recording_id
+-- ---^
+	
+INNER JOIN recording_name
+	ON recording_name.id = recording.name
+INNER JOIN l_audio_file_to_recording
+	ON l_audio_file_to_recording.recording_id = l_recording_to_medium.recording_id
+INNER JOIN audio_file
+	ON audio_file.id = l_audio_file_to_recording.audio_file_id
+INNER JOIN l_file_to_location
+	ON l_file_to_location.file_id = audio_file.file_id
+INNER JOIN archive_location
+	ON archive_location.location_id = l_file_to_location.location_id
+INNER JOIN archive_file
+	ON archive_file.id = archive_location.archive_file_id
+INNER JOIN (SELECT archive_file.id AS id, dvd.id AS dvd_id
+		FROM archive_file
+			INNER JOIN l_file_to_location
+				ON l_file_to_location.file_id = archive_file.file_id
+			INNER JOIN file_system_location
+				ON file_system_location.location_id = l_file_to_location.location_id
+			INNER JOIN l_file_system_to_data_storage_device
+				ON l_file_system_to_data_storage_device.file_system_id = file_system_location.file_system_id
+			INNER JOIN data_storage_device
+				ON data_storage_device.id = l_file_system_to_data_storage_device.data_storage_device_id
+			INNER JOIN dvd
+				ON dvd.data_storage_device_id = data_storage_device.id
+	) AS archive
+	ON archive.id = archive_file.id
+INNER JOIN flac_file
+	ON flac_file.audio_file_id = audio_file.id
+;
+
