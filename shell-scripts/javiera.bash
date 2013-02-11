@@ -117,8 +117,7 @@ declare oldifs   # Stores the content of the IFS variable as it
                  # was when this script was called.
 declare regex    # A regular expresion.
 
-regex="./[[0-9A-z]._+]{1}[-[0-9A-z]._+]*$"
-
+regex="^[0-9A-Za-z./_+]{1}[-0-9A-Za-z./_+]*$"
 declare -i i=0
 for arg
 do

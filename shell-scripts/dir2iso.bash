@@ -190,7 +190,7 @@ declare db   # A mysql database.
 
 version=\'$version\'
 options=\'$options\'
-isosha1=$(sha1sum $output | cut -c1-40); isosha1=\"$isosha1\"
+isosha1=$(sha1sum $output | cut -c1-40); isosha1=\'$isosha1\'
 
 $mysql_path --skip-reconnect -u$user -p$pass -D$db --skip-column-names -e "
 
