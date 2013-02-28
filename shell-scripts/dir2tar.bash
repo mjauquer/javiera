@@ -402,8 +402,8 @@ then
 fi
 tarabsname=$(readlink -f $tarbname)
 
-# Update the columns <file_system_id> and <pathname> into table 
-# 'file_system_location' the entry related to the new archive file.
+# Update the values <file_system_id> and <pathname> from table 
+# 'file_system_location' in the entry related to the new archive file.
 
 declare file_sys # The uuid fingerprint of the file system where
 	         # the file pointed by PATHNAME is located.             

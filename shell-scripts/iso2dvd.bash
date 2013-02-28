@@ -124,7 +124,7 @@ unset -v dvd_types
 declare options  # The options to be passed to the cdrecord command.
 declare version  # The version of the cdrecord command.
 
-options="-v -eject speed=4 dev=ATAPI:0,0,0" 
+options="-v -sao speed=8 dev=4,0,0" 
 
 
 version="$(cdrecord -version)"
@@ -229,7 +229,13 @@ dvd_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 ")
 if [ $? -ne 0 ]
 then
-	error_exit "$LINENO: Error after calling mysql."
+	error_exit "$LINENO: Error after a call to mysql."
+fi
+
+javiera -rp $volume
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after a call to javiera.bash."
 fi
 
 unset -v dvd_type_id

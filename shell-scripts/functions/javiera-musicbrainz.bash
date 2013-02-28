@@ -234,7 +234,7 @@ process_recording_mbid () {
 	")
 	[[ $? -ne 0 ]] && echo "Error after querying the database." 1>&2 && return 1
 
-	printf "SET @art_id = %b;\n" \'$rec_id\' >> $2
+	printf "SET @rec_id = %b;\n" \'$rec_id\' >> $2
 
 	# If it is not, update it.
 	if [ -z $rec_id ]
@@ -477,7 +477,7 @@ process_release_mbid () {
 				%b,
 				%b,
 				%b,
-				@rgroup_id,
+				@rgr_id,
 				%b,
 				@rel_id
 			);\n" $rel_mbid "$rel_status" "$rel_name" "$rel_comment" >> $2
@@ -650,7 +650,7 @@ process_release_group_mbid () {
 				%b,
 				%b,
 				%b,
-				@rgroup_id
+				@rgr_id
 			);\n" $rgr_mbid "$rgr_type" "$rgr_name" "$rgr_comment" >> $2
 
 		# Insert artist-release_group relationships.
@@ -666,7 +666,7 @@ process_release_group_mbid () {
 				printf "CALL link_artist_to_release_group (
 						@art_id,
 						'is credited for',
-						@rgroup_id 
+						@rgr_id 
 					);
 					SET @art_id = NULL;\n" >> $2
 			done

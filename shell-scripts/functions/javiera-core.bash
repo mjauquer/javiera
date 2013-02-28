@@ -241,7 +241,7 @@ process_fstab () {
 		# drive.
 
 		[[ $dev == /mnt/dvd ]] &&
-			cdrecord -V -inq dev=/dev/cdrom 2>&1 | grep -q "medium not present" &&
+			cdrecord -V -inq dev=/dev/sr1 2>&1 | grep -q "medium not present" &&
 			[[ $? == 0 ]] &&
 			continue
 
