@@ -233,17 +233,38 @@ process_fstab () {
 	               # are expected to be mounted.
 	local mounted  # "true" is the dvd device is mounted.
 
-	media=( "/mnt/dvd" )
+	media=( "/mnt/dvd/0" "/mnt/dvd/1" )
 	for dev in ${media[@]}
 	do
 
 		# XXX Skip mounting /mnt/dvd if there is no dvd in the
 		# drive.
 
-		[[ $dev == /mnt/dvd ]] &&
-			cdrecord -V -inq dev=/dev/sr1 2>&1 | grep -q "medium not present" &&
-			[[ $? == 0 ]] &&
-			continue
+		if [[ $dev == /mnt/dvd/0 ]]
+		then
+			if [[ -b /dev/sr0 ]]
+			then
+				if cdrecord -V -inq dev=/dev/sr0 2>&1 | grep -q "medium not present"
+				then
+					continue
+				fi
+			else
+				continue
+			fi
+		fi
+
+		if [[ $dev == /mnt/dvd/1 ]]
+		then
+			if [[ -b /dev/sr1 ]]
+			then
+				if cdrecord -V -inq dev=/dev/sr1 2>&1 | grep -q "medium not present"
+				then
+					continue
+				fi
+			else
+				continue
+			fi
+		fi
 
 		# Mount media if it is not already mounted.
 

@@ -124,8 +124,7 @@ unset -v dvd_types
 declare options  # The options to be passed to the cdrecord command.
 declare version  # The version of the cdrecord command.
 
-options="-v -sao speed=8 dev=4,0,0" 
-
+options="-v -sao -eject speed=8 dev=$(cdrecord -scanbus 2> /dev/null | grep SE-208AB | cut -f 2)" 
 
 version="$(cdrecord -version)"
 if [ $? -ne 0 ]
@@ -169,7 +168,7 @@ done
 declare volume  # The mount point corresponding to the dvd device.
 declare mounted # "true" is the dvd device is mounted.
 
-volume="/mnt/dvd"
+volume="/mnt/dvd/1"
 
 # Get the uuid related to the implanted file system.
 
