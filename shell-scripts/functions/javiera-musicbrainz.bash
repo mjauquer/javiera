@@ -67,10 +67,10 @@ process_artist_mbid () {
 #              database whith this data. Append the query to the file
 #              pointed by QUERY_FILE.
 #
-#   PARAMETER: ARTIST_MBID:  A 36 character string used by
-#                            musicbrainz.org as an unique identifier.
-#              QUERY_FILE:   The pathname of the file in which append
-#                            the sql query.
+#   PARAMETER: ARTIST_MBID: A 36 character string used by
+#                           musicbrainz.org as an unique identifier.
+#              QUERY_FILE:  The pathname of the file in which append
+#                           the sql query.
 
 	local art_oldpwd=$(pwd)
 	local art_tmpdir

@@ -231,7 +231,7 @@ then
 	error_exit "$LINENO: Error after a call to mysql."
 fi
 
-javiera -rp $volume
+javiera -r $volume
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after a call to javiera.bash."
@@ -245,13 +245,13 @@ unset -v db
 unset -v pass
 unset -v user
 
-# Print id number of the recently burned dvd.
+# Print the id number of the recently burned dvd.
 
 echo "Burned dvd number $dvd_id."
 
 unset -v dvd_id
 
-# Unmount the dvd device.
+# Unmount the dvd media.
 
 if ! sudo umount $volume
 then

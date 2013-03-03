@@ -271,16 +271,36 @@ process_fstab () {
 		( mount | grep "on $dev type" > /dev/null ) && mounted=true
 		if [[ $mounted != true ]] && ! sudo mount $dev 2> /dev/null
 		then
+			echo ""
 			echo "Could not mount $dev." 
-			echo -n "Should I continue [y/n]?: "
-			while read answer 
+			echo "Should I:"
+			echo " 	c) continue?"
+			echo " 	e) exit?"
+			echo "  r) retry?"
+			echo -n "> "
+			while [[ $mounted != true ]] && read answer
 			do
+				echo ""
 				case $answer in
-					y) break
-					   ;;
 					n) exit
 					   ;;
-					*) echo -n "Should I continue [y/n]?: "
+					r) sudo mount $dev 2> /dev/null
+					   if ( mount | grep "on $dev type" > /dev/null )
+					   then
+					   	mounted=true
+					   else
+						echo ""
+					   	echo "Could not mount $dev."
+						echo "Should I:"
+						echo " 	c) continue?"
+						echo "  e) exit?"
+						echo "  r) retry?"
+						echo -n "> "
+					   fi
+					   ;;
+					c) break
+					   ;;
+					*) echo -n "> "
 					   continue
 					   ;;
 				esac
