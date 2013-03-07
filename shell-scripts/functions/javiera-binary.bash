@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# javiera.flib <Core functions of the javiera.bash script.>
+# javiera-binary.bash <Binary files related functions for the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,40 +16,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               upvars.bash, filetype.flib
+# REQUIREMENTS: --
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
 insert_binary_file () {
 
-#       USAGE: insert_binary_file PATHNAME FILE_ID
+#       USAGE: insert_binary_file PATHNAME QUERY_FILE
 #
 # DESCRIPTION: Collect metadata related to the binary file pointed by
 #              PATHNAME and insert it in the 'binary_file' table in the
 #              database.
 #
-#  PARAMETERS: PATHNAME  A unix filesystem formatted string. 
-#              FILE_ID   The value of the 'id' column in the 'file'
-#                        table of the database.
+#  PARAMETERS: PATHNAME    A unix filesystem formatted string. 
+#              QUERY_FILE  The pathname of the file into which append
+#                          the sql query.
 
 	local filetype="$(file -b $1)"
 	if [[ $filetype == 'Parity Archive Volume Set' ]]
 	then
 		# Insert an entry in the 'binary_file' table.
-		local file_id=$2; file_id=\"$file_id\"
-
-		$mysql_path --skip-reconnect -u$user -p$pass -D$db \
-			--skip-column-names -e "
-
-			START TRANSACTION;
-			CALL insert_binary_file (
-				$file_id
-			);
-			COMMIT;
-		"
-		[[ $? -ne 0 ]] && return 1
+		printf "CALL insert_binary_file (@file_id);\n" >> $2
 	fi
 
 	return 0

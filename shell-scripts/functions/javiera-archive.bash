@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# javiera-archive.bash <Archive file functions of the javiera.bash script.>
+# javiera-archive.bash <Archive file related functions for the javiera.bash script.>
 # Copyright (C) 2012  Marcelo Javier Auquer
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,27 +23,17 @@
 
 insert_archive_file () {
 
-#       USAGE: insert_archive_file FILE_ID
+#       USAGE: insert_archive_file QUERY_FILE
 #
 # DESCRIPTION: Insert in the 'archive_file' table the file whose id in
 #              the 'file' table is FILE_ID.
 #
-#  PARAMETERS: FILE_ID The value of the 'id' column in the 'file'
-#                      table of the database.
+#  PARAMETERS: QUERY_FILE  The pathname of the file into which append
+#                          the sql query.
 
 	# Insert an entry in the 'archive_file' table.
-	local file_id=$1; file_id=\"$file_id\"
 
-	$mysql_path --skip-reconnect -u$user -p$pass -D$db \
-		--skip-column-names -e "
-
-		START TRANSACTION;
-		CALL insert_archive_file (
-			$file_id
-		);
-		COMMIT;
-	"
-	[[ $? -ne 0 ]] && return 1
+	printf "CALL insert_archive_file (@file_id);\n" >> $1
 
 	return 0
 }

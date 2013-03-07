@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# REQUIREMENTS: shellsql <http://sourceforge.net/projects/shellsql/>
-#               upvars.bash, filetype.flib
+# REQUIREMENTS: upvars.bash, filetype.flib
 #         BUGS: --
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
@@ -93,24 +92,34 @@ get_file_system_location () {
 
 process_file () {
 
-#       USAGE: process_file HOSTNAME PATHNAME
+#       USAGE: process_file HOSTNAME PATHNAME QUERY_FILE
 #
 # DESCRIPTION: Collect metadata related to the file located in HOSTNAME
 #              pointed by PATHNAME and call the pertinent procedures in
 #              the database.
 #
-#  PARAMETERS: HOSTNAME  The name of the host machine where the file it
-#                        is being query about is stored. 
-#              PATHNAME  The pathname of the file it is being query
-#                        about.
+#  PARAMETERS: HOSTNAME    The name of the host machine where the file
+#                          it is being query about is stored. 
+#              PATHNAME    The pathname of the file it is being query
+#                          about.
+#              QUERY_FILE  The pathname of the file into which append
+#                          the sql query.
 
-	local lastid_bef=$($mysql_path --skip-reconnect -u$user -p$pass \
+	# Test if file's metadata is already in the database.
+
+	local sha1; sha1=$(sha1sum $2)
+	[[ $? -ne 0 ]] && return 1
+	sha1=$(echo $sha1 | cut -c1-40); sha1=\'$sha1\'
+
+	local file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "
 
-		SELECT MAX(id) FROM file;
+		SELECT id FROM file WHERE sha1 = $sha1;
 
 	")
 	[[ $? -ne 0 ]] && return 1
+
+	[ $file_id ] && return 0
 
 	# Get the uuid of the file system where the file beeing
 	# processed is located, and the pathname of the file relative to
@@ -132,48 +141,23 @@ process_file () {
 
 	local mime_type; mime_type=$(file -b --mime-type $2)
 	[[ $? -ne 0 ]] && return 1
-
 	mime_type=\'$mime_type\'
-	local sha1; sha1=$(sha1sum $2)
-	[[ $? -ne 0 ]] && return 1
 
-	sha1=$(echo $sha1 | cut -c1-40)
-	sha1=\'$sha1\'
 	local fsize; fsize=$(stat --format='%s' $2)
 	[[ $? -ne 0 ]] && return 1
-
 	fsize=\'$fsize\'
+
 	local mtime; mtime=$(stat --format='%Y' $2)
 	[[ $? -ne 0 ]] && return 1
-
 	mtime=\'$mtime\'
 
 	# Insert file's metadata in the database.
 
-	local lastid; lastid=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
-		--skip-column-names -e "
+	printf "CALL insert_and_get_file (%b, %b, %b, %b, %b, %b, @file_id);\n" $file_sys $pathname $mime_type $sha1 $fsize $mtime >> $3
 
-		START TRANSACTION;
-		CALL insert_file (
-			$file_sys,
-			$pathname,
-			$mime_type,
-			$sha1,
-			$fsize,
-			$mtime
-		);
-		SELECT MAX(id) FROM file;
-		COMMIT;
-
-	")
-	[[ $? -ne 0 ]] && return 1
-
-	# If there was not an insertion, return 0
-
-	[[ $lastid_bef == $lastid ]] && return 0
-
-	# Look at the mime-type of the inserted file in order to
-	# determine in what tables, rows must been inserted.
+	# Look at the mime-type of the file whose metadata is going to
+	# be inserted in order to determine which function has to be
+	# called.
 
 	local -a file_type
 
@@ -192,11 +176,11 @@ process_file () {
 	[[ $? -ne 0 ]] && return 1
 
 	case ${file_type[-1]} in
-		audio)   ! insert_audio_file $2 $lastid && return 1
+		audio)   ! insert_audio_file $2 $3 && return 1
 			 ;;
-		archive) ! insert_archive_file $lastid && return 1
+		archive) ! insert_archive_file $3 && return 1
 			 ;;
-		binary)  ! insert_binary_file $2 $lastid && return 1
+		binary)  ! insert_binary_file $2 $3 && return 1
  
 	esac
 
@@ -207,7 +191,7 @@ process_fstab () {
 
 #       USAGE: process_fstab
 #
-# DESCRIPTION: Parse file systems data and insert it in the database.
+# DESCRIPTION: Parse file systems' data and insert it in the database.
 
 	# Get uuids related to hard disk partitions from /etc/fstab.
 

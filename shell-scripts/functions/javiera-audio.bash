@@ -26,57 +26,33 @@ source ~/projects/javiera/shell-scripts/functions/javiera-musicbrainz.bash ||
 
 insert_audio_file () {
 
-#       USAGE: insert_audio_file PATHNAME FILE_ID
+#       USAGE: insert_audio_file PATHNAME QUERY_FILE
 #
 # DESCRIPTION: Collect metadata related to the audio file pointed by
 #              PATHNAME and insert it in all the related tables in the
 #              database.
 #
-#  PARAMETERS: PATHNAME  A unix filesystem formatted string. 
-#              FILE_ID   The value of the 'id' column in the 'file'
-#                        table of the database.
+#  PARAMETERS: PATHNAME    A unix filesystem formatted string. 
+#              QUERY_FILE  The pathname of the file into which
+#                          append the sql query.
 
-	local file_id=$2 
 	local aud_rel_mbid
 	local aud_med_count
 	local aud_med_pos
 	local aud_rec_mbid
 	local aud_oldpwd=$(pwd)
-	local aud_tmpdir
 	local -i aud_i
 	local -i aud_j
-
-	# Change directory to the temporal root directory of the script.
-	cd $tmp_root
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
-
-	# Create a temporal directory for use of this function.
-	aud_tmpdir="$(mktemp -d aud.XXX)"
-	[[ $? -ne 0 ]] && echo "mktemp: could not create a temporal directory." && return 1
-	aud_tmpdir="$(readlink -f $aud_tmpdir)"
-	[[ $? -ne 0 ]] && echo "readlink: could not read the temporal directory pathname." && return 1
 
 	# Insert an entry in the 'audio_file' table and get the
 	# audio_file_id.
 
-	file_id=\"$file_id\"
-	local aud_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
-		-D$db --skip-column-names -e "
-
-		START TRANSACTION;
-		CALL insert_audio_file (
-			$file_id
-		);
-		SELECT MAX(id) FROM audio_file;
-		COMMIT;
-
-	")
-	[[ $? -ne 0 ]] && return 1
+	printf "CALL insert_and_get_audio_file (@file_id, @audio_file_id);\n" >> $2
 
 	# Process the audio file according to its mime-type.
 	if [ $(file -b --mime-type "$1") == audio/x-flac ]
 	then
-		insert_flac_file $1 $aud_file_id
+		insert_flac_file $1 $2
 		if [[ $? -ne 0 ]]
 		then
 			echo "Error after call to insert_flac_file()."
@@ -102,8 +78,7 @@ insert_audio_file () {
 			while true
 			do
 				aud_i=$(expr $aud_i + 1)
-				> $aud_tmpdir/aud_relquery.mysql
-				process_release_mbid $aud_rel_mbid $aud_tmpdir/aud_relquery.mysql
+				process_release_mbid $aud_rel_mbid $2
 				if [ $? -ne 0 ]
 				then
 					printf "\nError after a call to process_release_mbid().
@@ -114,25 +89,12 @@ insert_audio_file () {
 				fi
 				break
 			done
-			$mysql_path --skip-reconnect -u$user -p$pass -D$db \
-				--skip-column-names -e "
-
-				START TRANSACTION;
-				source $aud_tmpdir/aud_relquery.mysql
-				COMMIT;
-			"
-			if [ $? -ne 0 ]
-			then
-				echo "insert_audio_file(): Error after querying the database."
-				return 1
-			fi
 		elif ! [[ -z $aud_rec_mbid ]] 
 		then
 			while true
 			do
 				aud_j=$(expr $aud_j + 1)
-				> $aud_tmpdir/aud_recquery.mysql
-				process_recording_mbid $aud_rec_mbid $aud_tmpdir/aud_recquery.mysql
+				process_recording_mbid $aud_rec_mbid $2
 				if [ $? -ne 0 ]
 				then
 					printf "\nError after a call to process_recording_mbid().
@@ -143,18 +105,6 @@ insert_audio_file () {
 				fi
 				break
 			done
-			$mysql_path --skip-reconnect -u$user -p$pass -D$db \
-				--skip-column-names -e "
-
-				START TRANSACTION;
-				source $aud_tmpdir/aud_recquery.mysql
-				COMMIT;
-			"
-			if [ $? -ne 0 ]
-			then
-				echo "insert_audio_file(): Error after querying the database."
-				return 1
-			fi
 		fi
 
 		aud_file_id=\'$aud_file_id\'
@@ -163,50 +113,26 @@ insert_audio_file () {
 		aud_med_pos=\'$aud_med_pos\'
 		aud_rec_mbid=\'$aud_rec_mbid\'
 
-		$mysql_path --skip-reconnect -u$user -p$pass \
-			-D$db --skip-column-names -e "
-
-			START TRANSACTION;
-			CALL link_audio_file_to_recording (
-				$aud_file_id,
-				$aud_rel_mbid,
-				$aud_med_count,
-				$aud_med_pos,
-				$aud_rec_mbid
-			);
-			COMMIT;"
-
-		if [ $? -ne 0 ]
-		then
-			echo "insert_audio_file(): Error after querying the database."
-			return 1
-		fi
+		printf "CALL link_audio_file_to_recording (@audio_file_id, %b, %b, %b, %b);\n" $aud_rel_mbid $aud_med_count $aud_med_pos $aud_rec_mbid >> $2
 	fi
-
-	# Delete the temporal directory.
-	rm -r $aud_tmpdir
-	[[ $? -ne 0 ]] && echo "rm: could not remove temporal directory." && return 1
-	cd $aud_oldpwd
-	[[ $? -ne 0 ]] && echo "cd: could not change working directory." && return 1
 
 	return 0
 }
 
 insert_flac_file () {
 	
-#       USAGE: insert_flac_file PATHNAME AUDIO_FILE_ID
+#       USAGE: insert_flac_file PATHNAME QUERY_FILE
 #
 # DESCRIPTION: Collect metadata related to the flac file pointed by
 #              PATHNAME and insert it in all the related tables in the
 #              database.
 #
-#  PARAMETERS: PATHNAME      A unix filesystem formatted string. 
-#              AUDIO_FILE_ID The value of the 'id' column in the
-#                            'audio_file' table of the database.
+#  PARAMETERS: PATHNAME    A unix filesystem formatted string. 
+#              QUERY_FILE  The pathname of the file into which
+#                          append the sql query.
 
 	# Insert an entry in the 'flac_file' table and get the
 	# flac_file_id.
-	local audio_file_id=$2; audio_file_id=\"$audio_file_id\"
 	local min_blocksize=\"$(metaflac --show-min-blocksize $1)\"
 	local max_blocksize=\"$(metaflac --show-max-blocksize $1)\"
 	local min_framesize=\"$(metaflac --show-min-framesize $1)\"
@@ -217,51 +143,31 @@ insert_flac_file () {
 	local total_samples=\"$(metaflac --show-total-samples $1)\"
 	local md5sum=\"$(metaflac --show-md5sum $1)\"
 
-	local flac_file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
-		-D$db --skip-column-names -e "
-
-		START TRANSACTION;
-		CALL insert_flac_file (
-			$audio_file_id,
-			$min_blocksize,
-			$max_blocksize,
-			$min_framesize,
-			$max_framesize,
-			$sample_rate,
-			$channels,
-			$bits_per_sample,
-			$total_samples,
-			$md5sum
-		);
-		SELECT MAX(id) FROM flac_file;
-		COMMIT;
-
-	")
-	[[ $? -ne 0 ]] && return 1
+	printf "CALL insert_and_get_flac_file (@audio_file_id, %b, %b, %b, %b, %b, %b, %b, %b, %b, @flac_file_id);\n" $min_blocksize $max_blocksize $min_framesize $max_framesize $sample_rate $channels $bits_per_sample $total_samples $md5sum >> $2
 
 	# Insert metadata entries related to the picture metadata
 	# block.
-	! insert_flac_metadata PICTURE $1 $flac_file_id && return 1
+	! insert_flac_metadata PICTURE $1 $2 && return 1
 
 	# Insert metadata entries related to the vorbis_comment metadata
 	# block.
-	! insert_flac_metadata VORBIS_COMMENT $1 $flac_file_id && return 1
+	! insert_flac_metadata VORBIS_COMMENT $1 $2 && return 1
 
 	return 0
 }
 
 insert_flac_metadata() {
 
-#       USAGE: insert_flac_metadata BLKTYPE PATHNAME FLAC_ID
+#       USAGE: insert_flac_metadata BLKTYPE PATHNAME QUERY_FILE
 #
 # DESCRIPTION: Get metadata from the flac file pointed by PATHNAME. 
 #              Insert it in all the related tables in the database.
 #
-#  PARAMETERS: BLKTYPE  The type of the metadata block from which data
-#                       will be retrieved (see man metaflac).
-#              PATHNAME A unix filesystem formatted string. 
-#              FLAC_ID  The value of the 'id' column in the 'audio_file'
-#                       table of the database.
+#  PARAMETERS: BLKTYPE     The type of the metadata block from which
+#                          data will be retrieved (see man metaflac).
+#              PATHNAME    A unix filesystem formatted string. 
+#              QUERY_FILE  The pathname of the file into which
+#                          append the sql query.
 
 	local -a col1
 	local -a col2
@@ -316,7 +222,7 @@ insert_flac_metadata() {
 	[[ $? -ne 0 ]] && return 1
 
 	# For each tag, insert an entry in the database.
-	local flac_file_id=$3; flac_file_id=\"$flac_file_id\"
+
 	for (( ind=0; ind<${#col1[@]}; ind++)) 
 	do
 		local field1="${col1[ind]}"
@@ -331,20 +237,7 @@ insert_flac_metadata() {
 			"vendor string")              field1="\"$field1\""
 			                              field2="\"$field2\""
 			                              local mtype="\"$1\""
-			                              $mysql_path --skip-reconnect -u$user -p$pass \
-			                              	-D$db --skip-column-names -e "
-
-			                              	START TRANSACTION;
-			                              	CALL insert_flac_metadata_entry (
-			                                	$flac_file_id,
-			                                 	$mtype,
-								$field1,
-				                              	$field2
-		                              	        );
-				                        COMMIT;
-
-				                      "
-				                      [[ $? -ne 0 ]] && return 1
+			                              printf "CALL insert_flac_metadata_entry (@flac_file_id, %b, %b, %b);\n" $mtype "$field1" "$field2" >> $3
 				                      ;;
 		esac
 	done

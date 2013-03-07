@@ -69,7 +69,7 @@ process_artist_mbid () {
 #
 #   PARAMETER: ARTIST_MBID: A 36 character string used by
 #                           musicbrainz.org as an unique identifier.
-#              QUERY_FILE:  The pathname of the file in which append
+#              QUERY_FILE:  The pathname of the file into which append
 #                           the sql query.
 
 	local art_oldpwd=$(pwd)
@@ -190,7 +190,7 @@ process_recording_mbid () {
 #
 #   PARAMETER: RECORDING_MBID: A 36 character string used by
 #                              musicbrainz.org as an unique identifier.
-#              QUERY_FILE:     The pathname of the file in which append
+#              QUERY_FILE:     The pathname of the file into which append
 #                              the sql query.
 
 	local rec_oldpwd=$(pwd)
@@ -371,7 +371,7 @@ process_release_mbid () {
 #
 #   PARAMETER: RELEASE_MBID: A 36 character string used by
 #                            musicbrainz.org as an unique identifier.
-#              QUERY_FILE:   The pathname of the file in which append
+#              QUERY_FILE:   The pathname of the file into which append
 #                            the sql query.
 
 	local rel_oldpwd=$(pwd)
@@ -564,7 +564,7 @@ process_release_group_mbid () {
 #   PARAMETER: RELEASEGROUP_MBID: A 36 character string used by
 #                                 musicbrainz.org as an unique
 #                                 identifier.
-#              QUERY_FILE:        The pathname of the file in which
+#              QUERY_FILE:        The pathname of the file into which
 #                                 append the sql query.
 
 	local rgr_oldpwd=$(pwd)

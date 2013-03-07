@@ -230,15 +230,29 @@ then
 	error_exit "$LINENO: Error after calling process_fstab()."
 fi
 
+declare query_file=$tmp_root/query.mysql
 for file in ${files[@]}
 do
 	file=$(readlink -f $file)
-	[[ $? -ne 0 ]] && return 1
-	if ! process_file $(hostname) $file 
+	[[ $? -ne 0 ]] && error_exit "$LINENO: readlink command returned an error."
+
+	> $query_file
+	if ! process_file $(hostname) $file $query_file
 	then
 		error_exit "$LINENO: Error after calling process_file()."
 	fi
+
+	$mysql_path --skip-reconnect -u$user -p$pass -D$db \
+		--skip-column-names -e "
+
+		START TRANSACTION;
+		source $query_file
+		COMMIT;
+	"
+	[[ $? -ne 0 ]] && error_exit "$LINENO: error after querying the database."
 done
+rm $query_file
+[[ $? -ne 0 ]] && error_exit "$LINENO: error after trying to remove ${query_file}."
 
 unset -v file
 unset -v files
