@@ -105,7 +105,8 @@ process_file () {
 #              QUERY_FILE  The pathname of the file into which append
 #                          the sql query.
 
-	# Test if file's metadata is already in the database.
+	# Find out if file's metadata is already in the database. If it
+	# is so, get file's id.
 
 	local sha1; sha1=$(sha1sum $2)
 	[[ $? -ne 0 ]] && return 1
@@ -118,8 +119,6 @@ process_file () {
 
 	")
 	[[ $? -ne 0 ]] && return 1
-
-	[ $file_id ] && return 0
 
 	# Get the uuid of the file system where the file beeing
 	# processed is located, and the pathname of the file relative to
@@ -154,6 +153,9 @@ process_file () {
 	# Insert file's metadata in the database.
 
 	printf "CALL insert_and_get_file (%b, %b, %b, %b, %b, %b, @file_id);\n" $file_sys $pathname $mime_type $sha1 $fsize $mtime >> $3
+
+        # If file's metadata is already in the database, return 0.
+	[ $file_id ] && return 0
 
 	# Look at the mime-type of the file whose metadata is going to
 	# be inserted in order to determine which function has to be
