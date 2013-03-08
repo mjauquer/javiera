@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS audio_file ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
+	sample_rate      MEDIUMINT UNSIGNED NOT NULL,
+	channels         TINYINT UNSIGNED NOT NULL,
+	bits_per_sample  TINYINT UNSIGNED NOT NULL,
 	PRIMARY KEY (id)
 );
 

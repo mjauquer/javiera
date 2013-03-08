@@ -263,14 +263,20 @@ DROP PROCEDURE IF EXISTS insert_and_get_audio_file //
 CREATE PROCEDURE insert_and_get_audio_file -- {{{1
 
 	(
-		IN  p_file_id       MEDIUMINT UNSIGNED,
-		OUT p_audio_file_id MEDIUMINT UNSIGNED
+		IN  p_file_id         MEDIUMINT UNSIGNED,
+		IN  p_sample_rate     MEDIUMINT UNSIGNED,
+		IN  p_channels        TINYINT UNSIGNED,
+		IN  p_bits_per_sample TINYINT UNSIGNED,
+		OUT p_audio_file_id   MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN  <p_file_id>       MEDIUMINT UNSIGNED,
-                        OUT <p_audio_file_id> MEDIUMINT UNSIGNED.
+                        IN  <p_file_id>         MEDIUMINT UNSIGNED,
+                        IN  <p_sample_rate>     MEDIUMINT UNSIGNED,
+                        IN  <p_channels>        TINYINT UNSIGNED,
+                        IN  <p_bits_per_sample> TINYINT UNSIGNED,
+                        OUT <p_audio_file_id>   MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry in the 'audio_file'. Return the id field of the inserted row." -- 2}}}
 
@@ -285,9 +291,12 @@ BEGIN -- {{{2
 	-- If it doesn't exist, create it.
 	IF p_audio_file_id IS NULL
 	THEN
-		INSERT INTO audio_file (id, file_id) VALUES (
+		INSERT INTO audio_file (id, file_id, sample_rate, channels, bits_per_sample) VALUES (
 			'',
-			p_file_id
+			p_file_id,
+			p_sample_rate,
+			p_channels,
+			p_bits_per_sample
 		);
 		SELECT LAST_INSERT_ID() INTO p_audio_file_id;
 	END IF;
@@ -570,9 +579,6 @@ CREATE PROCEDURE insert_and_get_flac_file -- {{{1
 		IN  p_max_blocksize   MEDIUMINT UNSIGNED,
 		IN  p_min_framesize   MEDIUMINT UNSIGNED,
 		IN  p_max_framesize   MEDIUMINT UNSIGNED,
-		IN  p_sample_rate     MEDIUMINT UNSIGNED,
-		IN  p_channels        TINYINT UNSIGNED,
-		IN  p_bits_per_sample TINYINT UNSIGNED,
 		IN  p_total_samples   MEDIUMINT UNSIGNED,
 		IN  p_md5_signature   CHAR(32),
 		OUT p_flac_file_id    MEDIUMINT UNSIGNED
@@ -585,9 +591,6 @@ COMMENT -- {{{2
 		        IN  <p_max_blocksize>   MEDIUMINT UNSIGNED,
 	        	IN  <p_min_framesize>   MEDIUMINT UNSIGNED,
 	        	IN  <p_max_framesize>   MEDIUMINT UNSIGNED,
-	        	IN  <p_sample_rate>     MEDIUMINT UNSIGNED,
-	        	IN  <p_channels>        TINYINT UNSIGNED,
-	        	IN  <p_bits_per_sample> TINYINT UNSIGNED,
 	        	IN  <p_total_samples>   MEDIUMINT UNSIGNED,
 	        	IN  <p_md5_signature>   CHAR(32),
                         OUT <p_flac_file_id>    MEDIUMINT UNSIGNED.
@@ -603,16 +606,13 @@ BEGIN -- {{{2
 	-- If it doesn't exist, create it.
 	IF p_flac_file_id IS NULL
 	THEN
-		INSERT INTO flac_file (id, audio_file_id, min_blocksize, max_blocksize, min_framesize, max_framesize, sample_rate, channels, bits_per_sample, total_samples, md5_signature) VALUES (
+		INSERT INTO flac_file (id, audio_file_id, min_blocksize, max_blocksize, min_framesize, max_framesize, total_samples, md5_signature) VALUES (
 			'',
 			p_audio_file_id,
 		        p_min_blocksize,
 		        p_max_blocksize,
 	        	p_min_framesize,
 	        	p_max_framesize,
-	        	p_sample_rate,
-	        	p_channels,
-	        	p_bits_per_sample,
 	        	p_total_samples,
 	        	p_md5_signature
 		);
@@ -1227,18 +1227,24 @@ DROP PROCEDURE IF EXISTS insert_audio_file //
 CREATE PROCEDURE insert_audio_file -- {{{1
 
 	(
-		IN  p_file_id       MEDIUMINT UNSIGNED
+		IN  p_file_id         MEDIUMINT UNSIGNED,
+		IN  p_sample_rate     MEDIUMINT UNSIGNED,
+		IN  p_channels        TINYINT UNSIGNED,
+		IN  p_bits_per_sample TINYINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_file_id>       MEDIUMINT UNSIGNED,
+                        IN <p_sample_rate>     MEDIUMINT UNSIGNED,
+                        IN <p_channels>        TINYINT UNSIGNED,
+                        IN <p_bits_per_sample> TINYINT UNSIGNED,
                       Description:
                         Insert an entry in the 'audio_file'" -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_audio_file_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_audio_file (p_file_id, v_audio_file_id);
+	CALL insert_and_get_audio_file (p_file_id, p_sample_rate, p_channels, p_bits_per_sample, v_audio_file_id);
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -1348,9 +1354,6 @@ CREATE PROCEDURE insert_flac_file -- {{{1
 		IN p_max_blocksize   MEDIUMINT UNSIGNED,
 		IN p_min_framesize   MEDIUMINT UNSIGNED,
 		IN p_max_framesize   MEDIUMINT UNSIGNED,
-		IN p_sample_rate     MEDIUMINT UNSIGNED,
-		IN p_channels        TINYINT UNSIGNED,
-		IN p_bits_per_sample TINYINT UNSIGNED,
 		IN p_total_samples   MEDIUMINT UNSIGNED,
 		IN p_md5_signature   CHAR(32)
 	)
@@ -1362,9 +1365,6 @@ COMMENT -- {{{2
 		        IN <p_max_blocksize>   MEDIUMINT UNSIGNED,
 	        	IN <p_min_framesize>   MEDIUMINT UNSIGNED,
 	        	IN <p_max_framesize>   MEDIUMINT UNSIGNED,
-	        	IN <p_sample_rate>     MEDIUMINT UNSIGNED,
-	        	IN <p_channels>        TINYINT UNSIGNED,
-	        	IN <p_bits_per_sample> TINYINT UNSIGNED,
 	        	IN <p_total_samples>   MEDIUMINT UNSIGNED,
 	        	IN <p_md5_signature>   CHAR(32).
                       Description:
@@ -1372,7 +1372,7 @@ COMMENT -- {{{2
 
 BEGIN -- {{{2
 	DECLARE v_flac_file_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_flac_file (p_audio_file_id, p_min_blocksize, p_max_blocksize, p_min_framesize, p_max_framesize, p_sample_rate, p_channels, p_bits_per_sample, p_total_samples, p_md5_signature, v_flac_file_id);
+	CALL insert_and_get_flac_file (p_audio_file_id, p_min_blocksize, p_max_blocksize, p_min_framesize, p_max_framesize, p_total_samples, p_md5_signature, v_flac_file_id);
 
 END; // -- 2}}} 1}}}
 

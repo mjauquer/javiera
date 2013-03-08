@@ -44,10 +44,14 @@ insert_audio_file () {
 	local -i aud_i
 	local -i aud_j
 
+	local sample_rate=\"$(metaflac --show-sample-rate $1)\"
+	local channels=\"$(metaflac --show-channels $1)\"
+	local bits_per_sample=\"$(metaflac --show-bps $1)\"
+
 	# Insert an entry in the 'audio_file' table and get the
 	# audio_file_id.
 
-	printf "CALL insert_and_get_audio_file (@file_id, @audio_file_id);\n" >> $2
+	printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $sample_rate $channels $bits_per_sample >> $2
 
 	# Process the audio file according to its mime-type.
 	if [ $(file -b --mime-type "$1") == audio/x-flac ]
@@ -137,13 +141,10 @@ insert_flac_file () {
 	local max_blocksize=\"$(metaflac --show-max-blocksize $1)\"
 	local min_framesize=\"$(metaflac --show-min-framesize $1)\"
 	local max_framesize=\"$(metaflac --show-max-framesize $1)\"
-	local sample_rate=\"$(metaflac --show-sample-rate $1)\"
-	local channels=\"$(metaflac --show-channels $1)\"
-	local bits_per_sample=\"$(metaflac --show-bps $1)\"
 	local total_samples=\"$(metaflac --show-total-samples $1)\"
 	local md5sum=\"$(metaflac --show-md5sum $1)\"
 
-	printf "CALL insert_and_get_flac_file (@audio_file_id, %b, %b, %b, %b, %b, %b, %b, %b, %b, @flac_file_id);\n" $min_blocksize $max_blocksize $min_framesize $max_framesize $sample_rate $channels $bits_per_sample $total_samples $md5sum >> $2
+	printf "CALL insert_and_get_flac_file (@audio_file_id, %b, %b, %b, %b, %b, %b, @flac_file_id);\n" $min_blocksize $max_blocksize $min_framesize $max_framesize $total_samples $md5sum >> $2
 
 	# Insert metadata entries related to the picture metadata
 	# block.
