@@ -350,6 +350,59 @@ INSERT INTO procedures (id, name, level) VALUES (
 	'user'
 ) // -- 1}}}
 
+DROP PROCEDURE IF EXISTS insert_and_get_child_tree_node //
+
+CREATE PROCEDURE insert_and_get_child_tree_node -- {{{1
+	(
+		IN  p_tree_id        MEDIUMINT UNSIGNED,
+		IN  p_parent_node_id MEDIUMINT UNSIGNED,
+		OUT p_child_node_id  MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters: 
+                        IN  <p_tree_id>        MEDIUMINT UNSIGNED,
+                        IN  <p_parent_node_id> MEDIUMINT UNSIGNED,
+                        OUT <p_child_node_id>  MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert in the tree whose id is <p_tree_id> a node as a child of the node whose id is <p_parent_node_id>. 
+                        Return the inserted node's id." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_parent_right_extent MEDIUMINT;
+
+	SELECT right_extent INTO v_parent_right_extent
+	FROM tree_node
+	INNER JOIN l_tree_node_to_tree AS node2tree
+		ON node2tree.tree_node_id = tree_node.id
+	INNER JOIN tree
+		ON node2tree.tree_id = tree.id
+	WHERE tree.id = p_tree_id
+	AND tree_node.id = p_parent_node_id;
+
+	UPDATE tree_node SET right_extent = right_extent + 2
+	WHERE right_extent >= v_parent_right_extent;
+
+	UPDATE tree_node SET left_extent = left_extent + 2
+	WHERE left_extent >= v_parent_right_extent;
+
+	INSERT INTO tree_node (id, parent_id, left_extent, right_extent) VALUES (
+		'',
+		p_parent_node_id,
+		v_parent_right_extent,
+		v_parent_right_extent + 1
+	);
+
+	SELECT LAST_INSERT_ID() INTO p_child_node_id;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_child_tree_node',
+	'user'
+) // -- 1}}}
+
 DROP PROCEDURE IF EXISTS insert_and_get_dvd //
 
 CREATE PROCEDURE insert_and_get_dvd -- {{{1

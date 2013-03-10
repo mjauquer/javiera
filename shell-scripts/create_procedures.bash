@@ -47,7 +47,7 @@ procedures=( $($mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	COMMIT;
 
 ") )
-[[ $? -ne 0 ]] && return 1
+[[ $? -ne 0 ]] && exit 1
 
 user=\'$user\'
 pass=\'$pass\'
@@ -62,5 +62,5 @@ do
 			TO $user@'localhost' IDENTIFIED BY $pass;
 
 	"
-	[[ $? -ne 0 ]] && return 1
+	[[ $? -ne 0 ]] && exit 1
 done

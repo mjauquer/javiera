@@ -1,11 +1,43 @@
+
+-- <Insert node> ------------------------------------------------------- {{{1
+
+START TRANSACTION;
+
+-- Variables declaration. You need to set this variables.
+
+-- SET @treeId := '';
+-- SET @parentId := '';
+-- SET @tagText := '';
+
+-- Query:
+
+INSERT INTO tag (id, text) VALUES (
+	'',
+        @tagText
+);
+SELECT LAST_INSERT_ID() INTO @tagId;
+CALL insert_and_get_child_tree_node(@treeId, @parentId, @childId);
+INSERT INTO l_tree_node_to_tag (tree_node_id, tag_id) VALUES (
+	@childId,
+        @tagId
+);
+INSERT INTO l_tree_node_to_tree (tree_node_id, tree_id) VALUES (
+	@childId,
+        @treeId
+);
+
+COMMIT; -- 1}}}
+
+-- <Select audio files from backup dvds> --------------------------------------- {{{1
+
 SELECT
 	artist_name.text AS 'artist name',
 	release_name.text AS album,
 	release.mbid AS 'release mbid',
 	recording_name.text AS title,
 	medium_format.name AS format,
-	flac_file.sample_rate AS 'sample rate',
-	flac_file.bits_per_sample AS bps,
+	audio_file.sample_rate AS 'sample rate',
+	audio_file.bits_per_sample AS bps,
 	archive.dvd_id AS dvd
 FROM artist
 
@@ -84,5 +116,30 @@ INNER JOIN (SELECT archive_file.id AS id, dvd.id AS dvd_id
 	ON archive.id = archive_file.id
 INNER JOIN flac_file
 	ON flac_file.audio_file_id = audio_file.id
-;
+; -- 1}}}
 
+-- <Select file type hierarchy> ---------------------------------------- {{{1
+
+SELECT CONCAT( REPEAT('     ', COUNT(DISTINCT(parent.id))), '(', node.id, ')', ' ', tag.text) AS tag
+FROM tree_node AS node
+INNER JOIN l_tree_node_to_tag AS link
+	ON node.id = link.tree_node_id
+INNER JOIN tag
+	ON link.tag_id = tag.id
+INNER JOIN l_tree_node_to_tree AS link2
+	ON node.id = link2.tree_node_id
+INNER JOIN tree AS tree1
+	ON link2.tree_id = tree1.id
+CROSS JOIN tree_node AS parent
+INNER JOIN l_tree_node_to_tree AS link3
+	ON parent.id
+INNER JOIN tree AS tree2
+	ON link3.tree_id = tree2.id= link3.tree_node_id
+WHERE node.left_extent BETWEEN parent.left_extent AND parent.right_extent
+AND tree1.name = 'file type hierarchy'
+AND tree2.name = 'file type hierarchy'
+GROUP BY tag.id
+ORDER BY node.left_extent;
+ -- 1}}}
+
+-- ---------------------------------------------------------------------
