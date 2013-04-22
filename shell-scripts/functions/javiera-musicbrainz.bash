@@ -34,7 +34,7 @@ handle_wgeterr () {
 		0)	mb_wait=2
 			return 0
 			;;
-		*)	mb_wait=$(expr $mb_wait * 2)
+		*)	mb_wait=$(expr $mb_wait \* 2)
 			;;
 	esac
 	echo "wget: exit status is $1" 1>&2

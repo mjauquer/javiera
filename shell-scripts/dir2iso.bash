@@ -110,10 +110,12 @@ declare top_dirs # A list of directories where to find by inode the
                  # the files and directories passed as arguments.
 
 log=( $(javiera -r --verbose "$@") )
+echo 114
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after calling chpathn."
 fi
+
 if ! read_topdirs top_dirs ${log[@]}
 then
 	error_exit "$LINENO: Error after a call to read_topdirs()."
@@ -137,7 +139,9 @@ if ! mkdir $source_dir/.javiera
 then
 	error_exit "$LINENO: Coudn't make the .javiera directory."
 fi
+
 echo "UUID=$(uuidgen)" >> $source_dir/.javiera/info.txt
+
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: Error after a call to uuidgen."
@@ -152,7 +156,8 @@ fi
 declare version # The version of the mkisofs command.
 declare options # The options to be passed to the mkisofs command.
 
-version="$(mkisofs --version)"
+version="$(mkisofs --version )"
+
 if [ $? -ne 0 ]
 then
 	error_exit "$LINENO: error after calling mkisofs."

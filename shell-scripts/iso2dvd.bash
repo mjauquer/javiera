@@ -142,7 +142,7 @@ fi
 
 if ! sudo cdrecord $options $input
 then
-	error_exit "$LINENO: Error after calling cdrecord."
+ 	error_exit "$LINENO: Error after calling cdrecord."
 fi
 
 unset -v input
@@ -165,10 +165,9 @@ done
 
 # Mount the dvd device.
 
-declare volume  # The mount point corresponding to the dvd device.
+declare volume  # The mount point corresponding to the dvd device
+                # set by process_fstab().
 declare mounted # "true" is the dvd device is mounted.
-
-volume="/mnt/dvd/1"
 
 # Get the uuid related to the implanted file system.
 

@@ -219,49 +219,33 @@ process_fstab () {
 	               # are expected to be mounted.
 	local mounted  # "true" is the dvd device is mounted.
 
-	media=( "/mnt/dvd/0" "/mnt/dvd/1" )
+	media=( "/dev/sr0" "/dev/sr1" )
 	for dev in ${media[@]}
 	do
 
-		# XXX Skip mounting /mnt/dvd if there is no dvd in the
+		# XXX Skip mounting media if there is no dvd in the
 		# drive.
 
-		if [[ $dev == /mnt/dvd/0 ]]
+		if [[ -b $dev ]]
 		then
-			if [[ -b /dev/sr0 ]]
+			if cdrecord -V -inq dev=$dev 2>&1 | grep -q "medium not present"
 			then
-				if cdrecord -V -inq dev=/dev/sr0 2>&1 | grep -q "medium not present"
-				then
-					continue
-				fi
-			else
 				continue
 			fi
-		fi
-
-		if [[ $dev == /mnt/dvd/1 ]]
-		then
-			if [[ -b /dev/sr1 ]]
-			then
-				if cdrecord -V -inq dev=/dev/sr1 2>&1 | grep -q "medium not present"
-				then
-					continue
-				fi
-			else
-				continue
-			fi
+		else
+			continue
 		fi
 
 		# Mount media if it is not already mounted.
 
-		( mount | grep "on $dev type" > /dev/null ) && mounted=true
-		if [[ $mounted != true ]] && ! sudo mount $dev 2> /dev/null
+		( mount | grep "on /mnt/dvd type" > /dev/null ) && mounted=true && volume=/mnt/dvd
+		if [[ $mounted != true ]] && ! sudo mount -t iso9660 -o uid=marce,gid=users $dev /mnt/dvd 2> /dev/null
 		then
 			echo ""
 			echo "Could not mount $dev." 
 			echo "Should I:"
-			echo " 	c) continue?"
-			echo " 	e) exit?"
+			echo "  c) continue?"
+			echo "  e) exit?"
 			echo "  r) retry?"
 			echo -n "> "
 			while [[ $mounted != true ]] && read answer
@@ -270,15 +254,17 @@ process_fstab () {
 				case $answer in
 					n) exit
 					   ;;
-					r) sudo mount $dev 2> /dev/null
-					   if ( mount | grep "on $dev type" > /dev/null )
+					r) sudo mount -t iso9660 -o uid=marce,gid=users $dev /mnt/dvd 2> /dev/null 
+					   if ( mount | grep "on /mnt/dvd type" > /dev/null )
 					   then
 					   	mounted=true
+						volume=/mnt/dvd
+						break
 					   else
 						echo ""
 					   	echo "Could not mount $dev."
 						echo "Should I:"
-						echo " 	c) continue?"
+						echo "  c) continue?"
 						echo "  e) exit?"
 						echo "  r) retry?"
 						echo -n "> "
@@ -291,20 +277,22 @@ process_fstab () {
 					   ;;
 				esac
 			done
+		else
+			volume=/mnt/dvd
 		fi
 
 		# Get data.
 
-		if [[ -f $dev/.javiera/info.txt ]]
+		if [[ -f $volume/.javiera/info.txt ]]
 		then
 			while read line
 			do
 				if [[ $line =~ UUID=.* ]]
 				then
 					file_systems+=( ${line#UUID=} )
-					mount_points+=( $dev )
+					mount_points+=( $volume )
 				fi
-			done < $dev/.javiera/info.txt
+			done < $volume/.javiera/info.txt
 		fi
 		mounted=false
 	done
