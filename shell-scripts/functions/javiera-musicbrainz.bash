@@ -316,17 +316,19 @@ process_recording_mbid () {
 		then
 			while read line
 			do
+				echo $line
 				! [[ -z $line ]] && rec_xtypes+=( "$line" )
 			done < <(xml sel -t -m //metadata/recording/relation-list/relation -n -v ./@type $rec_tmpdir/recording2.xml)
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+#			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		if xml el -a $rec_tmpdir/recording2.xml | grep -q "metadata/recording/relation-list/relation/artist/@id"
 		then
 			while read line
 			do
+				echo $line
 				! [[ -z $line ]] && rec_xarts+=( "$line" )
 			done < <(xml sel -t -m //metadata/recording/relation-list/relation -n -v ./artist/@id $rec_tmpdir/recording2.xml)
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+#			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
 		fi
 		if [[ ${#rec_xtypes[@]} -eq ${#rec_xarts[@]} ]]
 		then

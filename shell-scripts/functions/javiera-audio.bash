@@ -41,8 +41,8 @@ insert_audio_file () {
 	local aud_med_pos
 	local aud_rec_mbid
 	local aud_oldpwd=$(pwd)
-	local -i aud_i
-	local -i aud_j
+	local -i aud_i=0
+	local -i aud_j=0
 
 	local sample_rate=\"$(metaflac --show-sample-rate $1)\"
 	local channels=\"$(metaflac --show-channels $1)\"
@@ -86,9 +86,9 @@ insert_audio_file () {
 				if [ $? -ne 0 ]
 				then
 					printf "\nError after a call to process_release_mbid().
-						(audio file id: %b)
+						(file: %b)
 						(release mbid: %b)
-						(attempt nº: %b)\n" $aud_file_id $aud_rel_mbid $aud_i 
+						(attempt nº: %b)\n" $1 $aud_rel_mbid $aud_i 
 					continue
 				fi
 				break
@@ -102,16 +102,15 @@ insert_audio_file () {
 				if [ $? -ne 0 ]
 				then
 					printf "\nError after a call to process_recording_mbid().
-						(audio file id: %b)
+						(file: %b)
 						(recording mbid: %b)
-						(attempt nº: %b)\n" $aud_file_id $aud_rec_mbid $aud_j 
+						(attempt nº: %b)\n" $1 $aud_rec_mbid $aud_j 
 					continue
 				fi
 				break
 			done
 		fi
 
-		aud_file_id=\'$aud_file_id\'
 		aud_rel_mbid=\'$aud_rel_mbid\'
 		aud_med_count=\'$aud_med_count\'
 		aud_med_pos=\'$aud_med_pos\'
