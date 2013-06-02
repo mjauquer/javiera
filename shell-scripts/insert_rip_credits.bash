@@ -28,6 +28,18 @@
 
 source ~/.myconf/javiera.cnf || exit 1
 
+error_exit () {
+
+#       USAGE: error_exit [MESSAGE]
+#
+# DESCRIPTION: Function for exit due to fatal program error.
+#
+#   PARAMETER: MESSAGE An optional description of the error.
+
+	echo "${progname}: ${1:-"Unknown Error"}" 1>&2
+	exit 1
+}
+
 insert_ripper () {
 	
 #       USAGE: insert_ripper RIPPER
@@ -37,7 +49,7 @@ insert_ripper () {
 #  PARAMETERS: RIPPER  The ripper's nickname.
 	
 	local ripper="$1"
-	ripper=\'$ripper\'
+	ripper="'$ripper'"
 
 	$mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		--skip-column-names -e "
@@ -101,8 +113,8 @@ ripper_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 if [ ! $ripper_id ]
 then
 	declare option
-	printf "\n> '%b' do not exist as a ripper in the database.\n" $ripper
-	while printf "\n> What do you want to do next?\n>    p) Print a list of registered rippers and quit\n>    i) Insert %b in the database and continue\n$ " \'$ripper\'
+	printf "\n> '%b' do not exist as a ripper in the database.\n" "$ripper"
+	while printf "\n> What do you want to do next?\n>    p) Print a list of registered rippers and quit\n>    i) Insert '%b' in the database and continue\n$ " "$ripper"
 	do
 		read option
 		case $option in
