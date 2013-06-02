@@ -691,7 +691,7 @@ CREATE PROCEDURE insert_and_get_host -- {{{1
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN  <p_name>    MEDIUMINT UNSIGNED,
+                        IN  <p_name>    VARCHAR(256),
                         OUT <p_host_id> MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry in the 'host' table. Return the id field of the inserted row." -- 2}}}
@@ -1082,6 +1082,41 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_and_get_release_group',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_and_get_ripper //
+
+CREATE PROCEDURE insert_and_get_ripper -- {{{1
+
+	(
+		IN  p_name      VARCHAR(36),
+		OUT p_ripper_id MEDIUMINT UNSIGNED
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN  <p_name>      VARCHAR(36),
+                        OUT <p_ripper_id> MEDIUMINT UNSIGNED.
+                      Description:
+                        Insert an entry in the 'ripper' table. Return the id field of the inserted row." -- 2}}}
+
+BEGIN -- {{{2
+	-- Test if the entry already exists in the table `ripper`.
+	SELECT id INTO p_ripper_id FROM ripper WHERE name = p_name;
+	
+	-- If it doesn't exist, create it.
+	IF p_ripper_id IS NULL
+	THEN
+		INSERT INTO ripper (id, name) VALUES ( '', p_name);
+		SELECT LAST_INSERT_ID() INTO p_ripper_id;
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_and_get_ripper',
 	'user'
 ) // -- 1}}}
 
@@ -1491,11 +1526,11 @@ COMMENT -- {{{2
                      "Parameters:
                         IN p_type_descriptor VARCHAR(75).
                       Description:
-                        Insert an entry in the 'mime_type'." -- 2}}}
+                        Insert an entry in the 'mime_type' table." -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_mime_type_id MEDIUMINT UNSIGNED;
-	CALL insert_and_get_mime_type (p_type_descriptor);
+	CALL insert_and_get_mime_type (p_type_descriptor, v_mime_type_id);
 END; // -- 2}}} 1}}}
 
 -- Insert an entry into the temporal 'procedures' table. -- {{{1
@@ -1631,6 +1666,32 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'insert_release_group',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS insert_ripper //
+
+CREATE PROCEDURE insert_ripper -- {{{1
+
+	(
+		IN  p_ripper VARCHAR(36)
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN p_ripper VARCHAR(36).
+                      Description:
+                        Insert an entry in the 'ripper' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_ripper_id MEDIUMINT UNSIGNED;
+	CALL insert_and_get_ripper (p_ripper, v_ripper_id);
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'insert_ripper',
 	'user'
 ) // -- 1}}}
 
@@ -1915,6 +1976,51 @@ END; // -- 2}}} 1}}}
 INSERT INTO procedures (id, name, level) VALUES (
 	'',
 	'link_audio_file_to_recording',
+	'user'
+) // -- 1}}}
+
+DROP PROCEDURE IF EXISTS link_audio_file_to_ripper //
+
+CREATE PROCEDURE link_audio_file_to_ripper -- {{{1
+
+	(
+		IN p_audio_file_id MEDIUMINT UNSIGNED,
+		IN p_ripper_id     MEDIUMINT UNSIGNED,
+		IN p_rip_date      DATE
+	)
+
+COMMENT -- {{{2
+                     "Parameters:
+                        IN <p_audio_file_id> MEDIUMINT UNSIGNED,
+                        IN <p_ripper_id>     MEDIUMINT UNSIGNED.
+                        IN <p_rip_date>      DATE
+                      Description:
+                        Insert an entry in the 'l_audio_file_to_ripper' table." -- 2}}}
+
+BEGIN -- {{{2
+	DECLARE v_count MEDIUMINT UNSIGNED;
+
+	-- Test if the entry already exists in the table `l_audio_file_to_ripper`.
+	SELECT COUNT(*) INTO v_count
+		FROM l_audio_file_to_ripper
+		WHERE audio_file_id = p_audio_file_id
+		AND ripper_id = p_ripper_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_audio_file_to_ripper (audio_file_id, ripper_id, rip_date) VALUES ( 
+			p_audio_file_id,
+			p_ripper_id,
+			p_rip_date
+		);
+	END IF;
+END; // -- 2}}} 1}}}
+
+-- Insert an entry into the temporal 'procedures' table. -- {{{1
+INSERT INTO procedures (id, name, level) VALUES (
+	'',
+	'link_audio_file_to_ripper',
 	'user'
 ) // -- 1}}}
 

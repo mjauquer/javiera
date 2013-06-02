@@ -43,19 +43,32 @@ insert_audio_file () {
 	local aud_oldpwd=$(pwd)
 	local -i aud_i=0
 	local -i aud_j=0
-
-	local sample_rate=\"$(metaflac --show-sample-rate $1)\"
-	local channels=\"$(metaflac --show-channels $1)\"
-	local bits_per_sample=\"$(metaflac --show-bps $1)\"
-
-	# Insert an entry in the 'audio_file' table and get the
-	# audio_file_id.
-
-	printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $sample_rate $channels $bits_per_sample >> $2
+	local aud_sample_rate
+	local aud_channels
+	local aud_bits_per_sample
+	local aud_ripper
+	local aud_rip_date
 
 	# Process the audio file according to its mime-type.
 	if [ $(file -b --mime-type "$1") == audio/x-flac ]
 	then
+		aud_sample_rate=\"$(metaflac --show-sample-rate $1)\"
+		aud_channels=\"$(metaflac --show-channels $1)\"
+		aud_bits_per_sample=\"$(metaflac --show-bps $1)\"
+
+		printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $aud_sample_rate $aud_channels $aud_bits_per_sample >> $2
+		aud_ripper="$(metaflac --show-tag=RIPPER $1)"
+		aud_ripper="${aud_ripper##RIPPER=}"
+		aud_rip_date="$(metaflac --show-tag=RIPDATE $1)"
+		aud_rip_date="${aud_rip_date##RIPDATE=}"
+		if [[ ${aud_ripper} != "" ]]
+		then
+			aud_ripper=\"$aud_ripper\"
+			aud_rip_date=\"$aud_rip_date\"
+			printf "CALL insert_and_get_ripper (%b, @ripper_id);\n" "$aud_ripper" >> $2
+			printf "CALL link_audio_file_to_ripper (@audio_file_id, @ripper_id, %b);\n" $aud_rip_date >> $2
+		fi
+
 		insert_flac_file $1 $2
 		if [[ $? -ne 0 ]]
 		then

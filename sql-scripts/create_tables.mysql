@@ -159,6 +159,14 @@ CREATE TABLE IF NOT EXISTS l_audio_file_to_recording ( -- #MUSICBRAINZ
 	                 	REFERENCES recording(id)
 );
 
+CREATE TABLE IF NOT EXISTS l_audio_file_to_ripper ( -- #RIPS
+	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES audio_file(id),
+	ripper_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES ripper(id),
+	rip_date         DATE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS l_dvd_to_software_session ( -- #CORE
 	dvd_id              MEDIUMINT UNSIGNED NOT NULL
 	                    	REFERENCES dvd(id),
@@ -311,6 +319,13 @@ CREATE TABLE IF NOT EXISTS release_name ( -- #MUSICBRAINZ
 	text             VARCHAR(256) NOT NULL,
 	PRIMARY KEY (id)
 );
+
+CREATE TABLE IF NOT EXISTS ripper ( -- #RIPS
+	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name             VARCHAR(36) NOT NULL,
+	PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS software ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(255) NOT NULL,
