@@ -28,6 +28,21 @@
 
 source ~/.myconf/javiera.cnf || exit 1
 
+usage () {
+
+#       USAGE: usage
+#
+# DESCRIPTION: Print a help message to stdout.
+	
+	cat <<- EOF
+	Usage: insert_rip_credits TARGET_DIR RIPPER RIPDATE
+
+	Search TARGET_DIR for flac files and tag them with the nickname
+	of the ripper and the date of the rip. This information is
+	inserted in the database as well.
+	EOF
+}
+
 error_exit () {
 
 #       USAGE: error_exit [MESSAGE]
@@ -74,30 +89,28 @@ print_rippers () {
 # DESCRIPTION: Print the list of the rippers that are registered in the
 #              database.
 	
-	local rippers=( $($mysql_path --skip-reconnect -u$user -p$pass -D$db \
-		--skip-column-names -e "
+	$mysql_path --skip-reconnect -u$user -p$pass -D$db -e "
 
 		SELECT id, name
 			FROM ripper
 			ORDER BY name
 		;
-	") )
+	"
 	[[ $? -ne 0 ]] && return 1
-
-	printf "\n>   id | name\n"
-	printf ">   ---------\n"
-	for (( i=0; i<${#rippers[@]}; i=$((i+2)) ))
-	do
-		echo ">   ${rippers[i]}  | ${rippers[i+1]}"
-	done
-	unset -v i
 
 	return 0
 }
 
+#-----------------------------------------------------------------------
+# BEGINNING OF MAIN CODE
+#-----------------------------------------------------------------------
+
 declare target_dir="$1"
 declare ripper="$2"
 declare rip_date="$3"
+
+# If no argument were passed, print usage message and exit.
+[[ $# -eq 0 ]] && usage && exit
 
 # Check if ripper exists in the database
 ripper_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \

@@ -160,8 +160,8 @@ declare outputinfo # The pathname of a text file where the output of
                    # the par2 command will be writen.
 declare version    # The version of the par2 command.
 
-blocksize=262144
-blockcount=1650
+blocksize=393216
+blockcount=800
 outputinfo=par2info.txt
 options="create -s${blocksize} -c${blockcount} par2file"
 
