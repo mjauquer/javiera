@@ -147,7 +147,7 @@ fi
 # Search for flac files in target_dir
 declare -a flac_files
 
-for file in $(find $source_dir -name '*.flac')
+for file in $(find $target_dir -name '*.flac')
 do
 	flac_files+=( "$file" )
 done

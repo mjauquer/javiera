@@ -87,7 +87,7 @@ declare progname        # The name of this script.
 progname=$(basename $0)
 
 # If no argument were passed, print usage message and exit.
-[[ $# -eq 0 ]] && usage && exit
+[[ $# -eq 0 ]] && usage && exit 1
 
 # Parse command line options.
 
