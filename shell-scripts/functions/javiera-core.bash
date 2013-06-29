@@ -193,9 +193,8 @@ process_fstab () {
 
 #       USAGE: process_fstab
 #
-# DESCRIPTION: Parse file systems' data and insert it in the database.
-
-	# Get uuids related to hard disk partitions from /etc/fstab.
+# DESCRIPTION: Parse file systems' data and insert it in the database. 
+#              Get uuids related to hard disk partitions from /etc/fstab.
 
 	while read line
 	do
