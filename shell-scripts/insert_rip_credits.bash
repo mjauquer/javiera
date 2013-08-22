@@ -105,6 +105,7 @@ print_rippers () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
+declare progname="$0"
 declare target_dir="$1"
 declare ripper="$2"
 declare rip_date="$3"
@@ -121,7 +122,10 @@ ripper_id=$($mysql_path --skip-reconnect -u$user -p$pass -D$db \
 		WHERE name = '$ripper'
 	;
 ")
-[[ $? -ne 0 ]] && return 1
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after trying a query to the database."
+fi
 
 if [ ! $ripper_id ]
 then
