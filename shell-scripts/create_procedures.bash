@@ -42,14 +42,14 @@ procedures=( $($mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 
 	START TRANSACTION;
-	source ~/projects/javiera/sql-scripts/create_procedures.mysql
+	source $JAVIERA_HOME/sql-scripts/create_procedures.mysql
 	SELECT name FROM procedures WHERE level = 'user';
 	COMMIT;
 
 ") )
 [[ $? -ne 0 ]] && exit 1
 
-user=\'$user\'
+USER=\'$User\'
 pass=\'$pass\'
 
 for procedure in ${procedures[@]}

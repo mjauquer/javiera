@@ -21,7 +21,7 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/shell-scripts/functions/javiera-musicbrainz.bash ||
+source $JAVIERA_HOME/shell-scripts/functions/javiera-musicbrainz.bash ||
 	exit 1
 
 insert_audio_file () {

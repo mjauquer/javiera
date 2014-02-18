@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS file ( -- #CORE
 
 CREATE TABLE IF NOT EXISTS file_system ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	uuid             CHAR(36) NOT NULL,
+	uuid             VARCHAR(36) NOT NULL,
 	PRIMARY KEY (id)
 );
 

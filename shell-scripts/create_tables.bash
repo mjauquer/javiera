@@ -22,7 +22,7 @@
 #               the dots).
 
 source ~/.myconf/javiera.cnf || exit 1
-source ~/projects/javiera/submodules/getoptx/getoptx.bash || exit 1
+source $JAVIERA_HOME/submodules/getoptx/getoptx.bash || exit 1
 
 usage () {
 
@@ -120,7 +120,7 @@ $mysql_path --skip-reconnect -u$admin_user -p$admin_pass \
 	-D$db --skip-column-names -e "
 	
 	START TRANSACTION;
-	source ~/projects/javiera/sql-scripts/create_tables.mysql
+	source $JAVIERA_HOME/sql-scripts/create_tables.mysql
 	COMMIT;
 
 "
@@ -135,7 +135,7 @@ then
 		-D$db --skip-column-names -e "
 		
 		START TRANSACTION;
-		source ~/projects/javiera/sql-scripts/populate_tables.mysql
+		source $JAVIERA_HOME/sql-scripts/populate_tables.mysql
 		COMMIT;
 
 	"

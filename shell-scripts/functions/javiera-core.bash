@@ -21,10 +21,10 @@
 #        NOTES: Any suggestion is welcomed at auq..r@gmail.com (fill in
 #               the dots).
 
-source ~/projects/javiera/submodules/upvars/upvars.bash || exit 1
-source ~/projects/javiera/shell-scripts/functions/javiera-archive.bash || exit 1
-source ~/projects/javiera/shell-scripts/functions/javiera-audio.bash || exit 1
-source ~/projects/javiera/shell-scripts/functions/javiera-binary.bash || exit 1
+source $JAVIERA_HOME/submodules/upvars/upvars.bash || exit 1
+source $JAVIERA_HOME/shell-scripts/functions/javiera-archive.bash || exit 1
+source $JAVIERA_HOME/shell-scripts/functions/javiera-audio.bash || exit 1
+source $JAVIERA_HOME/shell-scripts/functions/javiera-binary.bash || exit 1
 
 declare -a file_systems # An array with the uuid fingerprints that
                         # correspond to file systems that have been 
@@ -136,7 +136,7 @@ process_file () {
 	file_sys=\'$file_sys\'
 	pathname=\'$pathname\'
 
-	# Get the other needed data about the file.
+	# Get other valuable data about the file.
 
 	local mime_type; mime_type=$(file -b --mime-type $2)
 	[[ $? -ne 0 ]] && return 1
@@ -251,7 +251,7 @@ process_fstab () {
 			do
 				echo ""
 				case $answer in
-					n) exit
+					e) exit
 					   ;;
 					r) sudo mount -t iso9660 -o uid=marce,gid=users $dev /mnt/dvd 2> /dev/null 
 					   if ( mount | grep "on /mnt/dvd type" > /dev/null )

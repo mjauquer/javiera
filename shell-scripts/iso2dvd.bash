@@ -27,7 +27,7 @@
 #               the dots).
 
 source ~/.myconf/javiera.cnf || exit 1
-source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
+source $JAVIERA_HOME/shell-scripts/functions/javiera-core.bash ||
 	exit 1
 
 usage () {
@@ -121,10 +121,33 @@ unset -v dvd_types
 # Burn the DVD.
 #-----------------------------------------------------------------------
 
-declare options  # The options to be passed to the cdrecord command.
-declare version  # The version of the cdrecord command.
+declare options    # The options to be passed to the cdrecord command.
+declare version    # The version of the cdrecord command.
+declare -a burners # A list of dvd burners models in order of preference. 
+declare dev        # A device code as printed by cdrecord -scanbus.
+declare aux        # An auxiliar dev variable.
 
-options="-v -sao -eject speed=8 dev=$(cdrecord -scanbus 2> /dev/null | grep SE-208AB | cut -f 2)" 
+burners=(GH24NS95 SE-208AB)
+for (( f=0; f<${#burners[@]}; f++ ))
+do
+	aux="$(cdrecord -scanbus 2> /dev/null | grep ${burners[f]} | cut -f 2)"
+	if [ $aux ]
+	then
+		dev=$aux
+		skip
+	fi
+done
+unset -v f
+unset -v aux
+unset -v burners
+
+if [ ! $dev ]
+then
+	error_exit "$LINENO: Coudn't found a burner device."
+fi
+
+options="-v -sao -eject speed=8 dev=$dev" 
+unset -v dev
 
 version="$(cdrecord -version)"
 if [ $? -ne 0 ]

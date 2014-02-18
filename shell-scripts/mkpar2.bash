@@ -22,7 +22,7 @@
 #               the dots).
 
 source ~/.myconf/javiera.cnf || exit 1
-source ~/projects/javiera/shell-scripts/functions/javiera-core.bash ||
+source $JAVIERA_HOME/shell-scripts/functions/javiera-core.bash ||
 	exit 1
 source ~/code/bash/chpathn/chpathn.flib || exit 1
 
@@ -156,22 +156,27 @@ unset -v top_dirs
 declare blocksize  # The block size of the par2 parity volumes.
 declare blockcount # The number of parity blocks to be build.
 declare options    # Options invoked when par2cmdline is called.
-declare outputinfo # The pathname of a text file where the output of
-                   # the par2 command will be writen.
 declare version    # The version of the par2 command.
+declare logfile    # Output of the par2 command will be redirected to
+                   #this file.
 
 blocksize=393216
 blockcount=850
-outputinfo=par2info.txt
-options="create -s${blocksize} -c${blockcount} par2file"
+options="create -s${blocksize} -c${blockcount} -apar2main"
+logfile="par2log"
 
-if ! par2 $options ${files[@]} > $outputinfo
+if ! par2 $options ${files[@]} > $logfile
 then
 	error_exit "$LINENO: Error after calling par2 utility"
 fi
-version="$(head -n 1 < $outputinfo)"
 
-unset -v outputinfo
+version="$(par2 -V)"
+if [ $? -ne 0 ]
+then
+	error_exit "$LINENO: Error after calling par2 utility"
+fi
+
+unset -v logfile
 
 #----------------------------------------------------------------------
 # Update the database.

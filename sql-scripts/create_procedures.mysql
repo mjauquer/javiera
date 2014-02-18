@@ -534,13 +534,13 @@ DROP PROCEDURE IF EXISTS insert_and_get_file_system //
 CREATE PROCEDURE insert_and_get_file_system -- {{{1
 
 	(
-		IN  p_uuid           CHAR(36),
+		IN  p_uuid           VARCHAR(36),
 		OUT p_file_system_id MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN  <p_uuid>           CHAR(36),
+                        IN  <p_uuid>           VARCHAR(36),
                         OUT <p_file_system_id> MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry into the 'file_system' table. Return the id field of the inserted row in the 'file_system' table." -- 2}}}
@@ -572,14 +572,14 @@ DROP PROCEDURE IF EXISTS insert_and_get_file_system_location //
 CREATE PROCEDURE insert_and_get_file_system_location -- {{{1
 
 	(
-		IN  p_uuid                    CHAR(36),
+		IN  p_uuid                    VARCHAR(36),
 		IN  p_pathname                VARCHAR(256),
 		OUT p_file_system_location_id MEDIUMINT UNSIGNED
 	)
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN  <p_uuid>                    CHAR(36),
+                        IN  <p_uuid>                    VARCHAR(36),
                         IN  <p_pathname>                VARCHAR(256),
                         OUT <p_file_system_location_id> MEDIUMINT UNSIGNED.
                       Description:
@@ -820,7 +820,7 @@ CREATE PROCEDURE insert_and_get_mount_point -- {{{1
 	(
 		IN  p_hostname         VARCHAR(256),
 		IN  p_pathname         VARCHAR(256),
-		IN  p_file_system_uuid CHAR(36),
+		IN  p_file_system_uuid VARCHAR(36),
 		OUT p_mount_point_id   MEDIUMINT UNSIGNED
 	)
 
@@ -828,7 +828,7 @@ COMMENT -- {{{2
                      "Parameters:
                         IN  <p_hostname>         VARCHAR(256),
                         IN  <p_pathname>         VARCHAR(256),
-                        IN  <p_file_system_uuid> MEDIUMINT UNSIGNED,
+                        IN  <p_file_system_uuid> VARCHAR(36),
                         OUT <p_mount_point_id>   MEDIUMINT UNSIGNED.
                       Description:
                         Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables. Return the id field of the inserted row." -- 2}}}
@@ -1383,12 +1383,12 @@ DROP PROCEDURE IF EXISTS insert_file_system //
 CREATE PROCEDURE insert_file_system -- {{{1
 
 	(
-		IN  p_uuid CHAR(36)
+		IN  p_uuid VARCHAR(36)
 	)
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN p_uuid CHAR(36).
+                        IN p_uuid VARCHAR(36).
                       Description:
                         Insert an entry in the 'file_system'." -- 2}}}
 
@@ -1409,13 +1409,13 @@ DROP PROCEDURE IF EXISTS insert_file_system_location //
 CREATE PROCEDURE insert_file_system_location -- {{{1
 
 	(
-		IN  p_uuid      CHAR(36),
+		IN  p_uuid      VARCHAR(36),
 		IN  p_pathname  VARCHAR(256)
 	)
 
 COMMENT -- {{{2
                      "Parameters:
-                        IN p_uuid     CHAR(36),
+                        IN p_uuid     VARCHAR(36),
                         IN p_pathname VARCHAR(256).
                       Description:
                         Insert an entry into the 'location' and 'file_system_location' tables." -- 2}}}
@@ -1547,14 +1547,14 @@ CREATE PROCEDURE insert_mount_point -- {{{1
 	(
 		IN  p_hostname         VARCHAR(256),
 		IN  p_pathname         VARCHAR(256),
-		IN  p_file_system_uuid CHAR(36)
+		IN  p_file_system_uuid VARCHAR(36)
 	)
 
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_hostname>         VARCHAR(256),
                         IN <p_pathname>         VARCHAR(256),
-                        IN <p_file_system_uuid> MEDIUMINT UNSIGNED.
+                        IN <p_file_system_uuid> VARCHAR(36).
                       Description:
                         Insert an entry in the 'mount_point' and 'l_file_system_to_mount_point' tables." -- 2}}}
 
