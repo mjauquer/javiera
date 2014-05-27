@@ -123,27 +123,21 @@ unset -v dvd_types
 
 declare options    # The options to be passed to the cdrecord command.
 declare version    # The version of the cdrecord command.
-declare -a burners # A list of dvd burners models in order of preference. 
 declare dev        # A device code as printed by cdrecord -scanbus.
-declare aux        # An auxiliar dev variable.
 
-burners=(GH24NS95 SE-208AB)
-for (( f=0; f<${#burners[@]}; f++ ))
+for d in $(cdrecord -scanbus 2> /dev/null | grep "Removable CD-ROM" | cut -f 2)
 do
-	aux="$(cdrecord -scanbus 2> /dev/null | grep ${burners[f]} | cut -f 2)"
-	if [ $aux ]
+	if ! cdrecord dev="$d" -minfo |& grep -q "Cannot load media"
 	then
-		dev=$aux
-		skip
+		dev=$d;
+		break;
 	fi
 done
-unset -v f
-unset -v aux
-unset -v burners
+unset -v d
 
 if [ ! $dev ]
 then
-	error_exit "$LINENO: Coudn't found a burner device."
+	error_exit "$LINENO: Cannot load media."
 fi
 
 options="-v -sao -eject speed=8 dev=$dev" 
