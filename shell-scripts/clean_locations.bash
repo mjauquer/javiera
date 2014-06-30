@@ -71,7 +71,7 @@ progname=$(basename $0)
 if [ $# -ne 1 ]
 then
 	usage && exit 1
-elif [[ ! $1 =~ ^(.){8}-(.){4}-(.){4}-(.){4}-(.){12}$ ]]
+elif [[ ! ( $1 =~ ^(.){8}-(.){4}-(.){4}-(.){4}-(.){12}$ || $1 =~ ^(.){16}$ ) ]]
 then
 	error_exit "Argument must be a well-formatted uuid."
 fi

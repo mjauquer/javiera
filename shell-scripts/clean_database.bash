@@ -135,7 +135,7 @@ delete_outdated_locations () {
 # BEGINNING OF MAIN CODE
 #-----------------------------------------------------------------------
 
-declare hostnam     # The name of the host where this script will be
+declare hostname    # The name of the host where this script will be
                     # running.
 declare progname    # The name of this script.
 declare admin_user  # A mysql user name.
