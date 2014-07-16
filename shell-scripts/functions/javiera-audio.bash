@@ -130,6 +130,7 @@ insert_audio_file () {
 		aud_rec_mbid=\'$aud_rec_mbid\'
 
 		printf "CALL link_audio_file_to_recording (@audio_file_id, %b, %b, %b, %b);\n" $aud_rel_mbid $aud_med_count $aud_med_pos $aud_rec_mbid >> $2
+		printf "CALL link_audio_file_to_medium (@audio_file_id, @med_id, %b, %b);\n" $aud_rel_mbid $aud_med_pos >> $2
 	fi
 
 	return 0

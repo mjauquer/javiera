@@ -2,8 +2,9 @@ CREATE TABLE IF NOT EXISTS archive_file ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS archive_location ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -12,8 +13,9 @@ CREATE TABLE IF NOT EXISTS archive_location ( -- #CORE
 	archive_file_id  MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES archive_file(id),
 	pathname         VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS artist ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -24,14 +26,16 @@ CREATE TABLE IF NOT EXISTS artist ( -- #MUSICBRAINZ
 	sort_name        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES artist_name(id),
 	comment          VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS artist_name ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	text             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS audio_file ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -40,22 +44,25 @@ CREATE TABLE IF NOT EXISTS audio_file ( -- #CORE
 	sample_rate      MEDIUMINT UNSIGNED NOT NULL,
 	channels         TINYINT UNSIGNED NOT NULL,
 	bits_per_sample  TINYINT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS binary_file ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS data_storage_device ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	`timestamp`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 				ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS dvd ( -- #CORE
 	id                     MEDIUMINT UNSIGNED NOT NULL,
@@ -63,14 +70,16 @@ CREATE TABLE IF NOT EXISTS dvd ( -- #CORE
 	                       		REFERENCES data_storage_device(id),
 	dvd_type_id            MEDIUMINT UNSIGNED NOT NULL 
 	                       		REFERENCES dvd_type(id),
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS dvd_type ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	type_descriptor  VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS file ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -79,14 +88,16 @@ CREATE TABLE IF NOT EXISTS file ( -- #CORE
 	sha1             CHAR(40) NOT NULL,
 	fsize            BIGINT UNSIGNED NOT NULL,
 	mtime            INT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS file_system ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	uuid             VARCHAR(36) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS file_system_location ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -95,8 +106,9 @@ CREATE TABLE IF NOT EXISTS file_system_location ( -- #CORE
 	file_system_id   MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file_system(id),
 	pathname         VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS flac_file ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -111,170 +123,202 @@ CREATE TABLE IF NOT EXISTS flac_file ( -- #CORE
 	bits_per_sample  TINYINT UNSIGNED NOT NULL,
 	total_samples    MEDIUMINT UNSIGNED NOT NULL,
 	md5_signature    CHAR(32) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS flac_metadata_entry ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	type             ENUM('APPLICATION', 'CUESHEET', 'PADDING', 'PICTURE', 'SEEKTABLE', 'STREAMINFO', 'VORBIS_COMMENT') NOT NULL,
 	column1          VARCHAR(256) NOT NULL,
 	column2          VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS host ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_artist_to_recording ( -- #MUSICBRAINZ
 	artist_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES artist(id),
 	type             VARCHAR(256) NOT NULL,
 	recording_id     MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES recording(id)
-);
+	                 	REFERENCES recording(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_artist_to_release ( -- #MUSICBRAINZ
 	artist_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES artist(id),
 	type             VARCHAR(256) NOT NULL,
 	release_id       MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES `release`(id)
-);
+	                 	REFERENCES `release`(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_artist_to_release_group ( -- #MUSICBRAINZ
 	artist_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES artist(id),
 	type             VARCHAR(256) NOT NULL,
 	release_group_id MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES release_group(id)
-);
+	                 	REFERENCES release_group(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
+
+CREATE TABLE IF NOT EXISTS l_audio_file_to_medium ( -- #MUSICBRAINZ
+	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES audio_file(id),
+	medium_id        MEDIUMINT UNSIGNED NOT NULL
+	                 	REFERENCES medium(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_audio_file_to_recording ( -- #MUSICBRAINZ
 	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES audio_file(id),
 	recording_id     MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES recording(id)
-);
+	                 	REFERENCES recording(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_audio_file_to_ripper ( -- #RIPS
 	audio_file_id    MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES audio_file(id),
 	ripper_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES ripper(id),
-	rip_date         DATE NOT NULL
-);
+	rip_date         DATE NOT NULL)
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_dvd_to_software_session ( -- #CORE
 	dvd_id              MEDIUMINT UNSIGNED NOT NULL
 	                    	REFERENCES dvd(id),
 	software_session_id MEDIUMINT UNSIGNED NOT NULL
-	                    	REFERENCES software_session(id)
-);
+	                    	REFERENCES software_session(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_file_to_location ( -- #CORE
 	file_id          MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES file(id),
 	location_id      MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES location(id)
-);
+	                 	REFERENCES location(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_file_to_software_session ( -- #CORE
 	file_id             MEDIUMINT UNSIGNED NOT NULL
 	                    	REFERENCES file(id),
 	software_session_id MEDIUMINT UNSIGNED NOT NULL
-	                    	REFERENCES software_session(id)
-);
+	                    	REFERENCES software_session(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_file_system_to_data_storage_device ( -- #CORE
 	file_system_id         MEDIUMINT UNSIGNED NOT NULL
 	                       		REFERENCES file_system(id),
 	data_storage_device_id MEDIUMINT UNSIGNED NOT NULL
-	                 		REFERENCES data_storage_device(id)
-);
+	                 		REFERENCES data_storage_device(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_file_system_to_mount_point ( -- #CORE
 	mount_point_id   MEDIUMINT UNSIGNED NOT NULL
 	                	REFERENCES mount_point(id),
 	file_system_id   MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES file_system(id)
-);
+	                 	REFERENCES file_system(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_flac_file_to_metadata_entry ( -- #CORE
 	flac_file_id           MEDIUMINT UNSIGNED NOT NULL
 		               		REFERENCES flac_file(id),
 	flac_metadata_entry_id MEDIUMINT UNSIGNED NOT NULL
-			               	REFERENCES flac_metadata_entry(id)
-);
+			               	REFERENCES flac_metadata_entry(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_medium_to_release ( -- #MUSICBRAINZ
 	medium_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES medium(id),
 	release_id       MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES `release`(id)
-);
+	                 	REFERENCES `release`(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_mime_type_to_tree_node ( -- #CORE
 	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
 	mime_type_id     MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES mime_type(id)
-);
+	                 	REFERENCES mime_type(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_recording_to_medium ( -- #MUSICBRAINZ
 	recording_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES recording(id),
 	medium_id        MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES medium(id)
-);
+	                 	REFERENCES medium(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_tree_node_to_tag ( -- #CORE
 	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
 	tag_id           MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES tag(id)
-);
+	                 	REFERENCES tag(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS l_tree_node_to_tree ( -- #CORE
 	tree_node_id     MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES tree_node(id),
 	tree_id          MEDIUMINT UNSIGNED NOT NULL
-	                 	REFERENCES tree(id)
-);
+	                 	REFERENCES tree(id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS location ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS medium ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	format_id        MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES medium_format(id),
 	position         TINYINT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS medium_format ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(100) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS mime_type ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	type_descriptor  VARCHAR(75) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS mount_point ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	host_id          MEDIUMINT UNSIGNED NOT NULL,
 	pathname         VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS recording ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -283,14 +327,16 @@ CREATE TABLE IF NOT EXISTS recording ( -- #MUSICBRAINZ
 	                 	REFERENCES recording_name(id),
 	length           BIGINT UNSIGNED NOT NULL,
 	comment          VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS recording_name ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	text             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `release` ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -301,8 +347,9 @@ CREATE TABLE IF NOT EXISTS `release` ( -- #MUSICBRAINZ
 	release_group_id MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES release_group(id),
 	comment          VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS release_group ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -311,27 +358,31 @@ CREATE TABLE IF NOT EXISTS release_group ( -- #MUSICBRAINZ
 	name             MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES release_name(id),
 	comment          VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS release_name ( -- #MUSICBRAINZ
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	text             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS ripper ( -- #RIPS
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(36) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS software ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(255) NOT NULL,
 	version          VARCHAR(255) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS software_session ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -340,20 +391,23 @@ CREATE TABLE IF NOT EXISTS software_session ( -- #CORE
 	software_id      MEDIUMINT UNSIGNED NOT NULL
 	                 	REFERENCES software(id),
 	software_options VARCHAR(255) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS tag ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	text             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS tree ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	name             VARCHAR(256) NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS tree_node ( -- #CORE
 	id               MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -361,5 +415,6 @@ CREATE TABLE IF NOT EXISTS tree_node ( -- #CORE
 	                 	REFERENCES tree_node(id),
 	left_extent      MEDIUMINT UNSIGNED NOT NULL,
 	right_extent     MEDIUMINT UNSIGNED NOT NULL,
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id))
+	CHARACTER SET 'utf8'
+	COLLATE 'utf8_unicode_ci';
