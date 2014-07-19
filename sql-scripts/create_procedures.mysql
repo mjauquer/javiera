@@ -1898,7 +1898,6 @@ CREATE PROCEDURE link_audio_file_to_medium -- {{{1
 
 	(
 		IN p_audio_file_id   MEDIUMINT UNSIGNED,
-		IN p_medium_id       MEDIUMINT UNSIGNED,
 		IN p_release_mbid    CHAR(36),
 		IN p_medium_position TINYINT UNSIGNED
 	)
@@ -1906,57 +1905,37 @@ CREATE PROCEDURE link_audio_file_to_medium -- {{{1
 COMMENT -- {{{2
                      "Parameters:
                         IN <p_audio_file_id>   MEDIUMINT UNSIGNED,
-                        IN <p_medium_id>       MEDIUMINT UNSIGNED,
                         IN <p_release_mbid>    CHAR(36),
                         IN <p_medium_position> TINYINT UNSIGNED.
                       Description:
-                        If <p_medium_id> is not null, insert an entry in the 'l_audio_file_to_medium' table.
-                        If <p_medium_id> is null, query the database for the correct medium related to the release referenced by <p_release_mbid> and <p_medium_position> and insert an entry in the 'l_audio_file_to_medium' table." -- 2}}}
+                        Query the database for the correct medium related to the release referenced by <p_release_mbid> and <p_medium_position> and insert an entry in the 'l_audio_file_to_medium' table." -- 2}}}
 
 BEGIN -- {{{2
 	DECLARE v_medium_id MEDIUMINT UNSIGNED;
 	DECLARE v_count     MEDIUMINT UNSIGNED;
 
-	IF p_medium_id != ''
-	THEN
-		-- Test if an entry already exists in the table `l_audio_file_to_medium`.
-		SELECT COUNT(*) INTO v_count
-			FROM l_audio_file_to_medium
-			WHERE audio_file_id = p_audio_file_id
-			AND medium_id = p_medium_id;
-		
-		-- If it doesn't exist, create it.
-		IF v_count = 0
-		THEN
-			INSERT INTO l_audio_file_to_medium (audio_file_id, medium_id) VALUES ( 
-				p_audio_file_id,
-				p_medium_id
-			);
-		END IF;
-	ELSE
-		SELECT medium.id INTO v_medium_id
-			FROM medium
-			INNER JOIN l_medium_to_release AS link
-				ON link.medium_id = medium.id
-			INNER JOIN `release`
-				ON link.release_id = `release`.id
-			WHERE `release`.mbid = p_release_mbid
-			AND medium.position = p_medium_position;
+	SELECT medium.id INTO v_medium_id
+		FROM medium
+		INNER JOIN l_medium_to_release AS link
+			ON link.medium_id = medium.id
+		INNER JOIN `release`
+			ON link.release_id = `release`.id
+		WHERE `release`.mbid = p_release_mbid
+		AND medium.position = p_medium_position;
 
-		-- Test if an entry already exists in the table `l_audio_file_to_medium`.
-		SELECT COUNT(*) INTO v_count
-			FROM l_audio_file_to_medium
-			WHERE audio_file_id = p_audio_file_id
-			AND medium_id = v_medium_id;
-		
-		-- If it doesn't exist, create it.
-		IF v_count = 0
-		THEN
-			INSERT INTO l_audio_file_to_medium (audio_file_id, medium_id) VALUES ( 
-				p_audio_file_id,
-				v_medium_id
-			);
-		END IF;
+	-- Test if an entry already exists in the table `l_audio_file_to_medium`.
+	SELECT COUNT(*) INTO v_count
+		FROM l_audio_file_to_medium
+		WHERE audio_file_id = p_audio_file_id
+		AND medium_id = v_medium_id;
+	
+	-- If it doesn't exist, create it.
+	IF v_count = 0
+	THEN
+		INSERT INTO l_audio_file_to_medium (audio_file_id, medium_id) VALUES ( 
+			p_audio_file_id,
+			v_medium_id
+		);
 	END IF;
 END; // -- 2}}} 1}}}
 
@@ -2073,8 +2052,7 @@ BEGIN -- {{{2
 	-- Test if the entry already exists in the table `l_audio_file_to_ripper`.
 	SELECT COUNT(*) INTO v_count
 		FROM l_audio_file_to_ripper
-		WHERE audio_file_id = p_audio_file_id
-		AND ripper_id = p_ripper_id;
+		WHERE audio_file_id = p_audio_file_id;
 	
 	-- If it doesn't exist, create it.
 	IF v_count = 0
@@ -2084,6 +2062,12 @@ BEGIN -- {{{2
 			p_ripper_id,
 			p_rip_date
 		);
+	ELSEIF v_count = 1
+	THEN
+		UPDATE l_audio_file_to_ripper
+			SET ripper_id=p_ripper_id,
+			    rip_date=p_rip_date
+			WHERE audio_file_id = p_audio_file_id;
 	END IF;
 END; // -- 2}}} 1}}}
 

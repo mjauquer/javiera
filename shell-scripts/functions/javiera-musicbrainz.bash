@@ -365,7 +365,9 @@ process_release_mbid () {
 #              no record is found, get pertinent data to this value from
 #              musicbrainz.org and build a query in order to update the
 #              database whith this data. Append the query to the file
-#              pointed by QUERY_FILE.
+#              pointed by QUERY_FILE. If a record is found and the
+#              update option was given, update the database according to
+#              musicbrainz's database state.
 #
 #   PARAMETER: RELEASE_MBID: A 36 character string used by
 #                            musicbrainz.org as an unique identifier.
@@ -376,17 +378,6 @@ process_release_mbid () {
 	local rel_tmpdir
 	local rel_mbid
 	local rel_id
-	local -a rel_arts
-	local rel_art
-	local -a rel_recs
-	local rel_rec
-	local rel_name
-	local rel_status
-	local rel_rgroup
-	local rel_comment
-	local -i rel_med_count
-	local rel_med_format
-	local rel_med_pos
 	
 	# Check for well-formatted arguments.
 	if echo $1 | grep -q '^[-0123456789abcdef]\{36\}$'
@@ -421,123 +412,16 @@ process_release_mbid () {
 	# If it is not, insert it.
 	if [ -z $rel_id ]
 	then
-		# Query musicbrainz.
-		limit_mbcon
-		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release?query=reid:$1" > $rel_tmpdir/rel.xml
-		handle_wgeterr $?
-		[[ $? -ne 0 ]] && return 1
+		insert_release $1 $2
+		[[ $? -ne 0 ]] && echo "Error after a call to insert_release()." 1>&2 && return 1
+	fi
 
-		xml ed $rel_tmpdir/rel.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rel_tmpdir/release.xml
-
-		limit_mbcon
-		wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release/$1?inc=recordings+media" > $rel_tmpdir/rel2.xml
-		handle_wgeterr $?
-		[[ $? -ne 0 ]] && return 1
-
-		xml ed $rel_tmpdir/rel2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rel_tmpdir/release2.xml
-
-		# Parse data.
-		if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/status"
-		then
-			rel_status="$(xml sel -t -m //metadata/release-list/release/status -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
-		fi
-		escape_chars rel_status "$rel_status"
-		rel_status="${rel_status##+([-[[:space:]])}"
-		rel_status=\'$rel_status\'
-
-		if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/title"
-		then
-			rel_name="$(xml sel -t -m //metadata/release-list/release/title -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
-		fi
-		escape_chars rel_name "$rel_name"; rel_name=\'$rel_name\'
-
-		if xml el -a $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/release-group/@id"
-		then
-			rel_rgroup="$(xml sel -t -m //metadata/release-list/release/release-group/@id -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
-		fi
-		process_release_group_mbid $rel_rgroup $2
-		[[ $? -ne 0 ]] && echo "Error after calling to process_release_group_mbid()." 1>&2 && return 1
-
-		if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/disambiguation"
-		then
-			rel_comment="$(xml sel -t -m //metadata/release-list/release/disambiguation -v . $rel_tmpdir/release.xml)"
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
-		fi
-		escape_chars rel_comment "$rel_comment"
-		rel_comment="${rel_comment##+([-[[:space:]])}"
-		rel_comment=\'$rel_comment\'
-
-		# Insert release.
-		printf "CALL insert_and_get_release (
-				%b,
-				%b,
-				%b,
-				@rgr_id,
-				%b,
-				@rel_id
-			);\n" $rel_mbid "$rel_status" "$rel_name" "$rel_comment" >> $2
-
-		# Insert artist-release relationships.
-		if xml el -a $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/artist-credit/name-credit/artist/@id"
-		then
-			rel_arts=( $(xml sel -t -m //metadata/release-list/release/artist-credit/name-credit/artist/@id -n -v . $rel_tmpdir/release.xml) )
-			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
-			for rel_art in ${rel_arts[@]}
-			do
-				process_artist_mbid $rel_art $2
-				[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." 1>&2 && return 1
-
-				printf "CALL link_artist_to_release (
-						@art_id,
-						'is credited for',
-						@rel_id 
-					);
-					SET @art_id = NULL;\n" >> $2
-			done
-		fi
-
-		### Insert release's tracks into the database.
-		rel_med_count="$(xml sel -t -m //metadata/release/medium-list/@count -n -v . $rel_tmpdir/release2.xml)"
-		for (( i=1; i <= $rel_med_count; i++ ))
-		do
-			rel_med_format="$(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./format $rel_tmpdir/release2.xml)"
-			escape_chars rel_med_format "$rel_med_format";
-			rel_med_format="${rel_med_format##+([-[[:space:]])}"
-			rel_med_format=\'$rel_med_format\'
-			rel_med_pos=\'$i\'
-
-			printf "CALL insert_and_get_medium (
-					@rel_id,
-					%b,
-					%b,
-					@med_id
-				);\n" "$rel_med_format" "$rel_med_pos" >> $2
-
-			rel_med_format=
-			rel_med_pos=
-
-			if xml el -a $rel_tmpdir/release2.xml | grep -q "metadata/release/medium-list/medium/track-list/track/recording/@id"
-			then
-				rel_recs=( $(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./track-list/track/recording/@id $rel_tmpdir/release2.xml) )
-				[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
-				for rel_rec in ${rel_recs[@]}
-				do
-					process_recording_mbid $rel_rec $2
-					[[ $? -ne 0 ]] && echo "Error after calling to process_recording_mbid()." 1>&2 && return 1
-
-					rel_rec=\'$rel_rec\'
-
-					printf "INSERT INTO l_recording_to_medium (recording_id, medium_id) VALUES (
-							@rec_id,
-							@med_id
-						);\n" >> $2
-				done
-			fi
-		done
-		unset -v i
+	# If the update option was given, update local data about the
+	# release.
+	if [ $update ]
+	then
+		update_release $1 $2
+		[[ $? -ne 0 ]] && echo "Error after a call to update_release()." 1>&2 && return 1
 	fi
 
 	# Delete the temporal directory.
@@ -546,6 +430,169 @@ process_release_mbid () {
 	cd $rel_oldpwd
 	[[ $? -ne 0 ]] && echo "cd: could not change working directory." 1>&2 && return 1
 
+	return 0
+}
+
+insert_release () {
+
+#       USAGE: insert_release RELEASE_MBID QUERY_FILE
+#
+# DESCRIPTION: Build a query in order to insert in the database metadata
+#              about the release referenced by RELEASE_MBID. Append the
+#              query to the file pointed by QUERY_FILE.
+#
+#   PARAMETER: RELEASE_MBID: A 36 character string used by
+#                            musicbrainz.org as an unique identifier.
+#              QUERY_FILE:   The pathname of the file into which append
+#                            the sql query.
+
+	local -a rel_arts
+	local rel_art
+	local -a rel_recs
+	local rel_rec
+	local rel_name
+	local rel_status
+	local rel_rgroup
+	local rel_comment
+	local -i rel_med_count
+	local rel_med_format
+	local rel_med_pos
+	
+	# Query musicbrainz.
+	limit_mbcon
+	wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release?query=reid:$1" > $rel_tmpdir/rel.xml
+	handle_wgeterr $?
+	[[ $? -ne 0 ]] && return 1
+
+	xml ed $rel_tmpdir/rel.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rel_tmpdir/release.xml
+
+	limit_mbcon
+	wget --wait=5 -q -O - "http://musicbrainz.org/ws/2/release/$1?inc=recordings+media" > $rel_tmpdir/rel2.xml
+	handle_wgeterr $?
+	[[ $? -ne 0 ]] && return 1
+
+	xml ed $rel_tmpdir/rel2.xml | sed -e 's/ xmlns.*=".*"//g' | sed -e 's/ext://g' > $rel_tmpdir/release2.xml
+
+	# Parse data.
+	if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/status"
+	then
+		rel_status="$(xml sel -t -m //metadata/release-list/release/status -v . $rel_tmpdir/release.xml)"
+		[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+	fi
+	escape_chars rel_status "$rel_status"
+	rel_status="${rel_status##+([-[[:space:]])}"
+	rel_status=\'$rel_status\'
+
+	if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/title"
+	then
+		rel_name="$(xml sel -t -m //metadata/release-list/release/title -v . $rel_tmpdir/release.xml)"
+		[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+	fi
+	escape_chars rel_name "$rel_name"; rel_name=\'$rel_name\'
+
+	if xml el -a $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/release-group/@id"
+	then
+		rel_rgroup="$(xml sel -t -m //metadata/release-list/release/release-group/@id -v . $rel_tmpdir/release.xml)"
+		[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+	fi
+	process_release_group_mbid $rel_rgroup $2
+	[[ $? -ne 0 ]] && echo "Error after calling to process_release_group_mbid()." 1>&2 && return 1
+
+	if xml el $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/disambiguation"
+	then
+		rel_comment="$(xml sel -t -m //metadata/release-list/release/disambiguation -v . $rel_tmpdir/release.xml)"
+		[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+	fi
+	escape_chars rel_comment "$rel_comment"
+	rel_comment="${rel_comment##+([-[[:space:]])}"
+	rel_comment=\'$rel_comment\'
+
+	# Insert release.
+	printf "CALL insert_and_get_release (
+			%b,
+			%b,
+			%b,
+			@rgr_id,
+			%b,
+			@rel_id
+		);\n" $rel_mbid "$rel_status" "$rel_name" "$rel_comment" >> $2
+
+	# Insert artist-release relationships.
+	if xml el -a $rel_tmpdir/release.xml | grep -q "metadata/release-list/release/artist-credit/name-credit/artist/@id"
+	then
+		rel_arts=( $(xml sel -t -m //metadata/release-list/release/artist-credit/name-credit/artist/@id -n -v . $rel_tmpdir/release.xml) )
+		[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+		for rel_art in ${rel_arts[@]}
+		do
+			process_artist_mbid $rel_art $2
+			[[ $? -ne 0 ]] && echo "Error after calling to process_artist_mbid()." 1>&2 && return 1
+
+			printf "CALL link_artist_to_release (
+					@art_id,
+					'is credited for',
+					@rel_id 
+				);
+				SET @art_id = NULL;\n" >> $2
+		done
+	fi
+
+	### Insert release's tracks into the database.
+	rel_med_count="$(xml sel -t -m //metadata/release/medium-list/@count -n -v . $rel_tmpdir/release2.xml)"
+	for (( i=1; i <= $rel_med_count; i++ ))
+	do
+		rel_med_format="$(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./format $rel_tmpdir/release2.xml)"
+		escape_chars rel_med_format "$rel_med_format";
+		rel_med_format="${rel_med_format##+([-[[:space:]])}"
+		rel_med_format=\'$rel_med_format\'
+		rel_med_pos=\'$i\'
+
+		printf "CALL insert_and_get_medium (
+				@rel_id,
+				%b,
+				%b,
+				@med_id
+			);\n" "$rel_med_format" "$rel_med_pos" >> $2
+
+		rel_med_format=
+		rel_med_pos=
+
+		if xml el -a $rel_tmpdir/release2.xml | grep -q "metadata/release/medium-list/medium/track-list/track/recording/@id"
+		then
+			rel_recs=( $(xml sel -t -m //metadata/release/medium-list/medium -i "./position=$i" -n -v ./track-list/track/recording/@id $rel_tmpdir/release2.xml) )
+			[[ $? -ne 0 ]] && echo "xml: parsing error." 1>&2 && return 1
+			for rel_rec in ${rel_recs[@]}
+			do
+				process_recording_mbid $rel_rec $2
+				[[ $? -ne 0 ]] && echo "Error after calling to process_recording_mbid()." 1>&2 && return 1
+
+				rel_rec=\'$rel_rec\'
+
+				printf "INSERT INTO l_recording_to_medium (recording_id, medium_id) VALUES (
+						@rec_id,
+						@med_id
+					);\n" >> $2
+			done
+		fi
+	done
+	unset -v i
+
+	return 0
+}
+
+update_release () {
+
+#       USAGE: update_release RELEASE_MBID QUERY_FILE
+#
+# DESCRIPTION: Build a query in order to update in the database metadata
+#              about the release referenced by RELEASE_MBID. Append the
+#              query to the file pointed by QUERY_FILE.
+#
+#   PARAMETER: RELEASE_MBID: A 36 character string used by
+#                            musicbrainz.org as an unique identifier.
+#              QUERY_FILE:   The pathname of the file into which append
+#                            the sql query.
+
+	echo "update_release() has not been implemented yet." >&2
 	return 0
 }
 

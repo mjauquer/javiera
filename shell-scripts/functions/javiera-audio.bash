@@ -57,16 +57,25 @@ insert_audio_file () {
 		aud_bits_per_sample=\"$(metaflac --show-bps $1)\"
 
 		printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $aud_sample_rate $aud_channels $aud_bits_per_sample >> $2
-		aud_ripper="$(metaflac --show-tag=RIPPER $1)"
-		aud_ripper="${aud_ripper##RIPPER=}"
-		aud_rip_date="$(metaflac --show-tag=RIPDATE $1)"
-		aud_rip_date="${aud_rip_date##RIPDATE=}"
+		if [ $ripdata ]
+		then
+			aud_ripper=$ripper
+			aud_rip_date=$ripdate
+		else
+			aud_ripper="$(metaflac --show-tag=RIPPER $1)"
+			aud_ripper="${aud_ripper##RIPPER=}"
+			aud_rip_date="$(metaflac --show-tag=RIPDATE $1)"
+			aud_rip_date="${aud_rip_date##RIPDATE=}"
+		fi
 		if [[ ${aud_ripper} != "" ]]
 		then
 			aud_ripper=\"$aud_ripper\"
 			aud_rip_date=\"$aud_rip_date\"
 			printf "CALL insert_and_get_ripper (%b, @ripper_id);\n" "$aud_ripper" >> $2
 			printf "CALL link_audio_file_to_ripper (@audio_file_id, @ripper_id, %b);\n" $aud_rip_date >> $2
+		elif [ ! $ripdata ]
+		then
+			echo "warning: Tag 'RIPPER' do not exist in file $1." >&2
 		fi
 
 		insert_flac_file $1 $2
@@ -130,7 +139,7 @@ insert_audio_file () {
 		aud_rec_mbid=\'$aud_rec_mbid\'
 
 		printf "CALL link_audio_file_to_recording (@audio_file_id, %b, %b, %b, %b);\n" $aud_rel_mbid $aud_med_count $aud_med_pos $aud_rec_mbid >> $2
-		printf "CALL link_audio_file_to_medium (@audio_file_id, @med_id, %b, %b);\n" $aud_rel_mbid $aud_med_pos >> $2
+		printf "CALL link_audio_file_to_medium (@audio_file_id, %b, %b);\n" $aud_rel_mbid $aud_med_pos >> $2
 	fi
 
 	return 0
@@ -255,6 +264,120 @@ insert_flac_metadata() {
 				                      ;;
 		esac
 	done
+
+	return 0
+}
+
+update_audio_file () {
+
+#       USAGE: update_audio_file PATHNAME QUERY_FILE
+#
+# DESCRIPTION: Collect metadata related to the audio file pointed by
+#              PATHNAME and update all the related tables in the
+#              database.
+#
+#  PARAMETERS: PATHNAME    A unix filesystem formatted string. 
+#              QUERY_FILE  The pathname of the file into which
+#                          append the sql query.
+
+	local aud_rel_mbid
+	local aud_med_count
+	local aud_med_pos
+	local aud_rec_mbid
+	local aud_oldpwd=$(pwd)
+	local -i aud_i=0
+	local -i aud_j=0
+	local aud_sample_rate
+	local aud_channels
+	local aud_bits_per_sample
+	local aud_ripper
+	local aud_rip_date
+
+	# Process the audio file according to its mime-type.
+	if [ $(file -b --mime-type "$1") == audio/x-flac ]
+	then
+		aud_sample_rate=\"$(metaflac --show-sample-rate $1)\"
+		aud_channels=\"$(metaflac --show-channels $1)\"
+		aud_bits_per_sample=\"$(metaflac --show-bps $1)\"
+
+		printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $aud_sample_rate $aud_channels $aud_bits_per_sample >> $2
+		if [ $ripdata ]
+		then
+			aud_ripper=$ripper
+			aud_rip_date=$ripdate
+		else
+			aud_ripper="$(metaflac --show-tag=RIPPER $1)"
+			aud_ripper="${aud_ripper##RIPPER=}"
+			aud_rip_date="$(metaflac --show-tag=RIPDATE $1)"
+			aud_rip_date="${aud_rip_date##RIPDATE=}"
+		fi
+		if [[ ${aud_ripper} != "" ]]
+		then
+			aud_ripper=\"$aud_ripper\"
+			aud_rip_date=\"$aud_rip_date\"
+			printf "CALL insert_and_get_ripper (%b, @ripper_id);\n" "$aud_ripper" >> $2
+			printf "CALL link_audio_file_to_ripper (@audio_file_id, @ripper_id, %b);\n" $aud_rip_date >> $2
+		elif [ ! $ripdata ]
+		then
+			echo "warning: Tag 'RIPPER' do not exist in file $1." >&2
+		fi
+
+		aud_rel_mbid=$(metaflac --show-tag=musicbrainz_albumid $1)
+		aud_rel_mbid=${aud_rel_mbid##*=}
+		aud_med_count=$(metaflac --show-tag=totaldiscs $1)
+		aud_med_count=${aud_med_count##*=}
+		if [ -z $aud_med_count ]
+		then
+			aud_med_count=$(metaflac --show-tag=disctotal $1)
+			aud_med_count=${aud_med_count##*=}
+		fi
+		aud_med_pos=$(metaflac --show-tag=discnumber $1)
+		aud_med_pos=${aud_med_pos##*=}
+		aud_rec_mbid=$(metaflac --show-tag=musicbrainz_trackid $1)
+		aud_rec_mbid=${aud_rec_mbid##*=}
+
+		if ! [[ -z $aud_rel_mbid ]]
+		then
+			while true
+			do
+				aud_i=$(expr $aud_i + 1)
+				process_release_mbid $aud_rel_mbid $2
+				if [ $? -ne 0 ]
+				then
+					printf "\nError after a call to process_release_mbid().
+						(file: %b)
+						(release mbid: %b)
+						(attempt nº: %b)\n" $1 $aud_rel_mbid $aud_i 
+					continue
+				fi
+				break
+			done
+		elif ! [[ -z $aud_rec_mbid ]] 
+		then
+			while true
+			do
+				aud_j=$(expr $aud_j + 1)
+				process_recording_mbid $aud_rec_mbid $2
+				if [ $? -ne 0 ]
+				then
+					printf "\nError after a call to process_recording_mbid().
+						(file: %b)
+						(recording mbid: %b)
+						(attempt nº: %b)\n" $1 $aud_rec_mbid $aud_j 
+					continue
+				fi
+				break
+			done
+		fi
+
+		aud_rel_mbid=\'$aud_rel_mbid\'
+		aud_med_count=\'$aud_med_count\'
+		aud_med_pos=\'$aud_med_pos\'
+		aud_rec_mbid=\'$aud_rec_mbid\'
+
+		printf "CALL link_audio_file_to_recording (@audio_file_id, %b, %b, %b, %b);\n" $aud_rel_mbid $aud_med_count $aud_med_pos $aud_rec_mbid >> $2
+		printf "CALL link_audio_file_to_medium (@audio_file_id, %b, %b);\n" $aud_rel_mbid $aud_med_pos >> $2
+	fi
 
 	return 0
 }

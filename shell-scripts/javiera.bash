@@ -40,14 +40,22 @@ usage () {
 # DESCRIPTION: Print a help message to stdout.
 
 	cat <<- EOF
-	Usage: javiera.sh [OPTIONS] PATH...
+	Syntax: javiera.sh [OPTIONS] PATH...
 	
-	Collect and store in a backup database metadata about files in 
-	the directories listed in PATH...
+	Collect and store in a backup database metadata about files.
+	PATH... is a list of files or directories.
+
+	Options:
 
 	 -r
 	 -R
 	--recursive    Do all actions recursively.
+	--ripdata      Argument of this option is "RIPPER|DATE_OF_RIP".
+	               It is invoked in order to add data about an audio
+		       flac's ripper. It will be assumed that this data
+		       describes each audio file to be found in PATH...
+	--update       Search for changes in files' metadata and update
+	               the database.
 	--verbose      Print information about what is beeing done.
 	EOF
 }
@@ -92,9 +100,15 @@ fi
 
 declare -a find_opts # A list of options to be passed to the find
                      # command.
+declare ripdata      
+declare ripper
+declare ripdate
+declare update
+declare verbose
+declare regex="^(.)*\|[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 
 find_opts=( -maxdepth 1 )
-while getoptex "r recursive R verbose" "$@"
+while getoptex "r recursive R ripdata: update verbose" "$@"
 do
 	case "$OPTOPT" in
 		r)         find_opts=( -depth )
@@ -103,10 +117,22 @@ do
 		           ;;
 		R)         find_opts=( -depth )
 		           ;;
+		ripdata)   ripdata=true
+		           if [[ $OPTARG =~ $regex ]]
+			   then
+		           	ripper=${OPTARG%\|????-??-??}
+				ripdate=${OPTARG#*\|}
+			   else
+		           	error_exit "$LINENO: Wrong format in ripdata argument."
+			   fi
+			   ;;
+		update)    update=true
+		           ;;
 		verbose)   verbose=true
 	esac
 done
 shift $(($OPTIND-1))
+unset -v regex
 
 # Select from the list of pathname arguments, those that do not need to
 # be changed. Store them in the 'files' array.
@@ -115,9 +141,7 @@ declare -a files # The list of pathnames to be processed by this script.
 
 declare oldifs   # Stores the content of the IFS variable as it 
                  # was when this script was called.
-declare regex    # A regular expresion.
-
-regex="^[0-9A-Za-z./_+]{1}[-0-9A-Za-z./_+]*$"
+declare regex="^[0-9A-Za-z./_+]{1}[-0-9A-Za-z./_+]*$"
 declare -i i=0
 for arg
 do
@@ -144,7 +168,7 @@ unset oldifs
 
 declare -a log         # The output of the command chpathn --verbose.
 declare top_dirs       # A list of directories where to find by inode the
-		       # the files and directories passed as arguments.
+		       # files and directories passed as arguments.
 declare -a dir_inodes  # A list of inodes corresponding to every
 		       # directory passed as argument.
 declare -a file_inodes # A list of inodes corresponding to every file
@@ -193,6 +217,7 @@ then
 		done
 		unset -v dir
 	fi
+	unset -v verbose
 
 	# Get the pathnames of the files passed as arguments after calling to
 	# chpathn.
@@ -220,6 +245,7 @@ then
 	unset -v log
 	unset -v inode
 	unset -v file_inodes
+	unset -v find_opts
 	unset -v top_dirs
 fi
 
@@ -256,3 +282,8 @@ rm $query_file
 
 unset -v file
 unset -v files
+unset -v ripdata      
+unset -v ripper
+unset -v ripdate
+unset -v update
+unset -v verbose

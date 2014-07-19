@@ -154,8 +154,36 @@ process_file () {
 
 	printf "CALL insert_and_get_file (%b, %b, %b, %b, %b, %b, @file_id);\n" $file_sys $pathname $mime_type $sha1 $fsize $mtime >> $3
 
-        # If file's metadata is already in the database, return 0.
-	[ $file_id ] && return 0
+        # If file's metadata is already in the database and the update
+	# option was not given, return 0.
+	[ $file_id ] && [ ! $update ] && return 0
+
+
+        # If file's metadata is already in the database and the update
+	# option was given, update the database.
+	[ $file_id ] && ! update_file $1 $2 $3 && return 1
+
+        # If file's metadata is not already in the database, insert it
+	# into the database.
+	[ ! $file_id ] && ! insert_file $1 $2 $3 && return 1
+
+	return 0
+}
+
+insert_file () {
+
+#       USAGE: insert_file HOSTNAME PATHNAME QUERY_FILE
+#
+# DESCRIPTION: Collect metadata related to the file located in HOSTNAME
+#              pointed by PATHNAME and call the pertinent procedures in
+#              the database in order to insert it in the database.
+#
+#  PARAMETERS: HOSTNAME    The name of the host machine where the file
+#                          it is being query about is stored. 
+#              PATHNAME    The pathname of the file it is being query
+#                          about.
+#              QUERY_FILE  The pathname of the file where the SQL query
+#                          is going to be stored.
 
 	# Look at the mime-type of the file whose metadata is going to
 	# be inserted in order to determine which function has to be
@@ -183,7 +211,49 @@ process_file () {
 		archive) ! insert_archive_file $3 && return 1
 			 ;;
 		binary)  ! insert_binary_file $2 $3 && return 1
- 
+	esac
+
+	return 0
+}
+
+update_file () {
+
+#       USAGE: update_file HOSTNAME PATHNAME QUERY_FILE
+#
+# DESCRIPTION: Collect metadata related to the file located in HOSTNAME
+#              pointed by PATHNAME and call the pertinent procedures in
+#              the database in order to update the database.
+#
+#  PARAMETERS: HOSTNAME    The name of the host machine where the file
+#                          it is being query about is stored. 
+#              PATHNAME    The pathname of the file it is being query
+#                          about.
+#              QUERY_FILE  The pathname of the file where the SQL query
+#                          is going to be stored.
+
+	# Look at the mime-type of the file whose metadata is going to
+	# be inserted in order to determine which function has to be
+	# called.
+
+	local -a file_type
+
+	file_type=( $($mysql_path --skip-reconnect -u$user -p$pass -D$db \
+		--skip-column-names -e "
+
+		START TRANSACTION;
+		CALL select_ancestor (
+			'file type hierarchy',
+			'regular',
+			$mime_type
+		);
+		COMMIT;
+
+	") )
+	[[ $? -ne 0 ]] && return 1
+
+	case ${file_type[-1]} in
+		audio)   ! update_audio_file $2 $3 && return 1
+			 ;;
 	esac
 
 	return 0
