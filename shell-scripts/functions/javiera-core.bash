@@ -156,12 +156,12 @@ process_file () {
 
         # If file's metadata is already in the database and the update
 	# option was not given, return 0.
-	[ $file_id ] && [ ! $update ] && return 0
+	[ $file_id ] && [ $update == false ] && return 0
 
 
         # If file's metadata is already in the database and the update
 	# option was given, update the database.
-	[ $file_id ] && ! update_file $1 $2 $3 && return 1
+	[ $file_id ] && [ $update == true ] && ! update_file $1 $2 $3 && return 1
 
         # If file's metadata is not already in the database, insert it
 	# into the database.

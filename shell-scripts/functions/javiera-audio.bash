@@ -36,9 +36,9 @@ insert_audio_file () {
 #              QUERY_FILE  The pathname of the file into which
 #                          append the sql query.
 
-	local aud_rel_mbid
 	local aud_med_count
 	local aud_med_pos
+	local aud_rel_mbid
 	local aud_rec_mbid
 	local aud_oldpwd=$(pwd)
 	local -i aud_i=0
@@ -59,8 +59,8 @@ insert_audio_file () {
 		printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $aud_sample_rate $aud_channels $aud_bits_per_sample >> $2
 		if [ $ripdata ]
 		then
-			aud_ripper=$ripper
-			aud_rip_date=$ripdate
+			aud_ripper="${opt_args[ripper]}"
+			aud_rip_date=${opt_args[ripdate]}
 		else
 			aud_ripper="$(metaflac --show-tag=RIPPER $1)"
 			aud_ripper="${aud_ripper##RIPPER=}"
@@ -303,8 +303,8 @@ update_audio_file () {
 		printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $aud_sample_rate $aud_channels $aud_bits_per_sample >> $2
 		if [ $ripdata ]
 		then
-			aud_ripper=$ripper
-			aud_rip_date=$ripdate
+			aud_ripper="${opt_args[ripper]}"
+			aud_rip_date=${opt_args[ripdate]}
 		else
 			aud_ripper="$(metaflac --show-tag=RIPPER $1)"
 			aud_ripper="${aud_ripper##RIPPER=}"

@@ -86,8 +86,7 @@ shopt -s extglob
 
 # Store this script's name in a variable for further use.
 
-declare progname
-progname=$(basename $0)
+declare progname=$(basename $0)
 
 # Create a temporal directory.
 
@@ -98,13 +97,13 @@ fi
 
 # Parse command line options.
 
-declare -a find_opts # A list of options to be passed to the find
-                     # command.
-declare ripdata      
-declare ripper
-declare ripdate
-declare update
-declare verbose
+declare -a find_opts   # A list of options to be passed to the find
+                       # command.
+declare -A opt_args    # Stores the arguments of the invoked options.
+declare ripdata=false  # True if option 'ripdata' was invoked.
+declare update=false   # True if option 'update' was invoked.
+declare verbose=false  # True if option 'verbose' was invoked.
+declare ripper ripdate # Data about a rip.
 declare regex="^(.)*\|[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 
 find_opts=( -maxdepth 1 )
@@ -120,8 +119,8 @@ do
 		ripdata)   ripdata=true
 		           if [[ $OPTARG =~ $regex ]]
 			   then
-		           	ripper=${OPTARG%\|????-??-??}
-				ripdate=${OPTARG#*\|}
+		           	opt_args[ripper]=${OPTARG%\|????-??-??}
+				opt_args[ripdate]=${OPTARG#*\|}
 			   else
 		           	error_exit "$LINENO: Wrong format in ripdata argument."
 			   fi
