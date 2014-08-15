@@ -25,7 +25,7 @@
 #               the dots).
 #
 
-source ~/.myconf/javiera.cnf || exit 1
+source $JAVIERA_CONFIG || exit 1
 source $JAVIERA_HOME/shell-scripts/functions/javiera-core.bash ||
 	exit 1
 source $JAVIERA_HOME/submodules/getoptx/getoptx.bash || exit 1
@@ -119,8 +119,8 @@ do
 		ripdata)   ripdata=true
 		           if [[ $OPTARG =~ $regex ]]
 			   then
-		           	opt_args[ripper]=${OPTARG%\|????-??-??}
-				opt_args[ripdate]=${OPTARG#*\|}
+		           	opt_args[ripper]="${OPTARG%\|????-??-??}"
+				opt_args[ripdate]="${OPTARG#*\|}"
 			   else
 		           	error_exit "$LINENO: Wrong format in ripdata argument."
 			   fi

@@ -60,14 +60,14 @@ insert_audio_file () {
 		if [ $ripdata ]
 		then
 			aud_ripper="${opt_args[ripper]}"
-			aud_rip_date=${opt_args[ripdate]}
+			aud_rip_date=${opt_args[ripDate]}
 		else
 			aud_ripper="$(metaflac --show-tag=RIPPER $1)"
 			aud_ripper="${aud_ripper##RIPPER=}"
 			aud_rip_date="$(metaflac --show-tag=RIPDATE $1)"
 			aud_rip_date="${aud_rip_date##RIPDATE=}"
 		fi
-		if [[ ${aud_ripper} != "" ]]
+		if [[ "${aud_ripper}" != "" ]]
 		then
 			aud_ripper=\"$aud_ripper\"
 			aud_rip_date=\"$aud_rip_date\"
@@ -304,14 +304,14 @@ update_audio_file () {
 		if [ $ripdata ]
 		then
 			aud_ripper="${opt_args[ripper]}"
-			aud_rip_date=${opt_args[ripdate]}
+			aud_rip_date=${opt_args[ripDate]}
 		else
 			aud_ripper="$(metaflac --show-tag=RIPPER $1)"
 			aud_ripper="${aud_ripper##RIPPER=}"
 			aud_rip_date="$(metaflac --show-tag=RIPDATE $1)"
 			aud_rip_date="${aud_rip_date##RIPDATE=}"
 		fi
-		if [[ ${aud_ripper} != "" ]]
+		if [[ "${aud_ripper}" != "" ]]
 		then
 			aud_ripper=\"$aud_ripper\"
 			aud_rip_date=\"$aud_rip_date\"
