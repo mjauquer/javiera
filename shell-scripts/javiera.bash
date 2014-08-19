@@ -120,7 +120,7 @@ do
 		           if [[ $OPTARG =~ $regex ]]
 			   then
 		           	opt_args[ripper]="${OPTARG%\|????-??-??}"
-				opt_args[ripdate]="${OPTARG#*\|}"
+				opt_args[ripDate]="${OPTARG#*\|}"
 			   else
 		           	error_exit "$LINENO: Wrong format in ripdata argument."
 			   fi
