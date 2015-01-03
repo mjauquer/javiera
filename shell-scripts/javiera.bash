@@ -52,8 +52,8 @@ usage () {
 	--recursive    Do all actions recursively.
 	--ripdata      Argument of this option is "RIPPER|DATE_OF_RIP".
 	               It is invoked in order to add data about an audio
-		       flac's ripper. It will be assumed that this data
-		       describes each audio file to be found in PATH...
+	               flac's ripper. It will be assumed that this data
+	               describes each audio file to be found in PATH...
 	--update       Search for changes in files' metadata and update
 	               the database.
 	--verbose      Print information about what is beeing done.
