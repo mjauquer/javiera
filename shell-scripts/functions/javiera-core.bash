@@ -108,9 +108,34 @@ process_file () {
 	# Find out if file's metadata is already in the database. If it
 	# is so, get file's id.
 
+	local enforced_sha1=false
 	local sha1; sha1=$(sha1sum $2)
 	[[ $? -ne 0 ]] && return 1
-	sha1=$(echo $sha1 | cut -c1-40); sha1=\'$sha1\'
+	sha1=\'$sha1\'
+
+	if [ $sha1list == true ]
+	then
+		grep -q "$2" "${opt_args[sha1list]}"
+		if [ $? ]
+		then
+			enforced_sha1=true
+		fi
+	fi
+
+	local aux
+	if [ $enforced_sha1 == true ]
+	then
+		aux=$(basename $2)
+		sha1=$(grep "$aux" ${opt_args[sha1list]} | cut -c1-40)
+		sha1=\'$sha1\'
+	fi
+	unset -v enforced_sha1
+	unset -v aux
+
+	if [ $sha1 == "''" ]
+	then
+		sha1=$(sha1sum $2 | cut -c1-40); sha1=\'$sha1\'
+	fi
 
 	local file_id=$($mysql_path --skip-reconnect -u$user -p$pass \
 		-D$db --skip-column-names -e "

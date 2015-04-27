@@ -301,7 +301,7 @@ update_audio_file () {
 		aud_bits_per_sample=\"$(metaflac --show-bps $1)\"
 
 		printf "CALL insert_and_get_audio_file (@file_id, %b, %b, %b, @audio_file_id);\n" $aud_sample_rate $aud_channels $aud_bits_per_sample >> $2
-		if [ $ripdata ]
+		if [ $ripdata == true ]
 		then
 			aud_ripper="${opt_args[ripper]}"
 			aud_rip_date=${opt_args[ripDate]}
@@ -317,7 +317,7 @@ update_audio_file () {
 			aud_rip_date=\"$aud_rip_date\"
 			printf "CALL insert_and_get_ripper (%b, @ripper_id);\n" "$aud_ripper" >> $2
 			printf "CALL link_audio_file_to_ripper (@audio_file_id, @ripper_id, %b);\n" $aud_rip_date >> $2
-		elif [ ! $ripdata ]
+		elif [ $ripdata == false ]
 		then
 			echo "warning: Tag 'RIPPER' do not exist in file $1." >&2
 		fi

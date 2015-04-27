@@ -54,6 +54,17 @@ usage () {
 	               It is invoked in order to add data about an audio
 	               flac's ripper. It will be assumed that this data
 	               describes each audio file to be found in PATH...
+	--sha1list     Argument of this option is "PATH_TO_A_FILE".
+	               It is invoked in order to force the script to use
+	               a specific sha1 hashcode to handle a file
+	               specified in PATH...
+	               It is called in order to update the metadata of a
+	               file that is already existing in the database.
+	               Each line in the argument file must be in the
+	               following form:
+	                   SHA1_HASHCODE PATHNAME
+	               Note: This form is analogue to the output of the
+	              'sha1sum' command.
 	--update       Search for changes in files' metadata and update
 	               the database.
 	--verbose      Print information about what is beeing done.
@@ -103,11 +114,12 @@ declare -A opt_args    # Stores the arguments of the invoked options.
 declare ripdata=false  # True if option 'ripdata' was invoked.
 declare update=false   # True if option 'update' was invoked.
 declare verbose=false  # True if option 'verbose' was invoked.
+declare sha1list=false # True if option 'sha1list' was invoked.
 declare ripper ripdate # Data about a rip.
-declare regex="^(.)*\|[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+declare ripdata_regex="^(.)*\|[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 
 find_opts=( -maxdepth 1 )
-while getoptex "r recursive R ripdata: update verbose" "$@"
+while getoptex "r recursive R sha1list: ripdata: update verbose" "$@"
 do
 	case "$OPTOPT" in
 		r)         find_opts=( -depth )
@@ -117,12 +129,20 @@ do
 		R)         find_opts=( -depth )
 		           ;;
 		ripdata)   ripdata=true
-		           if [[ $OPTARG =~ $regex ]]
+		           if [[ $OPTARG =~ $ripdata_regex ]]
 			   then
 		           	opt_args[ripper]="${OPTARG%\|????-??-??}"
 				opt_args[ripDate]="${OPTARG#*\|}"
 			   else
 		           	error_exit "$LINENO: Wrong format in ripdata argument."
+			   fi
+			   ;;
+		sha1list)  if [ -f $OPTARG ]
+			   then
+				   sha1list=true
+				   opt_args[sha1list]=$(readlink -f "$OPTARG")
+			   else
+				   error_exit "$LINENO: Provided sha1 list file do not exist."
 			   fi
 			   ;;
 		update)    update=true
@@ -131,7 +151,7 @@ do
 	esac
 done
 shift $(($OPTIND-1))
-unset -v regex
+unset -v ripdata_regex
 
 # Select from the list of pathname arguments, those that do not need to
 # be changed. Store them in the 'files' array.
