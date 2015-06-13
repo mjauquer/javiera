@@ -109,7 +109,7 @@ process_file () {
 	# is so, get file's id.
 
 	local enforced_sha1=false
-	local sha1; sha1=$(sha1sum $2)
+	local sha1; sha1=$(sha1sum $2 | cut -c1-40)
 	[[ $? -ne 0 ]] && return 1
 	sha1=\'$sha1\'
 
