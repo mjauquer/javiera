@@ -157,10 +157,10 @@ then
 	error_exit "$LINENO: Error after calling readlink."
 fi
 
-#if ! sudo cdrecord $options $input
-#then
-#	error_exit "$LINENO: Error after calling cdrecord."
-#fi
+if ! sudo cdrecord $options $input
+then
+	error_exit "$LINENO: Error after calling cdrecord."
+fi
 
 unset -v input
 
