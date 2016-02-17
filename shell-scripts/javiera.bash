@@ -29,7 +29,7 @@ source $JAVIERA_CONFIG || exit 1
 source $JAVIERA_HOME/shell-scripts/functions/javiera-core.bash ||
 	exit 1
 source $JAVIERA_HOME/submodules/getoptx/getoptx.bash || exit 1
-source ~/code/bash/chpathn/chpathn.flib || exit 1
+source $BASH_SCRIPTS_HOME/chpathn/chpathn.flib || exit 1
 
 usage () {
 
